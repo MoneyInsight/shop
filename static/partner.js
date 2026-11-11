@@ -41,8 +41,8 @@
   if (costIn) costIn.addEventListener("input", () => {
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
-    const settle = Math.floor(c * 1.08), market = Math.ceil(settle / 0.88 / 10) * 10, price = Math.ceil(market * 0.95 / 10) * 10;
-    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 공급사 정산금 <b>${won(settle)}</b> (원가 + 8%, 공제 없음)<br>
+    const settle = Math.floor(c * 1.10), market = Math.ceil(settle / 0.88 / 10) * 10, price = Math.ceil(market * 0.95 / 10) * 10;
+    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 공급사 정산금 <b>${won(settle)}</b> (원가 + 10%, 공제 없음)<br>
       오픈마켓에서 같은 정산금을 받을 가격 <b>${won(market)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (5% 저렴)`;
   });
 

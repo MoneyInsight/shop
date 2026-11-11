@@ -56,10 +56,10 @@ async function ghPut(env, path, contentB64, message, sha) {
 }
 
 // ---------- 가격 ----------
-// 공급사 정산금 = 원가(상품+배송비) × 1.08 (수수료 공제 없음)
+// 공급사 정산금 = 원가(상품+배송비) × 1.10 (수수료 공제 없음)
 // 오픈마켓 기준가 = 정산금 ÷ (1 − 오픈마켓 수수료 12%)  → 같은 상품이 오픈마켓에서 팔릴 가격
 // 판매가 = 오픈마켓 기준가 × (1 − 고객 할인 5%)  → 남는 금액(카드수수료 포함)은 플랫폼 몫
-const settleFromCost = (env, cost) => Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.08)));
+const settleFromCost = (env, cost) => Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.10)));
 const marketPrice = (env, cost) => Math.ceil(settleFromCost(env, cost) / (1 - Number(env.MARKET_FEE || 0.12)) / 10) * 10;
 const priceFromCost = (env, cost) => Math.ceil(marketPrice(env, cost) * (1 - Number(env.CUSTOMER_DISCOUNT || 0.05)) / 10) * 10;
 function supplyFromCost(env, cost) { return settleFromCost(env, cost); }

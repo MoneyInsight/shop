@@ -29,7 +29,7 @@ export default async (req) => {
     CARD_FEE: e("CARD_FEE", "0.034"),
     MARKET_FEE: e("MARKET_FEE", "0.12"),
     CUSTOMER_DISCOUNT: e("CUSTOMER_DISCOUNT", "0.05"),
-    SUPPLIER_MARGIN: e("SUPPLIER_MARGIN", "0.08"),
+    SUPPLIER_MARGIN: e("SUPPLIER_MARGIN", "0.10"),
     MIN_MARGIN: e("MIN_MARGIN", "0"),
     FREE_SHIPPING_OVER: e("FREE_SHIPPING_OVER", "0"),
   };
