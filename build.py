@@ -271,8 +271,8 @@ def build_partner_pages():
 <div class="card form" id="product-form"><h2>2. 상품 등록 (입점코드 필요)</h2>
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" style="width:100%;height:48px;border:1px solid #cfd4d9;border-radius:10px;padding:0 10px;font-size:16px">{cats}</select>
-<label>공급가 (원, 부가세 포함)</label><input name="supply_price" inputmode="numeric">
-<label>배송비 (원, 무료면 0)</label><input name="shipping_fee" inputmode="numeric" value="3000">
+<label>공급가 (원, 부가세·배송비 포함 — 전 상품 무료배송)</label><input name="supply_price" inputmode="numeric">
+<p style="font-size:13px;color:#e5322d;margin-top:6px">판매가는 공급가 + 5.5%로 자동 설정돼요. 배송비는 별도로 받지 않아요.</p>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">

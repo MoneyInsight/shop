@@ -44,7 +44,7 @@
       "emoji": "🍱"
     }
   ],
-  "margin_rate": 0.15,
-  "min_margin_won": 1000,
+  "margin_rate": 0.055,
+  "min_margin_won": 0,
   "worker_url": ""
 }

@@ -10,8 +10,8 @@ id = "여기에_KV_ID"
 [vars]
 GITHUB_REPO = "USERNAME/shop"
 SITE_URL = "https://USERNAME.github.io/shop"
-MARGIN_RATE = "0.15"
-MIN_MARGIN = "1000"
+MARGIN_RATE = "0.055"
+MIN_MARGIN = "0"
 FREE_SHIPPING_OVER = "0"
 
 # 비밀값은 파일에 쓰지 말고 아래 명령으로 등록하세요
