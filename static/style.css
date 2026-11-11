@@ -151,3 +151,6 @@ footer p{line-height:1.8}
  .d-btns{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 12px;border-top:1px solid var(--line);z-index:20}
  body.has-buybar{padding-bottom:76px}
 }
+
+.detail-html img{max-width:100%;height:auto;margin:0 auto}
+.detail-html{text-align:center}

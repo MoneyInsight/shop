@@ -24,19 +24,54 @@
       "emoji": "🏠"
     },
     {
+      "slug": "furniture",
+      "name": "가구·수납",
+      "emoji": "🗄️"
+    },
+    {
+      "slug": "kitchen",
+      "name": "주방",
+      "emoji": "🍳"
+    },
+    {
       "slug": "tools",
-      "name": "공구·측정",
+      "name": "공구·산업",
       "emoji": "🛠️"
     },
     {
+      "slug": "digital",
+      "name": "디지털",
+      "emoji": "🔌"
+    },
+    {
+      "slug": "season",
+      "name": "계절가전",
+      "emoji": "🔥"
+    },
+    {
       "slug": "sleep",
-      "name": "침구·베개",
+      "name": "침구·쿠션",
       "emoji": "🛏️"
     },
     {
-      "slug": "digital",
-      "name": "디지털·케이블",
-      "emoji": "🔌"
+      "slug": "office",
+      "name": "문구·사무",
+      "emoji": "✏️"
+    },
+    {
+      "slug": "fashion",
+      "name": "패션잡화",
+      "emoji": "👟"
+    },
+    {
+      "slug": "jewelry",
+      "name": "주얼리",
+      "emoji": "💍"
+    },
+    {
+      "slug": "pet",
+      "name": "반려동물",
+      "emoji": "🐶"
     },
     {
       "slug": "food",

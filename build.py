@@ -32,7 +32,13 @@ def placeholder_svg(p):
 
 
 def load_products():
+    import smartstore_import
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
+    ss_rows, warns = smartstore_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0.05))
+    for w in warns:
+        print("⚠️", w)
+    seen = {r["id"] for r in rows}
+    rows += [r for r in ss_rows if r["id"] not in seen]
     out = []
     (OUT / "img").mkdir(parents=True, exist_ok=True)
     for r in rows:
@@ -44,6 +50,9 @@ def load_products():
         p["shipping_fee"] = int(p["shipping_fee"] or 0)
         p["category_name"] = CAT_NAME.get(p["category"], "기타")
         p["desc_lines"] = [x for x in p["description"].split("|") if x.strip()]
+        p.setdefault("detail_html", "")
+        if p["image"] and not p["image"].startswith("http") and not (ROOT / p["image"]).exists():
+            p["image"] = ""
         if not p["image"]:
             fn = f"img/p{p['id']}.svg"
             (OUT / fn).write_text(placeholder_svg(p), encoding="utf-8")
@@ -176,7 +185,9 @@ def build_products(ps):
               "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
               "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
                          "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition"}}
-        desc_html = "".join(f"<p>✔ {e(x)}</p>" for x in p["desc_lines"])
+        desc_html = "".join(f"<p>✔ {e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
+        if not desc_html:
+            desc_html = '<p style="color:#888">상세 정보 준비중이에요.</p>' 
         body = f'''<div class="wrap page"><div class="crumb"><a href="../index.html">홈</a> › <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
 <div class="card"><div class="detail">
 <div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>
