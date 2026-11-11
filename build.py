@@ -271,15 +271,15 @@ def build_partner_pages():
 <div class="card form" id="product-form"><h2>2. 상품 등록 (입점코드 필요)</h2>
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" style="width:100%;height:48px;border:1px solid #cfd4d9;border-radius:10px;padding:0 10px;font-size:16px">{cats}</select>
-<label>원가 (원, 상품+배송비, 부가세 포함)</label><input name="cost" inputmode="numeric" id="cost-in">
-<div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">원가를 입력하면 판매가·정산금이 자동 계산돼요.<br>공급사는 원가의 10%를 수수료 공제 없이 그대로 정산받아요. 판매가는 자동 계산, 전 상품 무료배송</div>
+<label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
+<div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 − 5% / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">
 <label>한 줄 소개</label><input name="summary">
 <label>상세 설명 (줄마다 한 가지 특징)</label><textarea name="description" style="height:120px"></textarea>
 <button class="btn btn-green" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 원가의 10% 그대로 정산 (수수료 공제 없음)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
            scripts='<script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="card form" id="admin-login"><h2>🔐 관리자</h2><label>관리자 비밀번호</label><input id="admin-pw" type="password">
 <button class="btn btn-dark" style="margin-top:12px" id="admin-enter">들어가기</button></div>
