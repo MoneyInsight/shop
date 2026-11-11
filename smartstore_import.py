@@ -144,7 +144,7 @@ def load(data_dir, cats, discount=0.05):
                 "event": get(r, "event") or "오픈마켓보다 5% 저렴 · 무료배송", "badge": "", "summary": "",
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": detail if detail.lstrip().startswith("<") else "",
-                "supplier": "직영", "status": "판매중",
+                "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")

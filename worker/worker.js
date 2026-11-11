@@ -182,7 +182,7 @@ async function approveProduct(req, env) {
   if (!csv.endsWith("\n")) csv += "\n";
   const normal = Math.max(p.normal_price, p.market_price || 0, salePrice);
   const row = [nextId, p.name, p.category, salePrice, normal, p.shipping_fee, imgPath, p.brand, p.maker, p.origin, "", "NEW",
-    p.summary, p.description.split(/\r?\n/).filter(Boolean).join("|"), p.supplier, "판매중"].map(csvCell).join(",");
+    p.summary, p.description.split(/\r?\n/).filter(Boolean).join("|"), p.supplier, "판매중", p.naver_low || ""].map(csvCell).join(",");
   await ghPut(env, "data/products.csv", b64encode(csv + row + "\n"), `상품 승인: ${p.name}`, file.sha);
 
   await env.SHOP.put("supply:" + nextId, JSON.stringify({ supplier: p.supplier, seller_code: p.seller_code, supply_price: p.supply_price }));

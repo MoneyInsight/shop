@@ -50,6 +50,8 @@ def load_products():
         p["normal_price"] = int(p["normal_price"] or 0) or p["price"]
         p["shipping_fee"] = int(p["shipping_fee"] or 0)
         p["category_name"] = CAT_NAME.get(p["category"], "기타")
+        p["naver_low"] = int(p.get("naver_low") or 0)
+        p["save"] = p["naver_low"] - p["price"] if p["naver_low"] > p["price"] else 0
         p["desc_lines"] = [x for x in p["description"].split("|") if x.strip()]
         p.setdefault("detail_html", "")
         if p["image"] and not p["image"].startswith("http") and not (ROOT / p["image"]).exists():
@@ -61,6 +63,8 @@ def load_products():
         elif p["image"].startswith("http"):
             pass  # 외부 이미지 주소
         out.append(p)
+    # 네이버 최저가보다 많이 싼 상품(절약률 큰 순)이 위로, 최저가 정보 없는 상품은 뒤로
+    out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
     return out
 
 
@@ -115,7 +119,7 @@ def card(p, root):
     img = p["image"] if p["image"].startswith("http") else root + p["image"]
     return f'''<a class="p-card" data-cat="{p["category"]}" href="{root}product/{p["id"]}.html">
 <div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}" loading="lazy">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>
-{f'<div class="p-event">{e(p["event"])}</div>' if p["event"] else ""}
+{f'<div class="p-event">네이버 최저가보다 {won(p["save"])}↓</div>' if p["save"] else (f'<div class="p-event">{e(p["event"])}</div>' if p["event"] else "")}
 <div class="p-name">{e(p["name"])}</div>
 <div class="p-price">{f'<span class="rate">{r}%</span>' if r else ""}{won(p["price"])}{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <div class="p-ship">{"배송비 " + won(p["shipping_fee"]) if p["shipping_fee"] else "무료배송"}</div></a>'''
@@ -152,13 +156,13 @@ def write(path, text):
 def build_home(ps):
     chips = '<button class="chip on" data-cat="">전체</button>' + "".join(
         f'<button class="chip" data-cat="{c["slug"]}">{e(c["name"])}</button>' for c in CATS)
-    best = [p for p in ps if p["badge"] == "BEST"] or ps[:4]
+    best = [p for p in ps if p["save"]][:8] or [p for p in ps if p["badge"] == "BEST"] or ps[:4]
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     body = search_box("./") + f'''<div class="wrap main"><div>
 <div class="card banner"><div class="b-img">🛍️</div><div class="b-txt"><strong>{e(CFG["slogan"])}</strong>
 <p>오픈마켓 수수료 거품을 뺀 공급사 직거래 가격. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
-<div class="card"><h2>🔥 지금 많이 찾는 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:4])}</div></div>
+<div class="card"><h2>💚 네이버 최저가보다 더 싼 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:8])}</div></div>
 <div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
 <div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps)}</div></div>
 </div>{side("./")}</div>'''
@@ -194,7 +198,7 @@ def build_products(ps):
 <div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>
 <div><div class="d-brand">{e(p["brand"])}</div><h1 class="d-name">{e(p["name"])}</h1><p class="d-summary">{e(p["summary"])}</p>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}
-{f'<div><span class="d-save">🎁 {e(p["event"])}</span></div>' if p["event"] else ""}</div>
+{f'<div><span class="d-save">💚 네이버 최저가 {won(p["naver_low"])}보다 {won(p["save"])} 저렴</span></div>' if p["save"] else ""}{f'<div><span class="d-save">🎁 {e(p["event"])}</span></div>' if p["event"] else ""}</div>
 <dl class="d-info"><dt>배송비</dt><dd>{"무료배송" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
 <dt>배송</dt><dd>영업일 1~3일 내 출발</dd><dt>원산지</dt><dd>{e(p["origin"] or "상세설명 참조")}</dd></dl>
 <div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric"><button id="plus" aria-label="더하기">+</button></div>
