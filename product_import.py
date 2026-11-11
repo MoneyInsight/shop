@@ -1,26 +1,26 @@
-"""스마트스토어 엑셀 양식 → 쇼핑몰 상품 변환
-data/ 폴더의 .xlsx / .csv 중 스마트스토어 '상품 일괄등록' 양식(또는 같은 열 이름을 쓰는 파일)을 읽어
-쇼핑몰 상품으로 바꿉니다. 열 순서는 상관없고 열 이름으로 찾습니다.
+"""땡잡았땡 상품등록 엑셀 → 쇼핑몰 상품 변환
+data/ 폴더의 .xlsx / .csv 를 읽어 쇼핑몰 상품으로 바꿉니다.
+열 순서는 상관없고 열 이름으로 찾습니다. (다른 판매채널에서 내려받은 엑셀의 흔한 열 이름도 함께 인식)
 
 가격 규칙 (전 상품 무료배송, 고객은 오픈마켓보다 5% 싸게):
-  기준가 = 판매가 − 즉시할인 + 기본배송비(유료배송일 때)
+  기준가 = 오픈마켓 판매가(무료배송 기준) [또는 판매가 − 즉시할인 + 기본배송비]
   쇼핑몰 판매가 = 기준가 × 0.95 (10원 단위 올림),  정가 표시 = 기준가
 """
 import csv, math, re
 from pathlib import Path
 
-# 스마트스토어 열 이름 → 내부 이름 (여러 표기를 모두 받음)
+# 엑셀 열 이름 → 내부 이름 (여러 표기를 모두 받음)
 ALIASES = {
     "name": ["상품명"],
-    "price": ["판매가", "판매가격"],
+    "price": ["오픈마켓 판매가", "오픈마켓판매가", "판매가", "판매가격"],
     "stock": ["재고수량", "재고"],
     "category_id": ["카테고리ID", "카테고리코드", "카테고리 ID"],
-    "category_name": ["카테고리명", "카테고리"],
-    "image": ["대표 이미지 파일명", "대표이미지", "대표 이미지", "대표이미지 URL", "대표 이미지 URL", "대표이미지URL"],
-    "images": ["추가 이미지 파일명", "추가이미지", "추가 이미지 URL"],
-    "detail": ["상품 상세정보", "상세설명", "상품상세", "상세정보"],
-    "code": ["판매자 상품코드", "판매자상품코드"],
-    "product_no": ["상품번호", "상품번호(스마트스토어)", "스마트스토어 상품번호"],
+    "category_name": ["카테고리명"],
+    "image": ["대표 이미지 주소", "대표이미지주소", "대표 이미지 파일명", "대표이미지", "대표 이미지", "대표이미지 URL", "대표 이미지 URL", "대표이미지URL"],
+    "images": ["추가 이미지 주소", "추가 이미지 파일명", "추가이미지", "추가 이미지 URL"],
+    "detail": ["상세 설명", "상품 상세정보", "상세설명", "상품상세", "상세정보"],
+    "code": ["상품코드", "판매자 상품코드", "판매자상품코드"],
+    "product_no": ["상품번호"],
     "maker": ["제조사"],
     "brand": ["브랜드"],
     "origin": ["원산지 직접입력", "원산지"],
@@ -29,7 +29,8 @@ ALIASES = {
     "discount": ["즉시할인 값(기본할인)", "즉시할인 값", "PC 즉시할인 값"],
     "discount_unit": ["즉시할인 단위(기본할인)", "즉시할인 단위", "PC 즉시할인 단위"],
     "status": ["판매상태", "상품상태"],
-    "mall_category": ["쇼핑몰카테고리", "자체몰카테고리"],
+    "mall_category": ["카테고리", "쇼핑몰카테고리", "자체몰카테고리"],
+    "summary": ["한 줄 소개", "한줄소개"],
     "event": ["홍보문구", "이벤트문구"],
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
 }
@@ -78,7 +79,7 @@ def _read_rows(path):
 
 
 def _find_header(rows):
-    """스마트스토어 양식은 위에 안내문이 있을 수 있어서, '상품명'이 있는 줄을 헤더로 찾음"""
+    """엑셀 위쪽에 안내문이 있을 수 있어서, '상품명'이 있는 줄을 헤더로 찾음"""
     for i, r in enumerate(rows[:15]):
         cells = [_norm(c) for c in r]
         if "상품명" in cells:
@@ -100,24 +101,26 @@ def guess_category(name, cats):
 
 
 def load(data_dir, cats, discount=0.05):
-    """data_dir 안의 스마트스토어 양식 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
+    """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
     cat_by_name = {c["name"]: c["slug"] for c in cats}
     for path in sorted(Path(data_dir).glob("*")):
-        if path.name == "products.csv" or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
+        if path.name in ("products.csv", "땡잡았땡_상품등록양식.xlsx") or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
             continue
         rows = _read_rows(path)
         h, col = _find_header(rows)
         if h is None:
-            warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (스마트스토어 양식의 열 이름이 있어야 해요)")
+            warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (땡잡았땡 상품등록 양식의 열 이름이 있어야 해요)")
             continue
         get = lambda r, k: (r[col[k]].strip() if k in col and col[k] < len(r) and r[col[k]] else "")
         skipped = 0
         for r in rows[h + 1:]:
             name = get(r, "name")
             price = _num(get(r, "price"))
-            if not name or name.startswith("필수") or not price:
+            if name.startswith("필수"):
+                continue  # 양식 안내 줄
+            if not name or not price:
                 skipped += 1; continue
             if get(r, "status") in ("판매중지", "판매종료", "품절"):
                 continue
@@ -141,7 +144,7 @@ def load(data_dir, cats, discount=0.05):
                 "id": code, "name": name[:100], "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
-                "event": get(r, "event") or "오픈마켓보다 5% 저렴 · 무료배송", "badge": "", "summary": "",
+                "event": get(r, "event") or "오픈마켓보다 5% 저렴 · 무료배송", "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": detail if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
