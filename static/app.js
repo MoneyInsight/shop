@@ -271,6 +271,22 @@
     $("#fail-msg").textContent = q.get("message") || "결제가 취소되었어요.";
   }
 
+  // ---------- 최저가 보상제: 더 싼 곳 알려주기 ----------
+  const rb = $("#report-btn");
+  if (rb) rb.onclick = async () => {
+    if (!CFG.worker_url) { alert("준비 중이에요. 고객센터로 알려 주세요."); return; }
+    const url = prompt("더 싸게 파는 곳의 상품 주소(https://…)를 붙여 넣어 주세요.");
+    if (!url) return;
+    const price = prompt("그곳의 가격을 입력해 주세요. (배송비 포함, 숫자만)");
+    if (!price) return;
+    const contact = prompt("적립금을 받으실 연락처(휴대폰 번호)를 입력해 주세요.") || "";
+    try {
+      const r = await fetch(CFG.worker_url + "/report-price", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: rb.dataset.id, product_name: rb.dataset.name, our_price: rb.dataset.price, url, price: String(price).replace(/\D/g, ""), contact }) });
+      alert((await r.json()).message);
+    } catch (e) { alert("전송하지 못했어요. 잠시 후 다시 시도해 주세요."); }
+  };
+
   updateBadge();
   initChips(); initMiniCart(); initDetail(); initCart(); initSearch(); initCheckout(); initSuccess(); initFail();
 })();

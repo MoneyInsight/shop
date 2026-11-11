@@ -141,7 +141,7 @@ def side(root):
 <div class="card login-box"><div class="hello">반가워요 👋</div><p>회원가입 없이 바로 주문할 수 있어요.</p>
 <div id="mini-cart"></div></div>
 <div class="card why"><h2>왜 {e(CFG["shop_name"])}인가요?</h2><ul>
-<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>🚚 전 상품 무료배송</li>
+<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>💚 더 싼 곳 있으면 차액 보상 (최저가 보상제)</li><li>🚚 전 상품 무료배송</li>
 <li>🔒 토스페이먼츠 안전결제</li><li>📦 공급사 직배송으로 빠른 처리</li></ul></div>
 <div class="card cs-box"><h2>고객센터</h2><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}</p><p>{e(BIZ["email"])}</p></div>
 <div class="card"><h2>공급사 입점 모집</h2><p style="color:#666;font-size:14px;margin-bottom:12px">좋은 상품을 가진 공급사라면 누구나 상품을 올릴 수 있어요.</p>
@@ -211,6 +211,8 @@ def build_products(ps):
 <div class="d-btns" id="buy" data-id="{p["id"]}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
 <button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-green" id="buy-now">바로 구매</button></div>
 </div></div></div>
+<div class="lowest-box"><b>💚 최저가 보상제</b> 같은 상품을 더 싸게 파는 곳을 찾으셨나요? 알려주시면 확인 후 차액을 적립금으로 돌려드려요.
+<button class="btn btn-line" id="report-btn" data-id="{p["id"]}" data-name="{e(p["name"])}" data-price="{p["price"]}" style="margin-top:10px;height:44px;font-size:15px">더 싼 곳 알려주기</button></div>
 <div class="d-desc"><div class="card"><h2>상품 상세정보</h2>{desc_html}</div>
 <div class="card"><h2>상품정보 제공고시</h2><table class="notice-table">
 <tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "-")}</td></tr>
@@ -309,7 +311,7 @@ def build_partner_pages():
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-green" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 최저가는 등록할 때 한 번만 확인 — 이후엔 고객 신고로 관리</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="card form" id="admin-login"><h2>🔐 관리자</h2><label>관리자 비밀번호</label><input id="admin-pw" type="password">
 <button class="btn btn-dark" style="margin-top:12px" id="admin-enter">들어가기</button></div>
@@ -317,6 +319,7 @@ def build_partner_pages():
 <div class="card"><h2>입점 신청</h2><div id="apps"></div></div>
 <div class="card"><h2>상품 등록 요청</h2><div id="pending"></div></div>
 <div class="card"><h2>주문 / 발주</h2><div id="orders"></div></div>
+<div class="card"><h2>💚 더 싼 곳 신고 (최저가 보상제)</h2><div id="reports"></div></div>
 <div class="card"><h2>⚠️ 네이버 최저가보다 비싸서 제외된 상품</h2><div id="price-check"></div></div></div>''', scripts='<script src="partner.js"></script>')
 
 

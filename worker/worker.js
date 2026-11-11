@@ -146,12 +146,34 @@ async function sellerProduct(req, env) {
   return json({ message: "상품 등록 요청이 접수되었어요. 검수 후 판매가 시작돼요." });
 }
 
+// ---------- 최저가 보상제: 더 싼 곳 신고 ----------
+async function reportPrice(req, env) {
+  const d = await req.json();
+  if (!d.product_id || !d.url || !/^https?:\/\//.test(d.url)) return fail("더 싸게 파는 곳의 주소(https://…)를 넣어 주세요.");
+  const price = parseInt(d.price);
+  if (!price) return fail("그곳의 가격(무료배송 기준)을 입력해 주세요.");
+  const id = "rep_" + Date.now();
+  await env.SHOP.put("report:" + id, JSON.stringify({ id, product_id: String(d.product_id).slice(0, 40), product_name: String(d.product_name || "").slice(0, 100),
+    our_price: parseInt(d.our_price) || 0, price, url: d.url.slice(0, 500), contact: String(d.contact || "").slice(0, 60), createdAt: new Date().toISOString(), status: "확인 전" }));
+  return json({ message: "신고해 주셔서 감사해요! 확인 후 더 싼 게 맞으면 차액을 적립금으로 돌려드릴게요." });
+}
+
+async function closeReport(req, env) {
+  const { id, status } = await req.json();
+  const r = await env.SHOP.get("report:" + id, "json");
+  if (!r) return fail("신고를 찾을 수 없어요.");
+  r.status = status || "처리완료";
+  await env.SHOP.put("report:" + id, JSON.stringify(r));
+  return json({ ok: true });
+}
+
 // ---------- 관리자 ----------
 async function adminList(env) {
   const apps = (await kvList(env, "app:")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const pending = (await kvList(env, "pending:")).map((p) => ({ ...p, image_url: p.image, image: undefined }));
   const orders = (await kvList(env, "order:")).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 200);
-  return json({ apps, pending, orders });
+  const reports = (await kvList(env, "report:")).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200);
+  return json({ apps, pending, orders, reports });
 }
 
 async function approveSeller(req, env) {
@@ -215,12 +237,14 @@ export async function handle(req, env, path) {
     if (path === "/confirm") return await confirm(req, env);
     if (path === "/seller/apply") return await sellerApply(req, env);
     if (path === "/seller/product") return await sellerProduct(req, env);
+    if (path === "/report-price") return await reportPrice(req, env);
     if (path.startsWith("/admin/")) {
       if (!env.ADMIN_PASSWORD || (req.headers.get("Authorization") || "") !== "Bearer " + env.ADMIN_PASSWORD) return fail("비밀번호가 틀렸어요.", 401);
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/approve-seller") return await approveSeller(req, env);
       if (path === "/admin/approve-product") return await approveProduct(req, env);
       if (path === "/admin/reject-product") return await rejectProduct(req, env);
+      if (path === "/admin/close-report") return await closeReport(req, env);
     }
     return fail("Not found", 404);
   } catch (e) {

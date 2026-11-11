@@ -124,6 +124,10 @@
       <small>${esc(o.customer.name)} / ${esc(o.customer.phone)} / [${esc(o.customer.zip)}] ${esc(o.customer.addr)} / ${esc(o.customer.memo || "")}</small>
       <ul style="margin:6px 0 0 18px;font-size:14px">${o.lines.map((l) => `<li>[${esc(l.supplier)}] ${esc(l.name)} × ${l.qty} — 정산금 ${won(l.supply_price * l.qty)}</li>`).join("")}</ul></div>
       <span class="chip">${esc(o.status || "결제완료")}</span></div>`).join("") : "<p>주문이 없어요.</p>";
+    $("#reports").innerHTML = (d.reports || []).length ? d.reports.map((r) => `<div class="c-row" style="grid-template-columns:1fr auto">
+      <div><a href="product/${encodeURIComponent(r.product_id)}.html" target="_blank"><b>${esc(r.product_name)}</b></a><br>
+      <small>우리 ${won(r.our_price)} → 신고 가격 <b style="color:#e5322d">${won(r.price)}</b> · <a href="${esc(r.url)}" target="_blank" rel="noopener">신고된 곳 보기</a> · 연락처 ${esc(r.contact || "-")} · ${new Date(r.createdAt).toLocaleString("ko-KR")}</small></div>
+      ${r.status === "확인 전" ? `<div style="display:flex;flex-direction:column;gap:6px"><button class="chip on" data-act="report-done" data-id="${r.id}">보상 완료</button><button class="chip" data-act="report-reject" data-id="${r.id}">해당 없음</button></div>` : `<span class="chip">${esc(r.status)}</span>`}</div>`).join("") : "<p>신고가 없어요.</p>";
   }
 
   async function loadPriceCheck() {
@@ -143,6 +147,8 @@
       if (b.dataset.act === "approve-seller") await call("/admin/approve-seller", { id });
       if (b.dataset.act === "approve-product") await call("/admin/approve-product", { id, price: Number($(`input[data-price="${id}"]`).value) });
       if (b.dataset.act === "reject-product") await call("/admin/reject-product", { id });
+      if (b.dataset.act === "report-done") await call("/admin/close-report", { id, status: "보상 완료" });
+      if (b.dataset.act === "report-reject") await call("/admin/close-report", { id, status: "해당 없음" });
       await load();
     } catch (e) { alert(e.message); }
   });
