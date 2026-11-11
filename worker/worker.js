@@ -184,25 +184,26 @@ async function rejectProduct(req, env) {
   return json({ ok: true });
 }
 
-export default {
-  async fetch(req, env) {
-    if (req.method === "OPTIONS") return new Response(null, { headers: cors });
-    if (req.method !== "POST") return fail("Not found", 404);
-    const path = new URL(req.url).pathname;
-    try {
-      if (path === "/confirm") return await confirm(req, env);
-      if (path === "/seller/apply") return await sellerApply(req, env);
-      if (path === "/seller/product") return await sellerProduct(req, env);
-      if (path.startsWith("/admin/")) {
-        if ((req.headers.get("Authorization") || "") !== "Bearer " + env.ADMIN_PASSWORD) return fail("비밀번호가 틀렸어요.", 401);
-        if (path === "/admin/list") return await adminList(env);
-        if (path === "/admin/approve-seller") return await approveSeller(req, env);
-        if (path === "/admin/approve-product") return await approveProduct(req, env);
-        if (path === "/admin/reject-product") return await rejectProduct(req, env);
-      }
-      return fail("Not found", 404);
-    } catch (e) {
-      return fail("서버 오류: " + e.message, 500);
+/** 공통 처리기: Cloudflare·Netlify 둘 다 사용 */
+export async function handle(req, env, path) {
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method !== "POST") return fail("Not found", 404);
+  path = path || new URL(req.url).pathname;
+  try {
+    if (path === "/confirm") return await confirm(req, env);
+    if (path === "/seller/apply") return await sellerApply(req, env);
+    if (path === "/seller/product") return await sellerProduct(req, env);
+    if (path.startsWith("/admin/")) {
+      if (!env.ADMIN_PASSWORD || (req.headers.get("Authorization") || "") !== "Bearer " + env.ADMIN_PASSWORD) return fail("비밀번호가 틀렸어요.", 401);
+      if (path === "/admin/list") return await adminList(env);
+      if (path === "/admin/approve-seller") return await approveSeller(req, env);
+      if (path === "/admin/approve-product") return await approveProduct(req, env);
+      if (path === "/admin/reject-product") return await rejectProduct(req, env);
     }
-  },
-};
+    return fail("Not found", 404);
+  } catch (e) {
+    return fail("서버 오류: " + e.message, 500);
+  }
+}
+
+export default { fetch: (req, env) => handle(req, env) };
