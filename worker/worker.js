@@ -56,11 +56,12 @@ async function ghPut(env, path, contentB64, message, sha) {
 }
 
 // ---------- 가격 ----------
-// 판매가 = 원가(상품+배송비) × (1 + 공급사 8% + 플랫폼 3%) ÷ (1 − 카드수수료 3.4%) (10원 단위 올림)
-// 공급사 정산금 = 원가 × 1.08 (수수료 공제 없음)
-const priceFromCost = (env, cost) =>
-  Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.08) + Number(env.MARGIN_RATE || 0.03)) / (1 - Number(env.CARD_FEE || 0.034)) / 10) * 10;
+// 공급사 정산금 = 원가(상품+배송비) × 1.08 (수수료 공제 없음)
+// 오픈마켓 기준가 = 정산금 ÷ (1 − 오픈마켓 수수료 12%)  → 같은 상품이 오픈마켓에서 팔릴 가격
+// 판매가 = 오픈마켓 기준가 × (1 − 고객 할인 5%)  → 남는 금액(카드수수료 포함)은 플랫폼 몫
 const settleFromCost = (env, cost) => Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.08)));
+const marketPrice = (env, cost) => Math.ceil(settleFromCost(env, cost) / (1 - Number(env.MARKET_FEE || 0.12)) / 10) * 10;
+const priceFromCost = (env, cost) => Math.ceil(marketPrice(env, cost) * (1 - Number(env.CUSTOMER_DISCOUNT || 0.05)) / 10) * 10;
 function supplyFromCost(env, cost) { return settleFromCost(env, cost); }
 function suggestPrice(env, supply) {
   const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);
@@ -175,7 +176,7 @@ async function approveProduct(req, env) {
   const file = await gh(env, "contents/data/products.csv");
   let csv = b64decode(file.content);
   if (!csv.endsWith("\n")) csv += "\n";
-  const normal = Math.max(p.normal_price, salePrice);
+  const normal = Math.max(p.normal_price, p.cost ? marketPrice(env, p.cost) : 0, salePrice);
   const row = [nextId, p.name, p.category, salePrice, normal, p.shipping_fee, imgPath, p.brand, p.maker, p.origin, "", "NEW",
     p.summary, p.description.split(/\r?\n/).filter(Boolean).join("|"), p.supplier, "판매중"].map(csvCell).join(",");
   await ghPut(env, "data/products.csv", b64encode(csv + row + "\n"), `상품 승인: ${p.name}`, file.sha);
