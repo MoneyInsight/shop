@@ -3,8 +3,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: "17 18 * * *"   # 매일 새벽 3시17분(한국) 네이버 최저가 재확인
 permissions:
   contents: read
   pages: write
@@ -23,15 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/cache@v4
-        with:
-          path: .naver_cache.json
-          key: naver-${{ github.run_id }}
-          restore-keys: naver-
       - run: pip install openpyxl && python build.py
-        env:
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
       - uses: actions/configure-pages@v5
         with:
           enablement: true

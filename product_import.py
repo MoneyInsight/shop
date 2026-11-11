@@ -174,14 +174,6 @@ def load(data_dir, cats, discount=0.05):
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
-    # 네이버 최저가가 비어 있으면 네이버 쇼핑 검색 API로 자동 채움 (키가 있을 때)
-    try:
-        import naver_price
-        filled = naver_price.fill(products)
-        if filled:
-            warns.append(f"네이버 최저가 자동 확인: {filled}개")
-    except Exception as ex:
-        warns.append(f"네이버 최저가 자동 확인 실패: {ex}")
     keep = []
     for p in products:
         low = _num(p.get("naver_low"))
