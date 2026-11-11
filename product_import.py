@@ -155,9 +155,6 @@ def load(data_dir, cats, discount=0.05):
             base = price - disc + ship
             sale = math.ceil(base * (1 - discount) / 10) * 10
             low = _num(get(r, "naver_low"))
-            if low and sale >= low:
-                excluded.append({"name": name, "price": sale, "naver_low": low, "file": path.name})
-                continue
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"
             mc = get(r, "mall_category")
@@ -177,6 +174,22 @@ def load(data_dir, cats, discount=0.05):
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
+    # 네이버 최저가가 비어 있으면 네이버 쇼핑 검색 API로 자동 채움 (키가 있을 때)
+    try:
+        import naver_price
+        filled = naver_price.fill(products)
+        if filled:
+            warns.append(f"네이버 최저가 자동 확인: {filled}개")
+    except Exception as ex:
+        warns.append(f"네이버 최저가 자동 확인 실패: {ex}")
+    keep = []
+    for p in products:
+        low = _num(p.get("naver_low"))
+        if low and int(p["price"]) >= low:
+            excluded.append({"name": p["name"], "price": int(p["price"]), "naver_low": low, "file": "자동확인" if not p.get("_low_from_file") else p.get("_file", "")})
+        else:
+            keep.append(p)
+    products = keep
     if excluded:
         warns.append(f"네이버 최저가보다 비싸서 등록 안 한 상품 {len(excluded)}개 (관리자 페이지에서 확인)")
     return products, warns, excluded
