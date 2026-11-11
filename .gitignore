@@ -1,0 +1,4 @@
+site/
+__pycache__/
+worker/node_modules/
+worker/.wrangler/

@@ -1,0 +1,50 @@
+{
+  "shop_name": "퓨어라이프몰",
+  "slogan": "오픈마켓보다 저렴하게, 공식몰 직판가",
+  "base_url": "https://USERNAME.github.io/shop",
+  "free_shipping_over": 0,
+  "toss_client_key": "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm",
+  "naver_site_verification": "",
+  "google_site_verification": "",
+  "business": {
+    "company": "퓨어라이프",
+    "ceo": "손기범",
+    "biz_no": "000-00-00000",
+    "mail_order_no": "제0000-지역-0000호",
+    "address": "사업장 주소를 입력하세요",
+    "phone": "000-0000-0000",
+    "email": "cs@example.com",
+    "privacy_officer": "손기범",
+    "cs_hours": "평일 10:00~17:00 (점심 12:00~13:00, 주말·공휴일 휴무)"
+  },
+  "categories": [
+    {
+      "slug": "living",
+      "name": "생활용품",
+      "emoji": "🏠"
+    },
+    {
+      "slug": "tools",
+      "name": "공구·측정",
+      "emoji": "🛠️"
+    },
+    {
+      "slug": "sleep",
+      "name": "침구·베개",
+      "emoji": "🛏️"
+    },
+    {
+      "slug": "digital",
+      "name": "디지털·케이블",
+      "emoji": "🔌"
+    },
+    {
+      "slug": "food",
+      "name": "식품",
+      "emoji": "🍱"
+    }
+  ],
+  "margin_rate": 0.15,
+  "min_margin_won": 1000,
+  "worker_url": ""
+}
