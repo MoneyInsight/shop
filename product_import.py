@@ -16,10 +16,10 @@ ALIASES = {
     "stock": ["재고수량", "재고"],
     "category_id": ["카테고리ID", "카테고리코드", "카테고리 ID"],
     "category_name": ["카테고리명"],
-    "image": ["대표 이미지 주소", "대표이미지주소", "대표 이미지 파일명", "대표이미지", "대표 이미지", "대표이미지 URL", "대표 이미지 URL", "대표이미지URL"],
+    "image": ["대표 이미지 주소", "대표이미지주소", "기본이미지", "목록이미지", "이미지1", "상품이미지", "메인이미지", "대표 이미지 파일명", "대표이미지", "대표 이미지", "대표이미지 URL", "대표 이미지 URL", "대표이미지URL"],
     "images": ["추가 이미지 주소", "추가 이미지 파일명", "추가이미지", "추가 이미지 URL"],
-    "detail": ["상세 설명", "상품 상세정보", "상세설명", "상품상세", "상세정보"],
-    "code": ["상품코드", "판매자 상품코드", "판매자상품코드"],
+    "detail": ["상세 설명", "상품 상세정보", "상세페이지", "상품상세설명", "상세설명HTML", "상세내용", "상품설명", "본문", "description", "상세설명", "상품상세", "상세정보"],
+    "code": ["상품코드", "상품번호(오너클랜)", "오너클랜상품코드", "도매매상품번호", "판매자 상품코드", "판매자상품코드"],
     "product_no": ["상품번호"],
     "maker": ["제조사"],
     "brand": ["브랜드"],
@@ -33,7 +33,7 @@ ALIASES = {
     "summary": ["한 줄 소개", "한줄소개"],
     "event": ["홍보문구", "이벤트문구"],
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
-    "cost": ["공급가", "공급가격", "도매가", "매입가", "원가"],
+    "cost": ["공급가", "공급가격", "도매가", "매입가", "원가", "판매가(공급가)", "오너클랜판매가", "도매매가"],
     "cost_ship": ["공급 배송비", "공급배송비", "배송비(공급)", "택배비", "배송비"],
     "opt_name": ["옵션명"],
     "opt_values": ["옵션값"],
@@ -55,6 +55,14 @@ KEYWORDS = [
     ("season", "히터 난로 전기요 전기방석 장판 방풍 뽁뽁이 단열 가습 선풍기 방충 모기장 찜질"),
     ("sleep", "베개 이불 패드 매트 담요 쿠션 안대"),
 ]
+
+
+def clean_html(h):
+    """공급처 상세 HTML 정리: 스크립트·이벤트 속성 제거, http 이미지는 https로"""
+    h = re.sub(r"(?is)<(script|iframe|style)[^>]*>.*?</\1>", "", h)
+    h = re.sub(r"(?i)\son\w+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", "", h)
+    h = re.sub(r"(?i)javascript:", "", h)
+    return h.replace('src="http://', 'src="https://')
 
 
 def _norm(s):
@@ -179,7 +187,7 @@ def load(data_dir, cats, discount=0.05, pricing=None):
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "오픈마켓보다 5% 저렴 · 무료배송", "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
-                "detail_html": detail if detail.lstrip().startswith("<") else "",
+                "detail_html": clean_html(detail) if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
                 "options": parse_options(get, r, discount), "option_name": get(r, "opt_name").replace("\n", " / "),
                 "images": [x for x in re.split(r"[|\n,]", get(r, "images")) if x.strip().startswith("http")][:9],
