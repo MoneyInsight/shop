@@ -56,6 +56,10 @@ async function ghPut(env, path, contentB64, message, sha) {
 }
 
 // ---------- 가격 ----------
+// 공급가 = 원가(상품+배송비) × (1 + 공급사 마진 7%), 판매가 = 공급가 × (1 + 플랫폼 수수료 7%)
+function supplyFromCost(env, cost) {
+  return Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07)));
+}
 function suggestPrice(env, supply) {
   const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);
   const p = Math.max(supply * (1 + rate), supply + min);
@@ -112,13 +116,14 @@ async function sellerProduct(req, env) {
   const d = await req.json();
   const seller = d.code && (await env.SHOP.get("seller:" + d.code.toUpperCase(), "json"));
   if (!seller) return fail("입점코드가 올바르지 않아요.", 403);
-  const supply = parseInt(d.supply_price);
-  if (!d.name || !supply) return fail("상품명과 공급가는 꼭 입력해 주세요.");
+  const cost = parseInt(d.cost);
+  if (!d.name || !cost) return fail("상품명과 원가는 꼭 입력해 주세요.");
+  const supply = supplyFromCost(env, cost);
   if (!d.image) return fail("대표 이미지를 올려 주세요.");
   const id = "req_" + Date.now();
   const item = {
     id, supplier: seller.company, seller_code: seller.code,
-    name: d.name.slice(0, 80), category: d.category, supply_price: supply,
+    name: d.name.slice(0, 80), category: d.category, cost, supply_price: supply,
     shipping_fee: 0, /* 무조건 무료배송 */ normal_price: parseInt(d.normal_price) || 0,
     brand: d.brand || "", maker: d.maker || "", origin: d.origin || "",
     summary: (d.summary || "").slice(0, 80), description: (d.description || "").slice(0, 3000),

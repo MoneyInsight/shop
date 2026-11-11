@@ -11,6 +11,7 @@ id = "여기에_KV_ID"
 GITHUB_REPO = "MoneyInsight/shop"
 SITE_URL = "https://moneyinsight.github.io/shop"
 MARGIN_RATE = "0.07"
+SUPPLIER_MARGIN = "0.07"
 MIN_MARGIN = "0"
 FREE_SHIPPING_OVER = "0"
 
