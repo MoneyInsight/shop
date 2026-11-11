@@ -147,7 +147,7 @@ def build_home(ps):
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     body = search_box("./") + f'''<div class="wrap main"><div>
 <div class="card banner"><div class="b-img">🛍️</div><div class="b-txt"><strong>{e(CFG["slogan"])}</strong>
-<p>오픈마켓 수수료 13% 대신 딱 7%만. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
+<p>오픈마켓 수수료 13% 대신 딱 10%만. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
 <div class="card"><h2>🔥 지금 많이 찾는 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:4])}</div></div>
 <div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
 <div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps)}</div></div>
@@ -272,7 +272,7 @@ def build_partner_pages():
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" style="width:100%;height:48px;border:1px solid #cfd4d9;border-radius:10px;padding:0 10px;font-size:16px">{cats}</select>
 <label>원가 (원, 상품+배송비, 부가세 포함)</label><input name="cost" inputmode="numeric" id="cost-in">
-<div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">원가를 입력하면 공급가·판매가가 자동 계산돼요.<br>공급가 = 원가 + 공급사 마진 7% / 판매가 = 공급가 + 플랫폼 수수료 7% (전 상품 무료배송)</div>
+<div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">원가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 원가 + 10% 고정 (공급사 7% + 플랫폼 3%), 카드수수료는 정산금에서 차감, 전 상품 무료배송</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">

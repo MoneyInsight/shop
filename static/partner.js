@@ -41,8 +41,10 @@
   if (costIn) costIn.addEventListener("input", () => {
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
-    const supply = Math.ceil(c * 1.07), price = Math.ceil(supply * 1.07 / 10) * 10;
-    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 공급가(공급사 정산) <b>${won(supply)}</b> → 판매가 <b style="color:#e5322d">${won(price)}</b><br>오픈마켓(수수료 12%)에서 같은 마진이면 약 <b>${won(Math.ceil(supply / 0.88 / 10) * 10)}</b>`;
+    const price = Math.ceil(c * 1.10 / 10) * 10, card = Math.round(price * 0.034), settle = Math.floor(c * 1.07 - card);
+    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 판매가 <b style="color:#e5322d">${won(price)}</b> (원가+10%)<br>
+      공급사 정산금 <b>${won(settle)}</b> = 원가+7% − 카드수수료 ${won(card)}<br>
+      같은 판매가로 오픈마켓(수수료 12%)에 팔면 정산금 약 <b>${won(Math.floor(price * 0.88))}</b>`;
   });
 
   // ---------- 관리자 ----------
@@ -66,14 +68,14 @@
     $("#pending").innerHTML = d.pending.length ? d.pending.map((p) => `<div class="c-row">
       <img src="${p.image_url || ""}" alt="">
       <div><b>${esc(p.name)}</b> <small>(${esc(p.supplier)})</small><br>
-      <small>원가 ${won(p.cost)} · 공급가 ${won(p.supply_price)} · 자동 판매가 <b>${won(p.suggested_price)}</b></small><br>
+      <small>원가 ${won(p.cost)} · 정산금 ${won(p.supply_price)} · 자동 판매가 <b>${won(p.suggested_price)}</b></small><br>
       <small>${esc(p.summary)}</small></div>
       <div style="display:flex;flex-direction:column;gap:6px"><input data-price="${p.id}" value="${p.suggested_price}" style="width:110px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0 8px">
       <button class="chip on" data-act="approve-product" data-id="${p.id}">승인</button><button class="chip" data-act="reject-product" data-id="${p.id}">반려</button></div></div>`).join("") : "<p>대기 중인 상품이 없어요.</p>";
     $("#orders").innerHTML = d.orders.length ? d.orders.map((o) => `<div class="c-row" style="grid-template-columns:1fr auto">
       <div><b>${esc(o.orderId)}</b> · ${new Date(o.paidAt).toLocaleString("ko-KR")} · <b>${won(o.amount)}</b><br>
       <small>${esc(o.customer.name)} / ${esc(o.customer.phone)} / [${esc(o.customer.zip)}] ${esc(o.customer.addr)} / ${esc(o.customer.memo || "")}</small>
-      <ul style="margin:6px 0 0 18px;font-size:14px">${o.lines.map((l) => `<li>[${esc(l.supplier)}] ${esc(l.name)} × ${l.qty} — 공급가 ${won(l.supply_price * l.qty)}</li>`).join("")}</ul></div>
+      <ul style="margin:6px 0 0 18px;font-size:14px">${o.lines.map((l) => `<li>[${esc(l.supplier)}] ${esc(l.name)} × ${l.qty} — 정산금 ${won(l.supply_price * l.qty)}</li>`).join("")}</ul></div>
       <span class="chip">${esc(o.status || "결제완료")}</span></div>`).join("") : "<p>주문이 없어요.</p>";
   }
 

@@ -56,10 +56,13 @@ async function ghPut(env, path, contentB64, message, sha) {
 }
 
 // ---------- 가격 ----------
-// 공급가 = 원가(상품+배송비) × (1 + 공급사 마진 7%), 판매가 = 공급가 × (1 + 플랫폼 수수료 7%)
-function supplyFromCost(env, cost) {
-  return Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07)));
-}
+// 판매가 = 원가(상품+배송비) × (1 + 공급사 7% + 플랫폼 3%) = 원가 × 1.10 (10원 단위 올림)
+// 공급사 정산금 = 원가 × 1.07 − 카드수수료(판매가 × 3.4%)
+const priceFromCost = (env, cost) =>
+  Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07) + Number(env.MARGIN_RATE || 0.03)) / 10) * 10;
+const settleFromCost = (env, cost) =>
+  Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07)) - priceFromCost(env, cost) * Number(env.CARD_FEE || 0.034));
+function supplyFromCost(env, cost) { return settleFromCost(env, cost); }
 function suggestPrice(env, supply) {
   const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);
   const p = Math.max(supply * (1 + rate), supply + min);
@@ -128,7 +131,7 @@ async function sellerProduct(req, env) {
     brand: d.brand || "", maker: d.maker || "", origin: d.origin || "",
     summary: (d.summary || "").slice(0, 80), description: (d.description || "").slice(0, 3000),
     image: d.image, image_name: d.image_name || "image.jpg",
-    suggested_price: suggestPrice(env, supply), createdAt: new Date().toISOString(),
+    suggested_price: priceFromCost(env, cost), createdAt: new Date().toISOString(),
   };
   await env.SHOP.put("pending:" + id, JSON.stringify(item));
   return json({ message: "상품 등록 요청이 접수되었어요. 검수 후 판매가 시작돼요." });
@@ -157,7 +160,7 @@ async function approveProduct(req, env) {
   const p = await env.SHOP.get("pending:" + id, "json");
   if (!p) return fail("요청을 찾을 수 없어요.");
   const salePrice = parseInt(price) || p.suggested_price;
-  if (salePrice <= p.supply_price) return fail("판매가가 공급가보다 낮아요.");
+  if (salePrice <= p.supply_price) return fail("판매가가 공급사 정산금보다 낮아요.");
 
   const nextId = String(parseInt((await env.SHOP.get("next_id")) || "2001"));
   await env.SHOP.put("next_id", String(+nextId + 1));
