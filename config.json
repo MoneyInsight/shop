@@ -77,6 +77,12 @@
       "slug": "food",
       "name": "식품",
       "emoji": "🍱"
+    },
+    {
+      "slug": "adult",
+      "name": "성인용품",
+      "emoji": "🔞",
+      "adult": true
     }
   ],
   "margin_rate": 0.03,
@@ -88,5 +94,6 @@
     "min_margin_won": 500
   },
   "show_naver": false,
-  "show_supplier": false
+  "show_supplier": false,
+  "adult_verified": false
 }

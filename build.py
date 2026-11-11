@@ -13,6 +13,7 @@ CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 BIZ = CFG["business"]
 BASE = CFG["base_url"].rstrip("/")
 CATS = CFG["categories"]
+SHOW_CATS = [c for c in CATS if not c.get("adult") or CFG.get("adult_verified")]
 CAT_NAME = {c["slug"]: c["name"] for c in CATS}
 e = html.escape
 won = lambda n: f"{int(n):,}원"
@@ -133,7 +134,7 @@ def search_box(root, value=""):
     return f'''<section class="hero"><div class="wrap">
 <form class="search" action="{root}search.html"><span class="s-logo">땡</span>
 <input name="q" value="{e(value)}" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">🔍</button></form>
-<nav class="quick">{"".join(f'<a href="{root}category/{c["slug"]}.html"><span>{c["emoji"]}</span>{e(c["name"])}</a>' for c in CATS)}
+<nav class="quick">{"".join(f'<a href="{root}category/{c["slug"]}.html"><span>{c["emoji"]}</span>{e(c["name"])}</a>' for c in SHOW_CATS)}
 <a href="{root}search.html"><span>⋯</span>전체</a></nav></div></section>'''
 
 
@@ -159,7 +160,7 @@ def write(path, text):
 # ---------------- 페이지 ----------------
 def build_home(ps):
     chips = '<button class="chip on" data-cat="">전체</button>' + "".join(
-        f'<a class="chip" href="category/{c["slug"]}.html">{e(c["name"])}</a>' for c in CATS)
+        f'<a class="chip" href="category/{c["slug"]}.html">{e(c["name"])}</a>' for c in SHOW_CATS)
     best = [p for p in ps if p["save"]][:8] or [p for p in ps if p["badge"] == "BEST"] or ps[:4]
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
@@ -177,6 +178,12 @@ def build_home(ps):
 
 def build_categories(ps):
     for c in CATS:
+        if c.get("adult") and not CFG.get("adult_verified"):
+            body = search_box("../") + f'''<div class="wrap page"><div class="card" style="text-align:center;padding:50px 20px">
+<div style="font-size:56px">🔞</div><h2 style="justify-content:center">청소년 이용불가</h2>
+<p style="color:#666">이 카테고리는 만 19세 이상 성인인증 후 이용할 수 있어요.<br>성인인증 서비스 준비 중이에요.</p></div></div>'''
+            write(f'category/{c["slug"]}.html', layout(f'{c["name"]} - {CFG["shop_name"]}', body, "../"))
+            continue
         items = [p for p in ps if p["category"] == c["slug"]]
         grid = "".join(card(p, "../") for p in items) or '<div class="empty">상품 준비중이에요.</div>'
         body = search_box("../") + f'''<div class="wrap main"><div><div class="card">
@@ -337,7 +344,7 @@ def build_feeds(ps):
         lines.append("\t".join(clean(x) for x in row))
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
-    urls = ["", "search.html"] + [f'category/{c["slug"]}.html' for c in CATS] + [f'product/{p["id"]}.html' for p in ps]
+    urls = ["", "search.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
     today = datetime.date.today().isoformat()
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
@@ -361,6 +368,12 @@ def main():
     if tpl.exists():
         shutil.copy(tpl, OUT / "product_template.xlsx")
     ps = load_products()
+    adult_slugs = {c["slug"] for c in CATS if c.get("adult")}
+    adult = [p for p in ps if p["category"] in adult_slugs]
+    if not CFG.get("adult_verified"):
+        ps = [p for p in ps if p["category"] not in adult_slugs]
+        if adult:
+            print(f"🔞 성인용품 {len(adult)}개는 본인인증 연결 전이라 비공개")
     build_home(ps); build_categories(ps); build_products(ps)
     build_shop_pages(); build_policies(); build_partner_pages(); build_feeds(ps)
     print(f"완료: 상품 {len(ps)}개 → {OUT}")
