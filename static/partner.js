@@ -51,6 +51,49 @@
         return !low ? "" : price < low ? `<br>✅ 네이버 최저가 ${won(low)}보다 ${won(low - price)} 싸요 — 등록 가능` : `<br>❌ 네이버 최저가 ${won(low)}보다 비싸요 — 등록 불가`; })();
   });
 
+  // ---------- 엑셀 일괄 등록 (스마트스토어 양식) ----------
+  const bulkBtn = $("#bulk-btn");
+  if (bulkBtn) bulkBtn.addEventListener("click", async () => {
+    if (!API && noApi()) return;
+    const code = $("#bulk-code").value.trim(), file = $("#bulk-file").files[0], out = $("#bulk-result");
+    if (!code || !file) { alert("입점코드와 엑셀 파일을 넣어 주세요."); return; }
+    if (!window.XLSX) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
+    const norm = (s) => String(s).replace(/\s+/g, "");
+    const h = rows.findIndex((r) => r.map(norm).includes("상품명"));
+    if (h < 0) { alert("'상품명' 열을 찾지 못했어요. 스마트스토어 양식인지 확인해 주세요."); return; }
+    const head = rows[h].map(norm);
+    const col = (...names) => { for (const n of names) { const i = head.indexOf(norm(n)); if (i >= 0) return i; } return -1; };
+    const C = { name: col("상품명"), price: col("판매가"), img: col("대표 이미지 파일명", "대표이미지", "대표 이미지 URL", "대표이미지 URL"), detail: col("상품 상세정보", "상세설명"),
+      brand: col("브랜드"), maker: col("제조사"), origin: col("원산지 직접입력", "원산지"), shipType: col("배송비 유형"), ship: col("기본배송비"),
+      disc: col("즉시할인 값(기본할인)", "즉시할인 값"), discUnit: col("즉시할인 단위(기본할인)", "즉시할인 단위"), cat: col("쇼핑몰카테고리"), low: col("네이버 최저가", "네이버최저가") };
+    const num = (v) => parseInt(String(v).replace(/[^0-9.-]/g, "")) || 0;
+    const v = (r, i) => (i >= 0 ? String(r[i] ?? "").trim() : "");
+    const { cats = [], keywords = [] } = window.SHOP_CATS || {};
+    const guess = (name, c) => { const byName = cats.find((x) => x.name === c || x.slug === c); if (byName) return byName.slug;
+      for (const [slug, words] of keywords) if (words.split(" ").some((w) => name.includes(w))) return slug; return "living"; };
+    const list = rows.slice(h + 1).filter((r) => v(r, C.name) && num(v(r, C.price)));
+    if (!list.length) { alert("등록할 상품이 없어요. 상품명과 판매가를 확인해 주세요."); return; }
+    bulkBtn.disabled = true; out.innerHTML = "";
+    let okN = 0;
+    for (const [i, r] of list.entries()) {
+      const price = num(v(r, C.price));
+      let disc = num(v(r, C.disc)); if (disc && v(r, C.discUnit).includes("%")) disc = Math.round(price * disc / 100);
+      const ship = v(r, C.shipType).includes("무료") ? 0 : num(v(r, C.ship));
+      const body = { code, name: v(r, C.name), category: guess(v(r, C.name), v(r, C.cat)), market_price: price - disc + ship, naver_low: num(v(r, C.low)),
+        image: v(r, C.img), brand: v(r, C.brand), maker: v(r, C.maker), origin: v(r, C.origin), description: v(r, C.detail), summary: "" };
+      bulkBtn.textContent = `등록 중… ${i + 1}/${list.length}`;
+      let msg;
+      try { const res = await fetch(API + "/seller/product", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const d = await res.json(); msg = res.ok ? "✅ 접수" : "❌ " + (d.message || "오류"); if (res.ok) okN++; }
+      catch (e) { msg = "❌ 서버 연결 실패"; }
+      out.insertAdjacentHTML("beforeend", `<div style="padding:4px 0;border-bottom:1px dashed #eee">${esc(body.name)} — ${esc(msg)}</div>`);
+    }
+    out.insertAdjacentHTML("afterbegin", `<b>총 ${list.length}개 중 ${okN}개 접수 완료</b> (검수 후 판매 시작)`);
+    bulkBtn.disabled = false; bulkBtn.textContent = "엑셀 상품 등록 요청";
+  });
+
   // ---------- 관리자 ----------
   const enter = $("#admin-enter");
   if (!enter) return;

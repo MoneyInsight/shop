@@ -296,8 +296,16 @@ def build_partner_pages():
 <label>한 줄 소개</label><input name="summary">
 <label>상세 설명 (줄마다 한 가지 특징)</label><textarea name="description" style="height:120px"></textarea>
 <button class="btn btn-green" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
+<div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록 (스마트스토어 양식)</h2>
+<p style="color:#555;font-size:15px">스마트스토어 '상품 일괄등록' 엑셀을 그대로 올려도 돼요. 열 이름(상품명·판매가·대표 이미지·기본배송비·네이버 최저가 등)으로 읽어요.<br>
+대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요. 네이버 최저가보다 비싼 상품은 등록되지 않아요.</p>
+<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>📥 상품등록 양식 내려받기 (.xlsx)</a>
+<label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
+<label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
+<button class="btn btn-green" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
+<div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
 </div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
-           scripts='<script src="partner.js"></script>')
+           scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("smartstore_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="card form" id="admin-login"><h2>🔐 관리자</h2><label>관리자 비밀번호</label><input id="admin-pw" type="password">
 <button class="btn btn-dark" style="margin-top:12px" id="admin-enter">들어가기</button></div>
 <div id="admin-body" style="display:none">
@@ -341,6 +349,9 @@ def main():
     if (ROOT / "uploads").exists():
         shutil.copytree(ROOT / "uploads", OUT / "uploads")
     (OUT / ".nojekyll").write_text("")
+    tpl = ROOT / "data" / "상품등록_스마트스토어양식.xlsx"
+    if tpl.exists():
+        shutil.copy(tpl, OUT / "product_template.xlsx")
     ps = load_products()
     build_home(ps); build_categories(ps); build_products(ps)
     build_shop_pages(); build_policies(); build_partner_pages(); build_feeds(ps)

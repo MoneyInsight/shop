@@ -125,13 +125,14 @@ async function sellerProduct(req, env) {
   if (!naverLow) return fail("네이버 최저가를 입력해 주세요. (네이버쇼핑에서 같은 상품 최저가)");
   if (price >= naverLow) return fail(`판매가 ${price.toLocaleString()}원이 네이버 최저가 ${naverLow.toLocaleString()}원보다 비싸서 등록할 수 없어요. 오픈마켓 판매가를 낮춰 주세요.`);
   if (!d.image) return fail("대표 이미지를 올려 주세요.");
+  if (!/^data:image\/|^https?:\/\//.test(d.image)) return fail("대표 이미지는 파일 또는 https:// 주소여야 해요.");
   const id = "req_" + Date.now();
   const item = {
     id, supplier: seller.company, seller_code: seller.code,
     name: d.name.slice(0, 80), category: d.category, market_price: market, naver_low: naverLow, supply_price: supply,
     shipping_fee: 0, /* 무조건 무료배송 */ normal_price: parseInt(d.normal_price) || 0,
     brand: d.brand || "", maker: d.maker || "", origin: d.origin || "",
-    summary: (d.summary || "").slice(0, 80), description: (d.description || "").slice(0, 3000),
+    summary: (d.summary || "").slice(0, 80), description: String(d.description || "").replace(/<[^>]+>/g, " ").replace(/[ \t]+/g, " ").slice(0, 3000),
     image: d.image, image_name: d.image_name || "image.jpg",
     suggested_price: price, createdAt: new Date().toISOString(),
   };
@@ -169,12 +170,15 @@ async function approveProduct(req, env) {
   const nextId = String(parseInt((await env.SHOP.get("next_id")) || "2001"));
   await env.SHOP.put("next_id", String(+nextId + 1));
 
-  // 1) 이미지 업로드
-  const m = p.image.match(/^data:image\/(\w+);base64,(.+)$/);
-  if (!m) return fail("이미지 형식이 올바르지 않아요.");
-  const ext = m[1] === "jpeg" ? "jpg" : m[1];
-  const imgPath = `uploads/p${nextId}.${ext}`;
-  await ghPut(env, imgPath, m[2], `상품 이미지 추가 ${nextId}`);
+  // 1) 이미지: 주소면 그대로 쓰고, 파일이면 깃허브에 업로드
+  let imgPath = p.image;
+  if (!/^https?:\/\//.test(p.image)) {
+    const m = p.image.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!m) return fail("이미지 형식이 올바르지 않아요.");
+    const ext = m[1] === "jpeg" ? "jpg" : m[1];
+    imgPath = `uploads/p${nextId}.${ext}`;
+    await ghPut(env, imgPath, m[2], `상품 이미지 추가 ${nextId}`);
+  }
 
   // 2) products.csv에 한 줄 추가
   const file = await gh(env, "contents/data/products.csv");
