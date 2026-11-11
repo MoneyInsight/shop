@@ -4,6 +4,7 @@
   const CFG = window.SHOP_CFG || {};
   const won = (n) => Number(n).toLocaleString("ko-KR") + "원";
   const $ = (s, el = document) => el.querySelector(s);
+  const img = (u) => (/^https?:\/\//.test(u || "") ? u : ROOT + (u || ""));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ---------- 저장소 ----------
@@ -58,7 +59,7 @@
   function cardHTML(p) {
     const rate = p.normal_price > p.price ? Math.round((1 - p.price / p.normal_price) * 100) : 0;
     return `<a class="p-card" href="${ROOT}product/${p.id}.html">
-      <div class="p-thumb"><img src="${ROOT}${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">${p.badge ? `<span class="badge ${esc(p.badge)}">${esc(p.badge)}</span>` : ""}</div>
+      <div class="p-thumb"><img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy">${p.badge ? `<span class="badge ${esc(p.badge)}">${esc(p.badge)}</span>` : ""}</div>
       ${p.event ? `<div class="p-event">${esc(p.event)}</div>` : ""}
       <div class="p-name">${esc(p.name)}</div>
       <div class="p-price">${rate ? `<span class="rate">${rate}%</span>` : ""}${won(p.price)}${rate ? `<del>${won(p.normal_price)}</del>` : ""}</div>
@@ -148,7 +149,7 @@
       }
       const { lines, subtotal, shipping, total } = calc(cart, await loadProducts());
       box.innerHTML = lines.map((l, i) => `<div class="c-row">
-        <img src="${ROOT}${esc(l.image)}" alt="">
+        <img src="${esc(img(l.image))}" alt="">
         <div><a class="nm" href="${ROOT}product/${l.id}.html">${esc(l.name)}</a>
           <div style="color:#888;font-size:14px">${won(l.price)} · ${l.shipping_fee ? "배송비 " + won(l.shipping_fee) : "무료배송"}</div>
           <div class="qty" style="margin-top:8px"><button data-a="-" data-k="${i}">−</button><input value="${l.qty}" readonly><button data-a="+" data-k="${i}">+</button></div>
@@ -182,7 +183,7 @@
     if (!cart.length) { location.href = ROOT + "cart.html"; return; }
     const { lines, subtotal, shipping, total } = calc(cart, await loadProducts());
 
-    $("#order-items").innerHTML = lines.map((l) => `<div class="c-row"><img src="${ROOT}${esc(l.image)}" alt=""><div><div class="nm">${esc(l.name)}</div><div style="color:#888;font-size:14px">${l.qty}개</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");
+    $("#order-items").innerHTML = lines.map((l) => `<div class="c-row"><img src="${esc(img(l.image))}" alt=""><div><div class="nm">${esc(l.name)}</div><div style="color:#888;font-size:14px">${l.qty}개</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");
     $("#order-sum").innerHTML = `<div class="sum"><div><span>상품금액</span><span>${won(subtotal)}</span></div><div><span>배송비</span><span>${won(shipping)}</span></div><div class="total"><span>최종 결제금액</span><b>${won(total)}</b></div></div>`;
 
     // 주소 검색 (다음 우편번호)
