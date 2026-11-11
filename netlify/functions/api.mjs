@@ -22,6 +22,7 @@ export default async (req) => {
     SHOP: kv(),
     TOSS_SECRET_KEY: e("TOSS_SECRET_KEY", "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6"),
     ADMIN_PASSWORD: e("ADMIN_PASSWORD"),
+    NOTIFY_WEBHOOK: e("NOTIFY_WEBHOOK"),
     GITHUB_TOKEN: e("GITHUB_TOKEN"),
     GITHUB_REPO: e("GITHUB_REPO", "MoneyInsight/shop"),
     SITE_URL: e("SITE_URL", "https://moneyinsight.github.io/shop"),

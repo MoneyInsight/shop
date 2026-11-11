@@ -81,8 +81,26 @@ def rate(p):
     return round((1 - p["price"] / p["normal_price"]) * 100) if p["normal_price"] > p["price"] else 0
 
 
+# ---------------- 아이콘 ----------------
+def ico(path, extra=""):
+    return f'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"{extra}>{path}</svg>'
+
+I_SEARCH = ico('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>')
+I_HEART = ico('<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/>')
+I_BAG = ico('<path d="M5.5 8h13l-1 12h-11z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>')
+I_BOX = ico('<path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>')
+I_HOME = ico('<path d="M4 11l8-7 8 7v8.5h-5.5V14h-5v5.5H4z"/>')
+I_MENU = ico('<path d="M4 7h16M4 12h16M4 17h16"/>')
+I_TRUCK = ico('<path d="M2.5 6.5h11v10h-11zM13.5 10h4l3 3v3.5h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>')
+I_SHIELD = ico('<path d="M12 3.5l7 2.5v5.5c0 4.2-3 7.3-7 9-4-1.7-7-4.8-7-9V6z"/><path d="M9 12l2.2 2.200L15.2 10"/>')
+I_RETURN = ico('<path d="M4 9h11a4.5 4.5 0 0 1 0 9H8"/><path d="M7.5 5.500L4 9l3.5 3.5"/>')
+I_TAG = ico('<path d="M3.5 12.500V4.500h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.3"/>')
+I_CHAT = ico('<path d="M4 5.500h16v11H10l-4.5 3.500v-3.500H4z"/>')
+I_PHONE = ico('<path d="M6.5 3.500h3l1.5 4-2 1.500a11 11 0 0 0 6 6l1.5-2 4 1.500v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 5.500a2 2 0 0 1 2-2z"/>')
+
+
 # ---------------- 공통 레이아웃 ----------------
-def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts="", og_img=""):
+def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts="", og_img="", active=""):
     desc = desc or CFG["slogan"]
     verify = ""
     if CFG.get("naver_site_verification"):
@@ -90,31 +108,47 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
     public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name")}
+    name = e(CFG["shop_name"])
+    on = lambda c: ' class="on"' if active == c["slug"] else ""
+    gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
+    logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈">{name}<i></i></a>'
     return f'''<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)}</title><meta name="description" content="{e(desc)}">
 {f'<link rel="canonical" href="{canonical}">' if canonical else ""}
 <meta property="og:type" content="website"><meta property="og:title" content="{e(title)}">
-<meta property="og:description" content="{e(desc)}"><meta property="og:site_name" content="{e(CFG["shop_name"])}">
+<meta property="og:description" content="{e(desc)}"><meta property="og:site_name" content="{name}">
 {f'<meta property="og:image" content="{og_img}">' if og_img else ""}
-{verify}
+{verify}<meta name="theme-color" content="#16171a">
+<link rel="icon" href="{root}favicon.svg" type="image/svg+xml"><link rel="manifest" href="{root}manifest.json">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="{root}style.css">{extra_head}
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
-<header class="topbar"><div class="wrap">
-<a class="logo" href="{root}index.html"><b>땡</b>{e(CFG["shop_name"])}</a>
-<div class="top-icons"><a class="icon-btn" href="{root}search.html" title="전체상품">☰</a>
-<a class="icon-btn" href="{root}cart.html" title="장바구니">🛒<span class="cart-count" style="display:none">0</span></a></div>
+<div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
+<nav><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<header class="head"><div class="wrap">{logo}
+<form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
+<div class="head-icons"><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
+<a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
+<a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
 </div></header>
-{body}
+<nav class="gnb" aria-label="카테고리"><div class="wrap"><a class="all" href="{root}search.html">전체 상품</a>{gnb}</div></nav>
+<main>{body}</main>
 <footer><div class="wrap">
-<div class="links"><a href="{root}terms.html">이용약관</a><a href="{root}privacy.html"><b>개인정보처리방침</b></a><a href="{root}refund.html">교환·환불 안내</a><a href="{root}seller.html">공급사 입점</a></div>
-<p>상호 {e(BIZ["company"])} | 대표 {e(BIZ["ceo"])} | 사업자등록번호 {e(BIZ["biz_no"])} | 통신판매업신고 {e(BIZ["mail_order_no"])}<br>
-주소 {e(BIZ["address"])} | 고객센터 {e(BIZ["phone"])} | 이메일 {e(BIZ["email"])} | 개인정보보호책임자 {e(BIZ["privacy_officer"])}<br>
-고객님의 안전거래를 위해 결제 시 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
-© {datetime.date.today().year} {e(CFG["shop_name"])}. All rights reserved.</p>
+<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p></div>
+<div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
+<div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
+<div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li></ul></div></div>
+<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}<br>
+주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])}<br>
+고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
+© {datetime.date.today().year} {name}. All rights reserved.</p>
 </div></footer>
+<nav class="tabbar" aria-label="하단 메뉴"><a href="{root}index.html">{I_HOME}홈</a><a href="{root}search.html">{I_MENU}전체</a><a href="{root}orders.html">{I_BOX}주문조회</a>
+<a href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a><a href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></nav>
 {scripts}<script src="{root}app.js"></script>
 </body></html>'''
 
@@ -122,33 +156,12 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 def card(p, root):
     r = rate(p)
     img = p["image"] if p["image"].startswith("http") else root + p["image"]
-    return f'''<a class="p-card" data-cat="{p["category"]}" href="{root}product/{p["id"]}.html">
-<div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}" loading="lazy">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>
-{f'<div class="p-event">네이버 최저가보다 {won(p["save"])}↓</div>' if p["save"] else (f'<div class="p-event">{e(p["event"])}</div>' if p["event"] else "")}
-<div class="p-name">{e(p["name"])}</div>
-<div class="p-price">{f'<span class="rate">{r}%</span>' if r else ""}{won(p["price"])}{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
+    return f'''<a class="p-card" href="{root}product/{p["id"]}.html">
+<div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}" loading="lazy">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}
+<button class="wish-btn" data-wish="{e(p["id"])}" aria-label="찜하기">{I_HEART}</button></div>
+<div class="p-brand">{e(p["brand"])}</div><div class="p-name">{e(p["name"])}</div>
+<div class="p-price">{f'<span class="rate">{r}%</span>' if r else ""}<span>{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <div class="p-ship">{"배송비 " + won(p["shipping_fee"]) if p["shipping_fee"] else "무료배송"}</div></a>'''
-
-
-def search_box(root, value=""):
-    return f'''<section class="hero"><div class="wrap">
-<form class="search" action="{root}search.html"><span class="s-logo">땡</span>
-<input name="q" value="{e(value)}" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">🔍</button></form>
-<nav class="quick">{"".join(f'<a href="{root}category/{c["slug"]}.html"><span>{c["emoji"]}</span>{e(c["name"])}</a>' for c in SHOW_CATS)}
-<a href="{root}search.html"><span>⋯</span>전체</a></nav></div></section>'''
-
-
-def side(root):
-    return f'''<aside class="side">
-<div class="card login-box"><div class="hello">반가워요 👋</div><p>회원가입 없이 바로 주문할 수 있어요.</p>
-<div id="mini-cart"></div></div>
-<div class="card why"><h2>왜 {e(CFG["shop_name"])}인가요?</h2><ul>
-<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>🚚 전 상품 무료배송</li>
-<li>🔒 토스페이먼츠 안전결제</li><li>📦 공급사 직배송으로 빠른 처리</li></ul></div>
-<div class="card cs-box"><h2>고객센터</h2><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}</p><p>{e(BIZ["email"])}</p></div>
-<div class="card"><h2>공급사 입점 모집</h2><p style="color:#666;font-size:14px;margin-bottom:12px">좋은 상품을 가진 공급사라면 누구나 상품을 올릴 수 있어요.</p>
-<a class="btn btn-line" href="{root}seller.html">입점 신청하기</a></div>
-</aside>'''
 
 
 def write(path, text):
@@ -157,113 +170,214 @@ def write(path, text):
     f.write_text(text, encoding="utf-8")
 
 
+SORT_BAR = '''<div class="sort" role="group" aria-label="정렬"><button data-sort="rec" class="on">추천순</button><button data-sort="low">낮은 가격순</button>
+<button data-sort="high">높은 가격순</button><button data-sort="sale">할인율순</button><button data-sort="name">이름순</button></div>'''
+
+
+def listing(title, mode, items, root, cat="", count=None):
+    """목록 틀: 첫 화면은 미리 그려 두고(검색엔진용), 정렬·페이지는 app.js가 처리"""
+    n = len(items) if count is None else count
+    return f'''<div class="wrap" id="listing" data-mode="{mode}" data-cat="{cat}">
+<div class="list-head"><h1 id="list-title">{e(title)}<span class="cnt" id="list-count">{n:,}개</span></h1>{SORT_BAR}</div>
+<div class="grid" id="list-grid">{"".join(card(p, root) for p in items[:40])}</div><div class="pager" id="pager"></div></div>'''
+
+
 # ---------------- 페이지 ----------------
 def build_home(ps):
-    chips = '<button class="chip on" data-cat="">전체</button>' + "".join(
-        f'<a class="chip" href="category/{c["slug"]}.html">{e(c["name"])}</a>' for c in SHOW_CATS)
-    best = [p for p in ps if p["save"]][:8] or [p for p in ps if p["badge"] == "BEST"] or ps[:4]
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
-    body = search_box("./") + f'''<div class="wrap main"><div>
-<div class="card banner"><div class="b-img">🛍️</div><div class="b-txt"><strong>{e(CFG["slogan"])}</strong>
-<p>오픈마켓 수수료 거품을 뺀 공급사 직거래 가격. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
-<div class="card"><h2>{"💚 네이버 최저가보다 더 싼 상품" if any(p["save"] for p in ps) else "🔥 추천 상품"}</h2><div class="grid">{"".join(card(p, "./") for p in best[:8])}</div></div>
-<div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
-<div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps[:60])}</div>
-<a class="btn btn-line" style="margin-top:18px" href="search.html">전체 상품 {len(ps):,}개 보기 ›</a></div>
-</div>{side("./")}</div>'''
-    write("index.html", layout(f'{CFG["shop_name"]} - {CFG["slogan"]}', body, "./", canonical=BASE + "/",
+    by_cat = {c["slug"]: [p for p in ps if p["category"] == c["slug"]] for c in SHOW_CATS}
+    art = [p for p in ps if p["image"].startswith("http")][:4] or ps[:4]
+    tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{len(by_cat[c["slug"]]):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
+    top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
+    sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
+<div class="grid">{"".join(card(p, "./") for p in by_cat[c["slug"]][:4])}</div></div></section>''' for c in top)
+    body = f'''<section class="hero"><div class="wrap"><div><small>THE HONEST PRICE</small>
+<h1>좋은 물건을,<br>군더더기 없는 가격으로.</h1>
+<p>유통 단계의 수수료를 덜어내고 꼭 필요한 만큼만 남겼습니다. 모든 상품은 무료로 배송해 드립니다.</p>
+<a class="btn" href="search.html">전체 상품 보기</a></div>
+<div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
+<div class="benefits"><div class="wrap">
+<div>{I_TRUCK}<p><b>전 상품 무료배송</b><span>금액과 상관없이 배송비 0원</span></p></div>
+<div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>
+<div>{I_SHIELD}<p><b>안전 결제</b><span>토스페이먼츠 구매안전 서비스</span></p></div>
+<div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div></div>
+<section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
+<div class="grid">{"".join(card(p, "./") for p in ps[:8])}</div></div></section>
+<section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
+{sections}
+<section class="section" id="recent-box" style="display:none"><div class="wrap"><div class="sec-head"><div><h2>최근 본 상품</h2></div></div><div class="grid" id="recent-grid"></div></div></section>
+<div class="section last"></div>'''
+    write("index.html", layout(f'{CFG["shop_name"]} — {CFG["slogan"]}', body, "./", canonical=BASE + "/",
           extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
 
 
 def build_categories(ps):
     for c in CATS:
         if c.get("adult") and not CFG.get("adult_verified"):
-            body = search_box("../") + f'''<div class="wrap page"><div class="card" style="text-align:center;padding:50px 20px">
-<div style="font-size:56px">🔞</div><h2 style="justify-content:center">청소년 이용불가</h2>
-<p style="color:#666">이 카테고리는 만 19세 이상 성인인증 후 이용할 수 있어요.<br>성인인증 서비스 준비 중이에요.</p></div></div>'''
-            write(f'category/{c["slug"]}.html', layout(f'{c["name"]} - {CFG["shop_name"]}', body, "../"))
+            body = f'''<div class="wrap page"><div class="done-box"><div class="mark" style="font-weight:700">19</div><h2>청소년 이용불가</h2>
+<p>이 카테고리는 만 19세 이상 성인인증 후 이용하실 수 있습니다.<br>성인인증 서비스를 준비하고 있습니다.</p></div></div>'''
+            write(f'category/{c["slug"]}.html', layout(f'{c["name"]} — {CFG["shop_name"]}', body, "../"))
             continue
         items = [p for p in ps if p["category"] == c["slug"]]
-        grid = "".join(card(p, "../") for p in items) or '<div class="empty">상품 준비중이에요.</div>'
-        body = search_box("../") + f'''<div class="wrap main"><div><div class="card">
-<div class="crumb"><a href="../index.html">홈</a> › {e(c["name"])}</div>
-<h2>{c["emoji"]} {e(c["name"])} <small>{len(items)}개</small></h2><div class="grid">{grid}</div></div></div>{side("../")}</div>'''
-        write(f'category/{c["slug"]}.html', layout(f'{c["name"]} - {CFG["shop_name"]}', body, "../",
-              desc=f'{CFG["shop_name"]} {c["name"]} 상품 모음', canonical=f'{BASE}/category/{c["slug"]}.html'))
+        body = f'<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / {e(c["name"])}</div></div>' + listing(c["name"], "cat", items, "../", c["slug"])
+        write(f'category/{c["slug"]}.html', layout(f'{c["name"]} — {CFG["shop_name"]}', body, "../", active=c["slug"],
+              desc=f'{CFG["shop_name"]} {c["name"]} 상품 {len(items)}개. 전 상품 무료배송.', canonical=f'{BASE}/category/{c["slug"]}.html'))
 
 
 def build_products(ps):
+    by_cat = {}
+    for p in ps:
+        by_cat.setdefault(p["category"], []).append(p)
     for p in ps:
         r = rate(p)
         img = p["image"] if p["image"].startswith("http") else "../" + p["image"]
         url = f'{BASE}/product/{p["id"]}.html'
-        ld = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "image": [abs_img(p)],
+        ld = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "image": [abs_img(p)] + p["images"],
               "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
               "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
-                         "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition"}}
-        desc_html = "".join(f'<img src="{e(u)}" alt="" loading="lazy" style="margin:0 auto 10px;max-width:100%">' for u in p["images"]) + "".join(f"<p>✔ {e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
-        if not desc_html:
-            desc_html = '<p style="color:#888">상세 정보 준비중이에요.</p>' 
-        body = f'''<div class="wrap page"><div class="crumb"><a href="../index.html">홈</a> › <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
-<div class="card"><div class="detail">
-<div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>
-<div><div class="d-brand">{e(p["brand"])}</div><h1 class="d-name">{e(p["name"])}</h1><p class="d-summary">{e(p["summary"])}</p>
-<div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}
-{f'<div><span class="d-save">💚 네이버 최저가 {won(p["naver_low"])}보다 {won(p["save"])} 저렴</span></div>' if p["save"] else ""}{f'<div><span class="d-save">🎁 {e(p["event"])}</span></div>' if p["event"] else ""}</div>
-<dl class="d-info"><dt>배송비</dt><dd>{"무료배송" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
-<dt>배송</dt><dd>영업일 1~3일 내 출발</dd><dt>원산지</dt><dd>{e(p["origin"] or "상세설명 참조")}</dd></dl>
-{('<label class="opt-label">' + e(p["option_name"]) + '</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(f'<option value="{i}">{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + '</select>') if p["options"] else ""}
-<div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric"><button id="plus" aria-label="더하기">+</button></div>
-<div class="d-total"><span>총 상품금액</span><strong id="d-total">{won(p["price"])}</strong></div>
-<div class="d-btns" id="buy" data-id="{p["id"]}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
-<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-green" id="buy-now">바로 구매</button></div>
-</div></div></div>
-
-<div class="d-desc"><div class="card"><h2>상품 상세정보</h2>{desc_html}</div>
-<div class="card"><h2>상품정보 제공고시</h2><table class="notice-table">
-<tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "-")}</td></tr>
-<tr><th>제조자/수입자</th><td>{e(p["maker"] or "상세설명 참조")}</td></tr><tr><th>원산지</th><td>{e(p["origin"] or "상세설명 참조")}</td></tr>
-<tr><th>A/S 책임자와 전화번호</th><td>{e(BIZ["company"])} {e(BIZ["phone"])}</td></tr></table></div>
-<div class="card"><h2>배송·교환·환불</h2><p style="font-size:15px;color:#444">단순 변심 교환·반품은 상품 수령 후 7일 이내 가능하며 왕복 배송비는 고객님 부담입니다. 상품 불량·오배송은 무료로 처리해 드립니다. <a href="../refund.html" style="text-decoration:underline">자세히 보기</a></p></div>
-</div></div>'''
-        write(f'product/{p["id"]}.html', layout(f'{p["name"]} - {CFG["shop_name"]}', body, "../",
-              desc=f'{p["name"]} {won(p["price"])} {p["summary"]}', canonical=url, og_img=abs_img(p),
+                         "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition",
+                         "shippingDetails": {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": p["shipping_fee"], "currency": "KRW"}}}}
+        gallery = [img] + p["images"]
+        thumbs = ('<div class="thumbs">' + "".join(f'<button data-src="{e(u)}" class="{"on" if i == 0 else ""}" aria-label="사진 {i + 1}"><img src="{e(u)}" alt="" loading="lazy"></button>' for i, u in enumerate(gallery)) + "</div>") if len(gallery) > 1 else ""
+        desc = "".join(f"<p>{e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
+        if not desc:
+            desc = f'<img src="{e(img)}" alt="{e(p["name"])}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">{e(p["name"])}</p><p class="muted">자세한 상품 정보는 고객센터로 문의해 주시면 안내해 드리겠습니다.</p>'
+        opts = ""
+        if p["options"]:
+            opts = f'<label class="opt-label" for="opt">{e(p["option_name"])}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(
+                f'<option value="{i}">{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
+        sib = by_cat[p["category"]]
+        k = sib.index(p)
+        related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
+        body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
+<div class="detail">
+<div class="gallery"><div class="main-img"><img id="main-img" src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>{thumbs}</div>
+<div class="d-info-box">{f'<div class="d-brand">{e(p["brand"])}</div>' if p["brand"] else ""}<h1 class="d-name">{e(p["name"])}</h1>
+{f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
+<div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
+<dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
+<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고</dd><dt>원산지</dt><dd>{e(p["origin"] or "상세설명 참조")}</dd></dl>
+{opts}
+<div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
+<div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
+<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
+<button class="wish-toggle" aria-label="찜하기">{I_HEART}</button><button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button></div>
+<div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
+</div></div>
+<nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
+<section class="tab-sec" id="info"><div class="detail-body">{desc}</div>
+<h3 style="margin-top:56px">상품정보 제공고시</h3><table class="notice-table">
+<tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "상세설명 참조")}</td></tr>
+<tr><th>제조자 / 수입자</th><td>{e(p["maker"] or "상세설명 참조")}</td></tr><tr><th>원산지</th><td>{e(p["origin"] or "상세설명 참조")}</td></tr>
+<tr><th>품질보증 기준</th><td>관련 법 및 소비자분쟁해결기준에 따름</td></tr>
+<tr><th>A/S 책임자와 전화번호</th><td>{e(BIZ["company"])} {e(BIZ["phone"])}</td></tr></table></section>
+<section class="tab-sec" id="review"><h3>리뷰 <button class="btn btn-line sm" id="rv-open">리뷰 쓰기</button></h3>
+<div class="mini-form" id="rv-form"><p class="muted">상품을 구매하신 분만 작성하실 수 있습니다. 주문번호와 주문 시 입력한 연락처를 입력해 주세요.</p>
+<div class="star-pick" aria-label="별점">{"".join(f'<button data-v="{i}" aria-label="{i}점">★</button>' for i in range(1, 6))}</div>
+<div class="form"><div class="row"><input id="rv-order" placeholder="주문번호" aria-label="주문번호"><input id="rv-phone" placeholder="연락처" inputmode="tel" aria-label="연락처"></div>
+<textarea id="rv-text" placeholder="상품은 어떠셨나요? (5자 이상)" style="margin-top:8px" aria-label="리뷰 내용"></textarea></div>
+<button class="btn btn-dark sm" id="rv-submit" style="margin-top:10px">등록하기</button></div>
+<div id="rv-box"><p class="empty">리뷰를 불러오고 있습니다.</p></div></section>
+<section class="tab-sec" id="qna"><h3>상품 문의 <button class="btn btn-line sm" id="qa-open">문의하기</button></h3>
+<div class="mini-form" id="qa-form"><div class="form"><div class="row"><input id="qa-name" placeholder="이름" aria-label="이름"><input id="qa-contact" placeholder="연락처 (답변 알림용, 선택)" aria-label="연락처"></div>
+<textarea id="qa-text" placeholder="궁금하신 점을 남겨 주세요. (5자 이상)" style="margin-top:8px" aria-label="문의 내용"></textarea>
+<label class="check"><input type="checkbox" id="qa-secret">비밀글로 문의하기</label></div>
+<button class="btn btn-dark sm" id="qa-submit">등록하기</button></div>
+<div id="qa-box"></div></section>
+<section class="tab-sec" id="guide"><h3>배송·교환·반품 안내</h3><table class="notice-table">
+<tr><th>배송</th><td>결제 확인 후 영업일 기준 1~3일 안에 출고되며, 출고 후 1~2일 안에 받아보실 수 있습니다. 전 상품 무료배송입니다. (도서·산간 지역은 추가 운임이 발생할 수 있습니다.)</td></tr>
+<tr><th>교환·반품 기간</th><td>단순 변심: 상품을 받으신 날부터 7일 이내<br>상품 불량·오배송: 받으신 날부터 3개월 이내 또는 그 사실을 안 날부터 30일 이내</td></tr>
+<tr><th>교환·반품 비용</th><td>단순 변심은 왕복 배송비를 고객님께서 부담하시며, 상품 불량·오배송은 판매자가 부담합니다.</td></tr>
+<tr><th>교환·반품이 어려운 경우</th><td>고객님의 책임으로 상품이 훼손된 경우, 사용하거나 일부 소비하여 가치가 현저히 떨어진 경우, 포장을 개봉하여 재판매가 어려운 경우</td></tr>
+<tr><th>신청 방법</th><td><a href="../orders.html" style="text-decoration:underline">주문·배송 조회</a>에서 주문번호와 연락처를 입력하신 뒤 신청하실 수 있습니다.</td></tr></table></section>
+{f'<section class="section last"><div class="sec-head"><div><h2>함께 보면 좋은 상품</h2></div><a href="../category/{p["category"]}.html">{e(p["category_name"])} 더 보기</a></div><div class="grid">{"".join(card(x, "../") for x in related)}</div></section>' if related else '<div class="section last"></div>'}
+</div>'''
+        write(f'product/{p["id"]}.html', layout(f'{p["name"]} — {CFG["shop_name"]}', body, "../", active=p["category"],
+              desc=f'{p["name"]} {won(p["price"])} 무료배송. {p["summary"]}'.strip(), canonical=url, og_img=abs_img(p),
               extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
 
 
-def simple(path, title, inner, scripts="", root="./"):
-    write(path, layout(f'{title} - {CFG["shop_name"]}', f'<div class="wrap page">{inner}</div>', root, scripts=scripts))
+def simple(path, title, inner, scripts="", root="./", heading=True):
+    h = f'<h1 class="page-title">{e(title)}</h1>' if heading else ""
+    write(path, layout(f'{title} — {CFG["shop_name"]}', f'<div class="wrap page">{h}{inner}</div>', root, scripts=scripts))
+
+
+FAQ = [
+    ("회원가입을 해야 주문할 수 있나요?", "아니요. 회원가입 없이 바로 주문하실 수 있습니다. 주문 후에는 주문번호와 연락처로 배송 상황을 확인하실 수 있습니다."),
+    ("배송비는 얼마인가요?", "모든 상품은 무료로 배송해 드립니다. 다만 도서·산간 지역은 택배사 정책에 따라 추가 운임이 발생할 수 있습니다."),
+    ("배송은 얼마나 걸리나요?", "결제 확인 후 영업일 기준 1~3일 안에 출고되며, 출고 후 보통 1~2일 안에 받아보실 수 있습니다. 여러 상품을 함께 주문하시면 상품별로 따로 배송될 수 있습니다."),
+    ("주문을 취소하고 싶어요.", "주문·배송 조회에서 직접 취소하실 수 있습니다. 상품 준비 전에는 즉시 취소·환불되며, 이미 출고된 경우에는 반품으로 진행됩니다."),
+    ("교환이나 반품은 어떻게 하나요?", "상품을 받으신 날부터 7일 이내에 주문·배송 조회에서 신청하실 수 있습니다. 단순 변심은 왕복 배송비를 부담하셔야 하며, 불량·오배송은 무료로 처리해 드립니다."),
+    ("환불은 언제 되나요?", "취소는 즉시, 반품은 상품이 도착해 확인된 뒤 3영업일 안에 결제하신 수단으로 환불됩니다. 카드사 사정에 따라 3~7영업일이 더 걸릴 수 있습니다."),
+    ("어떤 결제 수단을 쓸 수 있나요?", "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다."),
+    ("현금영수증이나 세금계산서를 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 세금계산서가 필요하시면 1:1 문의로 사업자 정보를 남겨 주세요."),
+    ("쿠폰은 어디에 입력하나요?", "주문서의 결제 금액 영역에서 쿠폰 코드를 입력하고 적용 버튼을 누르시면 됩니다."),
+    ("리뷰는 누구나 쓸 수 있나요?", "실제로 구매하신 분만 작성하실 수 있습니다. 상품이 발송된 뒤 상품 페이지에서 주문번호와 연락처를 입력해 작성해 주세요."),
+]
 
 
 def build_shop_pages():
-    write("search.html", layout(f'상품 검색 - {CFG["shop_name"]}', search_box("./") +
-          '<div class="wrap page"><div class="card"><h2 id="search-title">검색 중…</h2><div class="grid" id="search-result"></div></div></div>', "./"))
-    simple("cart.html", "장바구니", '''<div class="main" style="padding:0"><div class="card"><h2>🛒 장바구니</h2><div id="cart-box"></div></div>
-<div><div class="card" id="cart-sum"></div></div></div>''')
+    write("search.html", layout(f'상품 검색 — {CFG["shop_name"]}', listing("전체 상품", "search", [], "./", count=0), "./"))
+    write("wish.html", layout(f'찜한 상품 — {CFG["shop_name"]}', listing("찜한 상품", "wish", [], "./", count=0), "./"))
+    simple("cart.html", "장바구니", '''<div class="steps"><b>장바구니</b><span>›</span><span>주문/결제</span><span>›</span><span>주문 완료</span></div>
+<div class="main"><div class="card"><div id="cart-box"></div></div><div class="sticky"><div class="card" id="cart-sum"></div></div></div>''')
     test = "" if not CFG["toss_client_key"].startswith("test_") else \
-        '<div class="test-note">⚠️ 지금은 <b>테스트 결제</b> 모드예요. 실제로 돈이 빠져나가지 않아요. (PG 계약 후 실제 키로 바꾸면 정식 결제가 돼요)</div>'
-    simple("checkout.html", "주문/결제", f'''{test}<div class="main" style="padding:0"><div>
+        '<div class="note">지금은 <b>테스트 결제</b> 모드입니다. 실제로 결제되지 않습니다.</div>'
+    simple("checkout.html", "주문/결제", f'''<div class="steps"><span>장바구니</span><span>›</span><b>주문/결제</b><span>›</span><span>주문 완료</span></div>{test}
+<div class="main" id="checkout"><div>
 <div class="card"><h2>주문 상품</h2><div id="order-items"></div></div>
-<div class="card form"><h2>배송지 정보</h2>
+<div class="card form"><h2>배송지</h2>
 <label for="name">받는 분</label><input id="name" autocomplete="name">
 <label for="phone">연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
 <label for="email">이메일 (선택)</label><input id="email" type="email" autocomplete="email">
-<label>주소</label><div class="row"><input id="zip" placeholder="우편번호" readonly><button type="button" id="find-addr">주소 찾기</button></div>
-<input id="addr1" placeholder="기본주소" readonly style="margin-top:8px"><input id="addr2" placeholder="상세주소" style="margin-top:8px">
-<label for="memo">배송 메모 (선택)</label><textarea id="memo" placeholder="예) 문 앞에 놓아주세요"></textarea></div>
+<label for="zip">주소</label><div class="row"><input id="zip" placeholder="우편번호" readonly><button type="button" id="find-addr">주소 찾기</button></div>
+<input id="addr1" placeholder="기본 주소" readonly style="margin-top:8px" aria-label="기본 주소"><input id="addr2" placeholder="상세 주소" style="margin-top:8px" aria-label="상세 주소" autocomplete="address-line2">
+<label for="memo-sel">배송 메모</label><select id="memo-sel"><option value="">선택 안 함</option><option>문 앞에 놓아 주세요</option><option>경비실에 맡겨 주세요</option><option>배송 전에 연락 주세요</option><option>부재 시 문 앞에 놓아 주세요</option><option>직접 입력</option></select>
+<input id="memo" placeholder="배송 메모를 입력해 주세요" style="margin-top:8px;display:none" aria-label="배송 메모">
+<label class="check" style="margin-top:14px"><input type="checkbox" id="save-addr" checked>이 기기에 배송지 저장하기</label></div>
 <div class="card"><h2>결제 수단</h2><div id="payment-method"></div><div id="agreement"></div></div></div>
-<div><div class="card"><h2>결제 금액</h2><div id="order-sum"></div>
-<label style="display:flex;gap:8px;margin:16px 0;font-size:14px"><input type="checkbox" id="agree">주문 내용을 확인했으며 결제에 동의합니다.</label>
-<button class="btn btn-green" id="pay-btn">결제하기</button></div></div></div>''',
-           scripts='<script src="https://js.tosspayments.com/v2/standard"></script><script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script><script>/* checkout은 app.js가 SDK 로드 후 실행 */</script>')
-    simple("success.html", "주문 완료", '<div class="card" id="success" style="text-align:center;padding:40px 20px">결제를 확인하고 있어요…</div>')
-    simple("fail.html", "결제 실패", '<div class="card" id="fail" style="text-align:center;padding:40px 20px"><div style="font-size:48px">😥</div><h2>결제가 완료되지 않았어요</h2><p id="fail-msg"></p><a class="btn btn-dark" style="max-width:260px;margin:20px auto 0" href="cart.html">장바구니로</a></div>')
+<div class="sticky"><div class="card"><h2>결제 금액</h2>
+<label class="opt-label" for="coupon-in">쿠폰 코드</label><div class="coupon-row"><input id="coupon-in" placeholder="코드 입력" autocomplete="off"><button type="button" id="coupon-btn">적용</button></div>
+<p id="coupon-msg" class="muted" style="margin:6px 0 14px;min-height:20px"></p>
+<div id="order-sum"></div>
+<div style="margin-top:18px"><label class="check all"><input type="checkbox" id="agree-all">전체 동의</label>
+<label class="check"><input type="checkbox" class="agree-req">[필수] 주문 내용을 확인했으며 결제에 동의합니다.</label>
+<label class="check"><input type="checkbox" class="agree-req"><span>[필수] 개인정보 수집·이용에 동의합니다. <a href="privacy.html" target="_blank">보기</a></span></label>
+<label class="check"><input type="checkbox" class="agree-req">[필수] 배송을 위한 개인정보 제3자(택배사·공급사) 제공에 동의합니다.</label></div>
+<button class="btn btn-dark" id="pay-btn" style="margin-top:14px">결제하기</button></div></div></div>''',
+           scripts='<script src="https://js.tosspayments.com/v2/standard"></script><script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
+    simple("success.html", "주문 완료", '<div class="card done-box" id="success">결제를 확인하고 있습니다.</div>', heading=False)
+    simple("fail.html", "결제 실패", '<div class="card done-box" id="fail"><h2>결제가 완료되지 않았습니다</h2><p id="fail-msg"></p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="cart.html">장바구니로</a></div>', heading=False)
+    simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted">주문번호와 주문하실 때 입력한 연락처로 조회하실 수 있습니다. 취소·반품·교환도 여기에서 신청합니다.</p>
+<label for="o-id">주문번호</label><input id="o-id" placeholder="예) T261112-AB12CD">
+<label for="o-phone">연락처</label><input id="o-phone" inputmode="tel" placeholder="010-0000-0000">
+<button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button></div>
+<div class="card" id="my-orders" style="display:none"></div></div>
+<div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>''')
+    faq = "".join(f"<details><summary>{e(q)}</summary><p>{e(a)}</p></details>" for q, a in FAQ)
+    simple("cs.html", "고객센터", f'''<div class="policy" style="margin-top:0"><div class="cs-grid">
+<div>{I_PHONE}<b>{e(BIZ["phone"])}</b>{e(BIZ["cs_hours"])}</div>
+<a href="orders.html">{I_BOX}<b>주문·배송 조회</b>취소·반품·교환 신청</a>
+<a href="#inquiry">{I_CHAT}<b>1:1 문의</b>남겨주시면 답변드립니다</a></div>
+<div class="card"><h2>자주 묻는 질문</h2><div class="faq">{faq}</div></div>
+<div class="card form" id="inquiry"><h2>1:1 문의</h2>
+<div class="row"><input id="inq-name" placeholder="이름" aria-label="이름"><input id="inq-contact" placeholder="연락처 또는 이메일" aria-label="연락처"></div>
+<label for="inq-type">문의 유형</label><select id="inq-type"><option>배송</option><option>주문·결제</option><option>취소·반품·교환</option><option>상품</option><option>기타</option></select>
+<label for="inq-order">주문번호 (선택)</label><input id="inq-order">
+<label for="inq-text">문의 내용</label><textarea id="inq-text" style="height:140px"></textarea>
+<label class="check"><input type="checkbox" id="inq-agree"><span>문의 답변을 위한 개인정보(이름·연락처) 수집·이용에 동의합니다.</span></label>
+<button class="btn btn-dark" id="inq-btn" style="margin-top:8px">문의 보내기</button></div></div>''')
+    write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
+<p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
+    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">땡</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
+    write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "start_url": "./index.html", "display": "standalone",
+          "background_color": "#fbfaf8", "theme_color": "#16171a", "icons": [{"src": "favicon.svg", "sizes": "any", "type": "image/svg+xml"}]}, ensure_ascii=False))
 
 
 def build_policies():
     c, s = BIZ["company"], CFG["shop_name"]
-    simple("terms.html", "이용약관", f'''<div class="card policy"><h1>이용약관</h1>
+    simple("terms.html", "이용약관", f'''<div class="card policy">
 <h3>제1조 (목적)</h3><p>이 약관은 {e(c)}(이하 "회사")가 운영하는 {e(s)}(이하 "몰")에서 제공하는 전자상거래 서비스의 이용 조건과 절차, 회사와 이용자의 권리·의무를 정합니다.</p>
 <h3>제2조 (구매 신청)</h3><p>이용자는 몰에서 상품을 선택하고 배송지 정보를 입력한 뒤 결제하는 방법으로 구매를 신청합니다. 회원가입 없이 비회원으로 구매할 수 있습니다.</p>
 <h3>제3조 (계약의 성립)</h3><p>회사가 결제 승인을 확인하면 구매 계약이 성립합니다. 재고 부족 등으로 공급이 어려운 경우 지체 없이 알리고 결제를 취소합니다.</p>
@@ -271,7 +385,7 @@ def build_policies():
 <h3>제5조 (청약철회)</h3><p>이용자는 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 상품을 받은 날부터 7일 이내에 청약을 철회할 수 있습니다. 자세한 사항은 교환·환불 안내를 따릅니다.</p>
 <h3>제6조 (분쟁 해결)</h3><p>분쟁이 생기면 고객센터({e(BIZ["phone"])})로 접수해 주시면 성실히 처리합니다. 해결되지 않으면 공정거래위원회 또는 시·도지사가 의뢰하는 분쟁조정기관의 조정을 따를 수 있습니다.</p>
 <p style="margin-top:20px;color:#888">시행일: {datetime.date.today():%Y-%m-%d}</p></div>''')
-    simple("privacy.html", "개인정보처리방침", f'''<div class="card policy"><h1>개인정보처리방침</h1>
+    simple("privacy.html", "개인정보처리방침", f'''<div class="card policy">
 <h3>1. 수집 항목</h3><p>주문 시: 받는 분 이름, 연락처, 주소, 이메일(선택), 배송 메모. 결제 정보는 토스페이먼츠가 직접 처리하며 회사는 카드번호를 저장하지 않습니다.</p>
 <h3>2. 이용 목적</h3><p>주문 처리, 상품 배송, 고객 문의 응대, 교환·환불 처리.</p>
 <h3>3. 보유 기간</h3><p>「전자상거래법」에 따라 계약·청약철회 기록 5년, 대금결제·재화 공급 기록 5년, 소비자 불만·분쟁처리 기록 3년 보관 후 파기합니다.</p>
@@ -279,7 +393,7 @@ def build_policies():
 <h3>5. 이용자의 권리</h3><p>이용자는 언제든 개인정보 열람·정정·삭제·처리정지를 요청할 수 있습니다.</p>
 <h3>6. 개인정보 보호책임자</h3><p>{e(BIZ["privacy_officer"])} / {e(BIZ["phone"])} / {e(BIZ["email"])}</p>
 <p style="margin-top:20px;color:#888">시행일: {datetime.date.today():%Y-%m-%d}</p></div>''')
-    simple("refund.html", "교환·환불 안내", f'''<div class="card policy"><h1>교환·환불 안내</h1>
+    simple("refund.html", "교환·환불 안내", f'''<div class="card policy">
 <h3>신청 기간</h3><p>단순 변심: 상품 수령 후 7일 이내 / 상품 불량·오배송: 수령 후 3개월 이내 또는 사실을 안 날부터 30일 이내</p>
 <h3>배송비</h3><p>단순 변심은 왕복 배송비를 고객님이 부담하며, 불량·오배송은 회사가 부담합니다.</p>
 <h3>교환·반품이 어려운 경우</h3><ul style="padding-left:18px"><li>고객님의 책임으로 상품이 훼손된 경우</li><li>사용 또는 일부 소비로 상품 가치가 크게 떨어진 경우 (식품 개봉 등)</li><li>시간이 지나 재판매가 어려울 만큼 가치가 떨어진 경우</li></ul>
@@ -289,8 +403,8 @@ def build_policies():
 
 def build_partner_pages():
     cats = "".join(f'<option value="{c["slug"]}">{e(c["name"])}</option>' for c in CATS)
-    simple("seller.html", "공급사 입점", f'''<div class="main" style="padding:0"><div>
-<div class="card"><h2>🤝 공급사 입점 안내</h2><p style="color:#555">{e(CFG["shop_name"])}에 상품을 공급해 주실 도매·제조 공급사를 모집해요.
+    simple("seller.html", "공급사 입점", f'''<div class="main"><div>
+<div class="card"><h2>공급사 입점 안내</h2><p style="color:#555">{e(CFG["shop_name"])}에 상품을 공급해 주실 도매·제조 공급사를 모집해요.
 상품을 올려주시면 검수 후 쇼핑몰과 네이버 가격비교에 노출하고, 주문이 들어오면 발주서를 보내드려요. 공급사는 고객에게 직접 배송만 해주시면 돼요.</p>
 <ol style="padding-left:20px;margin-top:10px;color:#333"><li>아래에서 입점 신청 → 승인되면 <b>입점코드</b>를 받아요</li><li>입점코드로 상품 등록 (공급가·배송비·사진·설명)</li><li>검수 후 판매 시작, 주문 시 발주 안내</li></ol></div>
 <div class="card form" id="apply-form"><h2>1. 입점 신청</h2>
@@ -300,34 +414,29 @@ def build_partner_pages():
 <button class="btn btn-dark" style="margin-top:14px" data-api="/seller/apply">입점 신청하기</button></div>
 <div class="card form" id="product-form"><h2>2. 상품 등록 (입점코드 필요)</h2>
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
-<label>상품명</label><input name="name"><label>카테고리</label><select name="category" style="width:100%;height:48px;border:1px solid #cfd4d9;border-radius:10px;padding:0 10px;font-size:16px">{cats}</select>
+<label>상품명</label><input name="name"><label>카테고리</label><select name="category" >{cats}</select>
 <label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
 <label>네이버 최저가 (선택 · 적으면 이보다 비쌀 때 등록 안 돼요)</label><input name="naver_low" inputmode="numeric" id="naver-low-in">
-<div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 − 5% / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
+<div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 − 5% / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">
 <label>한 줄 소개</label><input name="summary">
 <label>상세 설명 (줄마다 한 가지 특징)</label><textarea name="description" style="height:120px"></textarea>
-<button class="btn btn-green" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
+<button class="btn btn-dark" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
 <div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록</h2>
 <p style="color:#555;font-size:15px">땡잡았땡 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
 가격은 <b>오픈마켓 판매가(무료배송 기준)</b>만 적으면 자동으로 5% 싸게 계산되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요. 네이버 최저가보다 비싼 상품은 등록되지 않아요.</p>
-<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>📥 땡잡았땡 상품등록 양식 내려받기 (.xlsx)</a>
+<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>땡잡았땡 상품등록 양식 내려받기 (.xlsx)</a>
 <label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
-<button class="btn btn-green" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
+<button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>네이버 가격비교 노출</li><li>주문 즉시 발주 안내</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
-    simple("admin.html", "관리자", '''<div class="card form" id="admin-login"><h2>🔐 관리자</h2><label>관리자 비밀번호</label><input id="admin-pw" type="password">
-<button class="btn btn-dark" style="margin-top:12px" id="admin-enter">들어가기</button></div>
-<div id="admin-body" style="display:none">
-<div class="card"><h2>입점 신청</h2><div id="apps"></div></div>
-<div class="card"><h2>상품 등록 요청</h2><div id="pending"></div></div>
-<div class="card"><h2>주문 / 발주</h2><div id="orders"></div></div>
-<div class="card"><h2>💚 더 싼 곳 신고 (최저가 보상제)</h2><div id="reports"></div></div>
-<div class="card"><h2>⚠️ 네이버 최저가보다 비싸서 제외된 상품</h2><div id="price-check"></div></div></div>''', scripts='<script src="partner.js"></script>')
+    simple("admin.html", "관리자", '''<div class="narrow"><div class="card form" id="admin-login"><label for="admin-pw">관리자 비밀번호</label><input id="admin-pw" type="password" autocomplete="current-password">
+<button class="btn btn-dark" style="margin-top:14px" id="admin-enter">들어가기</button></div></div>
+<div id="admin-body" style="display:none"><div class="adm-tabs" id="adm-tabs"></div><div id="adm-view"></div></div>''', scripts='<script src="admin.js"></script>')
 
 
 # ---------------- 네이버 EP · 사이트맵 ----------------
@@ -340,15 +449,15 @@ def build_feeds(ps):
         link = f'{BASE}/product/{p["id"]}.html'
         row = [p["id"], p["name"], p["price"], p["price"], p["normal_price"], link, link, abs_img(p),
                p["category_name"], p["brand"], p["maker"], p["origin"],
-               p["event"] or "오픈마켓 수수료 없는 직판가", p["shipping_fee"]]
+               "전 상품 무료배송", p["shipping_fee"]]
         lines.append("\t".join(clean(x) for x in row))
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
-    urls = ["", "search.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
+    urls = ["", "search.html", "cs.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
     today = datetime.date.today().isoformat()
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nSitemap: {BASE}/sitemap.xml\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
                               "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name")} for p in ps]
@@ -359,7 +468,7 @@ def main():
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
-    for f in ("style.css", "app.js", "partner.js"):
+    for f in ("style.css", "app.js", "partner.js", "admin.js"):
         shutil.copy(ROOT / "static" / f, OUT / f)
     if (ROOT / "uploads").exists():
         shutil.copytree(ROOT / "uploads", OUT / "uploads")

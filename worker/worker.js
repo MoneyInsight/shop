@@ -70,7 +70,7 @@ function suggestPrice(env, supply) {
 
 // ---------- 결제 승인 ----------
 async function confirm(req, env) {
-  const { paymentKey, orderId, amount, items, customer } = await req.json();
+  const { paymentKey, orderId, amount, items, customer, coupon } = await req.json();
   if (!paymentKey || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
 
@@ -95,7 +95,13 @@ async function confirm(req, env) {
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
-  if (subtotal + shipping !== Number(amount)) return fail("결제 금액이 상품 금액과 달라요. 다시 주문해 주세요.");
+  let discount = 0, couponCode = "";
+  if (coupon) {
+    const c = await checkCoupon(env, coupon, subtotal);
+    if (!c.ok) return fail(c.message);
+    discount = c.discount; couponCode = c.code;
+  }
+  if (subtotal - discount + shipping !== Number(amount)) return fail("결제 금액이 상품 금액과 달라요. 다시 주문해 주세요.");
 
   const r = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
     method: "POST",
@@ -105,8 +111,15 @@ async function confirm(req, env) {
   const pay = await r.json();
   if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
 
-  const order = { orderId, amount: Number(amount), lines, customer, method: pay.method, paymentKey, paidAt: new Date().toISOString(), status: "결제완료" };
+  const now = new Date().toISOString();
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, lines, customer, method: pay.method, paymentKey,
+    paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   await env.SHOP.put("order:" + orderId, JSON.stringify(order));
+  if (couponCode) {
+    const c = await env.SHOP.get("coupon:" + couponCode, "json");
+    if (c) { c.used = (c.used || 0) + 1; await env.SHOP.put("coupon:" + couponCode, JSON.stringify(c)); }
+  }
+  await notify(env, `🛒 새 주문 ${orderId}\n${lines.map((l) => `- ${l.name} × ${l.qty}`).join("\n")}\n결제 ${Number(amount).toLocaleString()}원 / ${customer?.name || ""}`);
   return json({ ok: true, orderId });
 }
 
@@ -166,13 +179,262 @@ async function closeReport(req, env) {
   return json({ ok: true });
 }
 
+
+// ---------- 공통 도우미 ----------
+const digits = (s) => String(s || "").replace(/\D/g, "");
+const maskName = (s) => { s = String(s || "고객"); return s.length <= 1 ? s + "*" : s[0] + "*".repeat(Math.min(s.length - 1, 2)); };
+const clip = (s, n) => String(s || "").replace(/<[^>]*>/g, "").trim().slice(0, n);
+
+async function notify(env, text) {
+  if (!env.NOTIFY_WEBHOOK) return;
+  try {
+    await fetch(env.NOTIFY_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, content: text }) });
+  } catch (e) { /* 알림 실패는 주문에 영향 없음 */ }
+}
+
+async function tossCancel(env, paymentKey, reason, amount) {
+  const r = await fetch(`https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`, {
+    method: "POST",
+    headers: { Authorization: "Basic " + btoa(env.TOSS_SECRET_KEY + ":"), "Content-Type": "application/json" },
+    body: JSON.stringify({ cancelReason: reason || "고객 요청", ...(amount ? { cancelAmount: amount } : {}) }),
+  });
+  const d = await r.json();
+  return r.ok ? { ok: true } : { ok: false, message: d.message || "결제 취소 실패" };
+}
+
+function setStatus(order, status, extra) {
+  order.status = status;
+  order.history = order.history || [];
+  order.history.push({ status, at: new Date().toISOString(), ...(extra || {}) });
+}
+
+// 고객에게 보여줄 주문 정보 (결제키·공급가 등 내부 정보 제외)
+const publicOrder = (o) => ({
+  orderId: o.orderId, status: o.status, paidAt: o.paidAt, amount: o.amount, subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping || 0, method: o.method,
+  lines: o.lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price })),
+  receiver: { name: o.customer?.name, zip: o.customer?.zip, addr: o.customer?.addr, memo: o.customer?.memo },
+  courier: o.courier || "", tracking: o.tracking || "", history: o.history || [], claim: o.claim || null,
+});
+
+async function findOrder(env, orderId, phone) {
+  const o = orderId && (await env.SHOP.get("order:" + String(orderId).trim(), "json"));
+  if (!o || !digits(phone) || digits(o.customer?.phone) !== digits(phone)) return null;
+  return o;
+}
+
+// ---------- 주문 조회 · 취소 · 반품/교환 ----------
+async function orderLookup(req, env) {
+  const { orderId, phone } = await req.json();
+  const o = await findOrder(env, orderId, phone);
+  if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
+  return json({ order: publicOrder(o) });
+}
+
+async function orderCancel(req, env) {
+  const { orderId, phone, reason } = await req.json();
+  const o = await findOrder(env, orderId, phone);
+  if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
+  if (o.status === "결제완료") {  // 출고 준비 전: 즉시 자동 취소·환불
+    const c = await tossCancel(env, o.paymentKey, clip(reason, 100) || "고객 주문 취소");
+    if (!c.ok) return fail(c.message);
+    setStatus(o, "취소완료", { reason: clip(reason, 200) });
+    await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+    await notify(env, `↩️ 주문 취소(자동 환불) ${o.orderId}`);
+    return json({ message: "주문이 취소되었어요. 결제수단에 따라 환불까지 3~7영업일이 걸릴 수 있어요.", order: publicOrder(o) });
+  }
+  if (o.status === "상품준비중") {
+    setStatus(o, "취소요청", { reason: clip(reason, 200) });
+    await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+    await notify(env, `⚠️ 취소 요청 ${o.orderId} (상품 준비 중)`);
+    return json({ message: "취소 요청이 접수되었어요. 이미 출고된 경우 반품으로 진행될 수 있어요.", order: publicOrder(o) });
+  }
+  return fail("지금 상태에서는 취소할 수 없어요. 반품/교환 신청을 이용해 주세요.");
+}
+
+async function orderClaim(req, env) {
+  const { orderId, phone, type, reason } = await req.json();
+  const o = await findOrder(env, orderId, phone);
+  if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
+  if (!["반품", "교환"].includes(type)) return fail("신청 종류를 선택해 주세요.");
+  if (!["배송중", "배송완료"].includes(o.status)) return fail("배송이 시작된 주문만 반품/교환을 신청할 수 있어요.");
+  if (!clip(reason, 500)) return fail("사유를 입력해 주세요.");
+  o.claim = { type, reason: clip(reason, 500), at: new Date().toISOString(), status: "접수" };
+  setStatus(o, type + "요청");
+  await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  await notify(env, `📦 ${type} 요청 ${o.orderId}\n${o.claim.reason}`);
+  return json({ message: `${type} 신청이 접수되었어요. 확인 후 연락드릴게요.`, order: publicOrder(o) });
+}
+
+async function orderConfirmReceipt(req, env) {
+  const { orderId, phone } = await req.json();
+  const o = await findOrder(env, orderId, phone);
+  if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
+  if (!["배송중", "배송완료"].includes(o.status)) return fail("배송이 시작된 주문만 구매확정할 수 있어요.");
+  setStatus(o, "구매확정");
+  await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  return json({ message: "구매확정 되었어요. 리뷰를 남겨 주시면 큰 도움이 돼요!", order: publicOrder(o) });
+}
+
+// ---------- 리뷰 (실제 구매자만) ----------
+async function reviewList(req, env) {
+  const { product_id } = await req.json();
+  const list = (await kvList(env, "review:" + String(product_id) + ":")).sort((a, b) => b.at.localeCompare(a.at));
+  const avg = list.length ? Math.round((list.reduce((a, r) => a + r.rating, 0) / list.length) * 10) / 10 : 0;
+  return json({ avg, count: list.length, reviews: list.map((r) => ({ name: r.name, rating: r.rating, text: r.text, at: r.at, option: r.option || "" })) });
+}
+
+async function reviewAdd(req, env) {
+  const { orderId, phone, product_id, rating, text } = await req.json();
+  const o = await findOrder(env, orderId, phone);
+  if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요. 구매하신 분만 리뷰를 쓸 수 있어요.", 404);
+  const line = o.lines.find((l) => String(l.id) === String(product_id));
+  if (!line) return fail("이 주문에는 해당 상품이 없어요.");
+  if (!["배송중", "배송완료", "구매확정"].includes(o.status)) return fail("상품이 발송된 뒤에 리뷰를 쓸 수 있어요.");
+  const star = Math.max(1, Math.min(5, parseInt(rating) || 0));
+  const body = clip(text, 1000);
+  if (body.length < 5) return fail("리뷰를 5자 이상 적어 주세요.");
+  const key = `review:${product_id}:${o.orderId}`;
+  if (await env.SHOP.get(key)) return fail("이미 이 상품의 리뷰를 작성하셨어요.");
+  await env.SHOP.put(key, JSON.stringify({ key, product_id: String(product_id), product_name: line.name, orderId: o.orderId, name: maskName(o.customer?.name), rating: star, text: body, option: line.option || "", at: new Date().toISOString() }));
+  return json({ message: "리뷰가 등록되었어요. 감사합니다!" });
+}
+
+// ---------- 상품 문의 ----------
+async function qnaList(req, env) {
+  const { product_id } = await req.json();
+  const list = (await kvList(env, "qna:" + String(product_id) + ":")).sort((a, b) => b.at.localeCompare(a.at));
+  return json({ list: list.map((q) => ({ name: q.name, at: q.at, secret: !!q.secret, text: q.secret ? "" : q.text, answer: q.secret ? (q.answer ? "답변 완료 (비밀글)" : "") : q.answer || "", answered: !!q.answer })) });
+}
+
+async function qnaAdd(req, env) {
+  const d = await req.json();
+  const text = clip(d.text, 1000);
+  if (!d.product_id || text.length < 5) return fail("문의 내용을 5자 이상 적어 주세요.");
+  const key = `qna:${d.product_id}:${Date.now()}`;
+  await env.SHOP.put(key, JSON.stringify({ key, product_id: String(d.product_id), product_name: clip(d.product_name, 100), name: maskName(clip(d.name, 20)), contact: clip(d.contact, 60), text, secret: !!d.secret, answer: "", at: new Date().toISOString() }));
+  await notify(env, `❓ 상품 문의: ${clip(d.product_name, 60)}\n${text}`);
+  return json({ message: "문의가 등록되었어요. 빠르게 답변드릴게요." });
+}
+
+// ---------- 1:1 문의 ----------
+async function inquiryAdd(req, env) {
+  const d = await req.json();
+  const text = clip(d.text, 2000);
+  if (!clip(d.name, 20) || !clip(d.contact, 60) || text.length < 5) return fail("이름, 연락처, 문의 내용을 입력해 주세요.");
+  const id = "inq_" + Date.now();
+  await env.SHOP.put("inquiry:" + id, JSON.stringify({ id, name: clip(d.name, 20), contact: clip(d.contact, 60), type: clip(d.type, 20), orderId: clip(d.orderId, 40), text, answer: "", status: "접수", at: new Date().toISOString() }));
+  await notify(env, `💬 1:1 문의 (${clip(d.type, 20)}) ${clip(d.name, 20)} ${clip(d.contact, 60)}\n${text}`);
+  return json({ message: "문의가 접수되었어요. 남겨주신 연락처로 답변드릴게요." });
+}
+
+// ---------- 쿠폰 ----------
+async function checkCoupon(env, code, subtotal) {
+  code = String(code || "").trim().toUpperCase();
+  const c = code && (await env.SHOP.get("coupon:" + code, "json"));
+  if (!c) return { ok: false, message: "사용할 수 없는 쿠폰 코드예요." };
+  if (c.expires && new Date(c.expires + "T23:59:59+09:00") < new Date()) return { ok: false, message: "기간이 지난 쿠폰이에요." };
+  if (c.max_uses && (c.used || 0) >= c.max_uses) return { ok: false, message: "선착순이 마감된 쿠폰이에요." };
+  if (subtotal < (c.min_order || 0)) return { ok: false, message: `${Number(c.min_order).toLocaleString()}원 이상 주문할 때 쓸 수 있어요.` };
+  let discount = c.type === "percent" ? Math.floor((subtotal * c.value) / 100 / 10) * 10 : c.value;
+  if (c.max_discount) discount = Math.min(discount, c.max_discount);
+  discount = Math.min(discount, subtotal - 100 > 0 ? subtotal - 100 : 0);
+  return { ok: true, code, discount, name: c.name || code };
+}
+
+async function couponCheck(req, env) {
+  const { code, subtotal } = await req.json();
+  const c = await checkCoupon(env, code, parseInt(subtotal) || 0);
+  return c.ok ? json(c) : fail(c.message);
+}
+
+// ---------- 관리자: 주문·문의·리뷰·쿠폰 ----------
+const ORDER_STATUS = ["결제완료", "상품준비중", "배송중", "배송완료", "구매확정", "취소요청", "취소완료", "반품요청", "반품완료", "교환요청", "교환완료"];
+
+async function adminOrderUpdate(req, env) {
+  const { orderId, status, courier, tracking, memo } = await req.json();
+  const o = await env.SHOP.get("order:" + orderId, "json");
+  if (!o) return fail("주문을 찾을 수 없어요.");
+  if (courier != null) o.courier = clip(courier, 20);
+  if (tracking != null) o.tracking = clip(tracking, 40);
+  if (memo != null) o.adminMemo = clip(memo, 500);
+  if (status && status !== o.status) {
+    if (!ORDER_STATUS.includes(status)) return fail("알 수 없는 상태예요.");
+    setStatus(o, status);
+    if (o.claim && /완료$/.test(status)) o.claim.status = "완료";
+  }
+  await env.SHOP.put("order:" + orderId, JSON.stringify(o));
+  return json({ ok: true });
+}
+
+async function adminOrderCancel(req, env) {
+  const { orderId, reason, amount } = await req.json();
+  const o = await env.SHOP.get("order:" + orderId, "json");
+  if (!o) return fail("주문을 찾을 수 없어요.");
+  if (o.status === "취소완료" || o.status === "반품완료") return fail("이미 환불된 주문이에요.");
+  const amt = parseInt(amount) || 0;
+  if (amt && amt > o.amount - (o.refunded || 0)) return fail("환불 금액이 결제 금액보다 커요.");
+  const c = await tossCancel(env, o.paymentKey, clip(reason, 100) || "판매자 취소", amt || undefined);
+  if (!c.ok) return fail(c.message);
+  o.refunded = (o.refunded || 0) + (amt || o.amount - (o.refunded || 0));
+  setStatus(o, amt && o.refunded < o.amount ? o.status : (o.status.startsWith("반품") ? "반품완료" : "취소완료"), { refund: amt || "전액", reason: clip(reason, 200) });
+  if (o.claim) o.claim.status = "완료";
+  await env.SHOP.put("order:" + orderId, JSON.stringify(o));
+  return json({ ok: true });
+}
+
+async function adminAnswer(req, env) {
+  const { key, answer } = await req.json();
+  if (!/^(qna|inquiry):/.test(key || "")) return fail("잘못된 요청이에요.");
+  const q = await env.SHOP.get(key, "json");
+  if (!q) return fail("문의를 찾을 수 없어요.");
+  q.answer = clip(answer, 2000); q.answeredAt = new Date().toISOString(); q.status = "답변완료";
+  await env.SHOP.put(key, JSON.stringify(q));
+  return json({ ok: true });
+}
+
+async function adminDelete(req, env) {
+  const { key } = await req.json();
+  if (!/^(qna|inquiry|review|coupon):/.test(key || "")) return fail("잘못된 요청이에요.");
+  await env.SHOP.delete(key);
+  return json({ ok: true });
+}
+
+async function adminCouponSave(req, env) {
+  const d = await req.json();
+  const code = String(d.code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const value = parseInt(d.value);
+  if (code.length < 3 || !value) return fail("쿠폰 코드(영문·숫자 3자 이상)와 할인 값을 입력해 주세요.");
+  const type = d.type === "percent" ? "percent" : "amount";
+  if (type === "percent" && value > 50) return fail("할인율은 50% 이하로 설정해 주세요.");
+  const old = (await env.SHOP.get("coupon:" + code, "json")) || {};
+  await env.SHOP.put("coupon:" + code, JSON.stringify({ key: "coupon:" + code, code, name: clip(d.name, 40) || code, type, value, min_order: parseInt(d.min_order) || 0,
+    max_discount: parseInt(d.max_discount) || 0, max_uses: parseInt(d.max_uses) || 0, expires: /^\d{4}-\d{2}-\d{2}$/.test(d.expires || "") ? d.expires : "", used: old.used || 0 }));
+  return json({ ok: true });
+}
+
 // ---------- 관리자 ----------
 async function adminList(env) {
   const apps = (await kvList(env, "app:")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const pending = (await kvList(env, "pending:")).map((p) => ({ ...p, image_url: p.image, image: undefined }));
   const orders = (await kvList(env, "order:")).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 200);
   const reports = (await kvList(env, "report:")).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200);
-  return json({ apps, pending, orders, reports });
+  const all = await kvList(env, "order:");
+  const kst = (iso) => new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const today = kst(new Date().toISOString());
+  const paid = all.filter((o) => !["취소완료", "반품완료"].includes(o.status));
+  const stats = {
+    todayOrders: paid.filter((o) => kst(o.paidAt) === today).length,
+    todaySales: paid.filter((o) => kst(o.paidAt) === today).reduce((a, o) => a + o.amount, 0),
+    monthSales: paid.filter((o) => kst(o.paidAt).slice(0, 7) === today.slice(0, 7)).reduce((a, o) => a + o.amount, 0),
+    toShip: all.filter((o) => ["결제완료", "상품준비중"].includes(o.status)).length,
+    claims: all.filter((o) => /요청$/.test(o.status)).length,
+  };
+  const byAt = (a, b) => b.at.localeCompare(a.at);
+  const qnas = (await kvList(env, "qna:")).sort(byAt).slice(0, 200);
+  const inquiries = (await kvList(env, "inquiry:")).sort(byAt).slice(0, 200).map((q) => ({ ...q, key: "inquiry:" + q.id }));
+  const reviews = (await kvList(env, "review:")).sort(byAt).slice(0, 200);
+  const coupons = await kvList(env, "coupon:");
+  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, statuses: ORDER_STATUS });
 }
 
 async function approveSeller(req, env) {
@@ -237,6 +499,16 @@ export async function handle(req, env, path) {
     if (path === "/seller/apply") return await sellerApply(req, env);
     if (path === "/seller/product") return await sellerProduct(req, env);
     if (path === "/report-price") return await reportPrice(req, env);
+    if (path === "/order/lookup") return await orderLookup(req, env);
+    if (path === "/order/cancel") return await orderCancel(req, env);
+    if (path === "/order/claim") return await orderClaim(req, env);
+    if (path === "/order/confirm-receipt") return await orderConfirmReceipt(req, env);
+    if (path === "/review/list") return await reviewList(req, env);
+    if (path === "/review/add") return await reviewAdd(req, env);
+    if (path === "/qna/list") return await qnaList(req, env);
+    if (path === "/qna/add") return await qnaAdd(req, env);
+    if (path === "/inquiry/add") return await inquiryAdd(req, env);
+    if (path === "/coupon/check") return await couponCheck(req, env);
     if (path.startsWith("/admin/")) {
       if (!env.ADMIN_PASSWORD || (req.headers.get("Authorization") || "") !== "Bearer " + env.ADMIN_PASSWORD) return fail("비밀번호가 틀렸어요.", 401);
       if (path === "/admin/list") return await adminList(env);
@@ -244,6 +516,11 @@ export async function handle(req, env, path) {
       if (path === "/admin/approve-product") return await approveProduct(req, env);
       if (path === "/admin/reject-product") return await rejectProduct(req, env);
       if (path === "/admin/close-report") return await closeReport(req, env);
+      if (path === "/admin/order-update") return await adminOrderUpdate(req, env);
+      if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
+      if (path === "/admin/answer") return await adminAnswer(req, env);
+      if (path === "/admin/delete") return await adminDelete(req, env);
+      if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
     }
     return fail("Not found", 404);
   } catch (e) {
