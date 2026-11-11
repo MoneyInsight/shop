@@ -84,7 +84,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
 <header class="topbar"><div class="wrap">
-<a class="logo" href="{root}index.html"><b>{e(CFG["shop_name"][0])}</b>{e(CFG["shop_name"])}</a>
+<a class="logo" href="{root}index.html"><b>땡</b>{e(CFG["shop_name"])}</a>
 <div class="top-icons"><a class="icon-btn" href="{root}search.html" title="전체상품">☰</a>
 <a class="icon-btn" href="{root}cart.html" title="장바구니">🛒<span class="cart-count" style="display:none">0</span></a></div>
 </div></header>
@@ -113,7 +113,7 @@ def card(p, root):
 
 def search_box(root, value=""):
     return f'''<section class="hero"><div class="wrap">
-<form class="search" action="{root}search.html"><span class="s-logo">{e(CFG["shop_name"][0])}</span>
+<form class="search" action="{root}search.html"><span class="s-logo">땡</span>
 <input name="q" value="{e(value)}" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">🔍</button></form>
 <nav class="quick">{"".join(f'<a href="{root}category/{c["slug"]}.html"><span>{c["emoji"]}</span>{e(c["name"])}</a>' for c in CATS)}
 <a href="{root}search.html"><span>⋯</span>전체</a></nav></div></section>'''
@@ -124,7 +124,7 @@ def side(root):
 <div class="card login-box"><div class="hello">반가워요 👋</div><p>회원가입 없이 바로 주문할 수 있어요.</p>
 <div id="mini-cart"></div></div>
 <div class="card why"><h2>왜 {e(CFG["shop_name"])}인가요?</h2><ul>
-<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>🚚 영업일 1~3일 안에 출발</li>
+<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>🚚 전 상품 무료배송</li>
 <li>🔒 토스페이먼츠 안전결제</li><li>📦 공급사 직배송으로 빠른 처리</li></ul></div>
 <div class="card cs-box"><h2>고객센터</h2><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}</p><p>{e(BIZ["email"])}</p></div>
 <div class="card"><h2>공급사 입점 모집</h2><p style="color:#666;font-size:14px;margin-bottom:12px">좋은 상품을 가진 공급사라면 누구나 상품을 올릴 수 있어요.</p>
@@ -147,7 +147,7 @@ def build_home(ps):
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     body = search_box("./") + f'''<div class="wrap main"><div>
 <div class="card banner"><div class="b-img">🛍️</div><div class="b-txt"><strong>{e(CFG["slogan"])}</strong>
-<p>오픈마켓에서 보던 그 상품, 수수료를 뺀 가격으로 만나보세요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
+<p>오픈마켓 수수료 13% 대신 딱 5.5%만. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
 <div class="card"><h2>🔥 지금 많이 찾는 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:4])}</div></div>
 <div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
 <div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps)}</div></div>
