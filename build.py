@@ -165,7 +165,7 @@ def build_home(ps):
     body = search_box("./") + f'''<div class="wrap main"><div>
 <div class="card banner"><div class="b-img">🛍️</div><div class="b-txt"><strong>{e(CFG["slogan"])}</strong>
 <p>오픈마켓 수수료 거품을 뺀 공급사 직거래 가격. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
-<div class="card"><h2>💚 네이버 최저가보다 더 싼 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:8])}</div></div>
+<div class="card"><h2>{"💚 네이버 최저가보다 더 싼 상품" if any(p["save"] for p in ps) else "🔥 추천 상품"}</h2><div class="grid">{"".join(card(p, "./") for p in best[:8])}</div></div>
 <div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
 <div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps[:60])}</div>
 <a class="btn btn-line" style="margin-top:18px" href="search.html">전체 상품 {len(ps):,}개 보기 ›</a></div>
