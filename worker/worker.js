@@ -9,7 +9,7 @@
  *  - POST /admin/reject-product    관리자: 상품 반려
  *
  * 환경변수(Secrets): TOSS_SECRET_KEY, ADMIN_PASSWORD, GITHUB_TOKEN
- * 환경변수(Vars):    GITHUB_REPO(예: myid/shop), SITE_URL, MARGIN_RATE(0.055), MIN_MARGIN(0)
+ * 환경변수(Vars):    GITHUB_REPO(예: myid/shop), SITE_URL, MARGIN_RATE(0.07), MIN_MARGIN(0)
  * KV 바인딩:         SHOP
  * 공급가는 이 서버(KV)에만 저장되고 공개 사이트에는 나가지 않습니다.
  */
@@ -57,7 +57,7 @@ async function ghPut(env, path, contentB64, message, sha) {
 
 // ---------- 가격 ----------
 function suggestPrice(env, supply) {
-  const rate = Number(env.MARGIN_RATE || 0.055), min = Number(env.MIN_MARGIN || 0);
+  const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);
   const p = Math.max(supply * (1 + rate), supply + min);
   return Math.ceil(p / 10) * 10; // 10원 단위 올림
 }

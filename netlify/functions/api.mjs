@@ -25,7 +25,7 @@ export default async (req) => {
     GITHUB_TOKEN: e("GITHUB_TOKEN"),
     GITHUB_REPO: e("GITHUB_REPO", "MoneyInsight/shop"),
     SITE_URL: e("SITE_URL", "https://moneyinsight.github.io/shop"),
-    MARGIN_RATE: e("MARGIN_RATE", "0.055"),
+    MARGIN_RATE: e("MARGIN_RATE", "0.07"),
     MIN_MARGIN: e("MIN_MARGIN", "0"),
     FREE_SHIPPING_OVER: e("FREE_SHIPPING_OVER", "0"),
   };
