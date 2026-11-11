@@ -33,6 +33,8 @@ ALIASES = {
     "summary": ["한 줄 소개", "한줄소개"],
     "event": ["홍보문구", "이벤트문구"],
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
+    "cost": ["공급가", "공급가격", "도매가", "매입가", "원가"],
+    "cost_ship": ["공급 배송비", "공급배송비", "배송비(공급)", "택배비", "배송비"],
     "opt_name": ["옵션명"],
     "opt_values": ["옵션값"],
     "opt_prices": ["옵션가"],
@@ -124,7 +126,14 @@ def guess_category(name, cats):
     return "living" if "living" in slugs else cats[0]["slug"]
 
 
-def load(data_dir, cats, discount=0.05):
+def price_from_cost(cost, pricing):
+    """원가(공급가+배송비)에서 판매가 계산: 카드수수료·부가세 빼고 순마진이 net_margin(최소 min_margin_won) 남게, 10원 단위 올림
+    판매가 X: (X×(1−카드) − 원가) × 10/11 = 순마진  →  X = (원가 + 순마진×1.1) / (1 − 카드)"""
+    net = max(cost * pricing.get("net_margin", 0.05), pricing.get("min_margin_won", 500))
+    return math.ceil((cost + net * 1.1) / (1 - pricing.get("card_fee", 0.034)) / 10) * 10
+
+
+def load(data_dir, cats, discount=0.05, pricing=None):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
@@ -142,6 +151,9 @@ def load(data_dir, cats, discount=0.05):
         for r in rows[h + 1:]:
             name = get(r, "name")
             price = _num(get(r, "price"))
+            cost = _num(get(r, "cost"))
+            if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
+                price = price_from_cost(cost + _num(get(r, "cost_ship")), pricing)
             if name.startswith("필수"):
                 continue  # 양식 안내 줄
             if not name or not price:
@@ -153,7 +165,7 @@ def load(data_dir, cats, discount=0.05):
                 disc = round(price * disc / 100)
             ship = _num(get(r, "ship_fee")) if "무료" not in get(r, "ship_type") else 0
             base = price - disc + ship
-            sale = math.ceil(base * (1 - discount) / 10) * 10
+            sale = base if (cost and pricing) else math.ceil(base * (1 - discount) / 10) * 10
             low = _num(get(r, "naver_low"))
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"

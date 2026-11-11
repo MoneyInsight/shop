@@ -81,5 +81,12 @@
   ],
   "margin_rate": 0.03,
   "min_margin_won": 0,
-  "worker_url": "https://ttaengjab.netlify.app/api"
+  "worker_url": "https://ttaengjab.netlify.app/api",
+  "pricing": {
+    "net_margin": 0.05,
+    "card_fee": 0.034,
+    "min_margin_won": 500
+  },
+  "show_naver": false,
+  "show_supplier": false
 }

@@ -128,8 +128,7 @@ async function sellerProduct(req, env) {
   if (!d.name || !market) return fail("상품명과 오픈마켓 판매가는 꼭 입력해 주세요.");
   const price = priceFromMarket(env, market), supply = settleFromPrice(env, price);
   const naverLow = parseInt(d.naver_low);
-  if (!naverLow) return fail("네이버 최저가를 입력해 주세요. (네이버쇼핑에서 같은 상품 최저가)");
-  if (price >= naverLow) return fail(`판매가 ${price.toLocaleString()}원이 네이버 최저가 ${naverLow.toLocaleString()}원보다 비싸서 등록할 수 없어요. 오픈마켓 판매가를 낮춰 주세요.`);
+  if (naverLow && price >= naverLow) return fail(`판매가 ${price.toLocaleString()}원이 네이버 최저가 ${naverLow.toLocaleString()}원보다 비싸서 등록할 수 없어요. 오픈마켓 판매가를 낮춰 주세요.`);
   if (!d.image) return fail("대표 이미지를 올려 주세요.");
   if (!/^data:image\/|^https?:\/\//.test(d.image)) return fail("대표 이미지는 파일 또는 https:// 주소여야 해요.");
   const id = "req_" + Date.now();

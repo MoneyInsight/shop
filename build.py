@@ -34,7 +34,7 @@ def placeholder_svg(p):
 def load_products():
     import product_import
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
-    ss_rows, warns, excluded = product_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0.05))
+    ss_rows, warns, excluded = product_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0.05), CFG.get("pricing"))
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
     for w in warns:
         print("⚠️", w)
@@ -50,7 +50,7 @@ def load_products():
         p["normal_price"] = int(p["normal_price"] or 0) or p["price"]
         p["shipping_fee"] = int(p["shipping_fee"] or 0)
         p["category_name"] = CAT_NAME.get(p["category"], "기타")
-        p["naver_low"] = int(p.get("naver_low") or 0)
+        p["naver_low"] = int(p.get("naver_low") or 0) if CFG.get("show_naver", True) else 0
         p["save"] = p["naver_low"] - p["price"] if p["naver_low"] > p["price"] else 0
         p["desc_lines"] = [x for x in p["description"].split("|") if x.strip()]
         p.setdefault("detail_html", "")
@@ -67,7 +67,8 @@ def load_products():
             pass  # 외부 이미지 주소
         out.append(p)
     # 네이버 최저가보다 많이 싼 상품(절약률 큰 순)이 위로, 최저가 정보 없는 상품은 뒤로
-    out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
+    if CFG.get("show_naver", True):
+        out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
     return out
 
 
@@ -141,7 +142,7 @@ def side(root):
 <div class="card login-box"><div class="hello">반가워요 👋</div><p>회원가입 없이 바로 주문할 수 있어요.</p>
 <div id="mini-cart"></div></div>
 <div class="card why"><h2>왜 {e(CFG["shop_name"])}인가요?</h2><ul>
-<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>💚 더 싼 곳 있으면 차액 보상 (최저가 보상제)</li><li>🚚 전 상품 무료배송</li>
+<li>💸 오픈마켓 수수료가 없어 같은 상품도 더 저렴해요</li><li>🚚 전 상품 무료배송</li>
 <li>🔒 토스페이먼츠 안전결제</li><li>📦 공급사 직배송으로 빠른 처리</li></ul></div>
 <div class="card cs-box"><h2>고객센터</h2><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}</p><p>{e(BIZ["email"])}</p></div>
 <div class="card"><h2>공급사 입점 모집</h2><p style="color:#666;font-size:14px;margin-bottom:12px">좋은 상품을 가진 공급사라면 누구나 상품을 올릴 수 있어요.</p>
@@ -211,8 +212,7 @@ def build_products(ps):
 <div class="d-btns" id="buy" data-id="{p["id"]}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
 <button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-green" id="buy-now">바로 구매</button></div>
 </div></div></div>
-<div class="lowest-box"><b>💚 최저가 보상제</b> 같은 상품을 더 싸게 파는 곳을 찾으셨나요? 알려주시면 확인 후 차액을 적립금으로 돌려드려요.
-<button class="btn btn-line" id="report-btn" data-id="{p["id"]}" data-name="{e(p["name"])}" data-price="{p["price"]}" style="margin-top:10px;height:44px;font-size:15px">더 싼 곳 알려주기</button></div>
+
 <div class="d-desc"><div class="card"><h2>상품 상세정보</h2>{desc_html}</div>
 <div class="card"><h2>상품정보 제공고시</h2><table class="notice-table">
 <tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "-")}</td></tr>
@@ -295,7 +295,7 @@ def build_partner_pages():
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" style="width:100%;height:48px;border:1px solid #cfd4d9;border-radius:10px;padding:0 10px;font-size:16px">{cats}</select>
 <label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
-<label>네이버 최저가 (원, 네이버쇼핑에서 같은 상품 최저가 — 우리 판매가가 이보다 싸야 등록돼요)</label><input name="naver_low" inputmode="numeric" id="naver-low-in">
+<label>네이버 최저가 (선택 · 적으면 이보다 비쌀 때 등록 안 돼요)</label><input name="naver_low" inputmode="numeric" id="naver-low-in">
 <div id="price-preview" style="font-size:14px;background:#f5f6f8;border-radius:10px;padding:12px;margin-top:8px;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 − 5% / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
@@ -311,7 +311,7 @@ def build_partner_pages():
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-green" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 최저가는 등록할 때 한 번만 확인 — 이후엔 고객 신고로 관리</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>✅ 수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>✅ 입점비·월 이용료 없음</li><li>✅ 네이버 가격비교 노출</li><li>✅ 주문 즉시 발주 안내</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="card form" id="admin-login"><h2>🔐 관리자</h2><label>관리자 비밀번호</label><input id="admin-pw" type="password">
 <button class="btn btn-dark" style="margin-top:12px" id="admin-enter">들어가기</button></div>
