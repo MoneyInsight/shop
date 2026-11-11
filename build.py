@@ -45,7 +45,7 @@ def load_products():
     for r in rows:
         if r.get("status", "판매중") not in ("판매중", ""):
             continue
-        p = {k: (v or "").strip() for k, v in r.items()}
+        p = {k: (v.strip() if isinstance(v, str) else (v if v is not None else "")) for k, v in r.items()}
         p["price"] = int(p["price"] or 0)
         p["normal_price"] = int(p["normal_price"] or 0) or p["price"]
         p["shipping_fee"] = int(p["shipping_fee"] or 0)
@@ -54,6 +54,9 @@ def load_products():
         p["save"] = p["naver_low"] - p["price"] if p["naver_low"] > p["price"] else 0
         p["desc_lines"] = [x for x in p["description"].split("|") if x.strip()]
         p.setdefault("detail_html", "")
+        p["options"] = p.get("options") or []
+        p["option_name"] = p.get("option_name") or "옵션"
+        p["images"] = p.get("images") or []
         if p["image"] and not p["image"].startswith("http") and not (ROOT / p["image"]).exists():
             p["image"] = ""
         if not p["image"]:
@@ -155,7 +158,7 @@ def write(path, text):
 # ---------------- 페이지 ----------------
 def build_home(ps):
     chips = '<button class="chip on" data-cat="">전체</button>' + "".join(
-        f'<button class="chip" data-cat="{c["slug"]}">{e(c["name"])}</button>' for c in CATS)
+        f'<a class="chip" href="category/{c["slug"]}.html">{e(c["name"])}</a>' for c in CATS)
     best = [p for p in ps if p["save"]][:8] or [p for p in ps if p["badge"] == "BEST"] or ps[:4]
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
@@ -164,7 +167,8 @@ def build_home(ps):
 <p>오픈마켓 수수료 거품을 뺀 공급사 직거래 가격. 같은 상품을 더 싸게, 전 상품 무료배송이에요.</p></div><a class="b-btn" href="search.html">전체 상품 보기 ›</a></div>
 <div class="card"><h2>💚 네이버 최저가보다 더 싼 상품</h2><div class="grid">{"".join(card(p, "./") for p in best[:8])}</div></div>
 <div class="card"><h2>카테고리별 상품 <small>{len(ps)}개</small></h2><div class="chips">{chips}</div>
-<div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps)}</div></div>
+<div class="grid" id="home-grid">{"".join(card(p, "./") for p in ps[:60])}</div>
+<a class="btn btn-line" style="margin-top:18px" href="search.html">전체 상품 {len(ps):,}개 보기 ›</a></div>
 </div>{side("./")}</div>'''
     write("index.html", layout(f'{CFG["shop_name"]} - {CFG["slogan"]}', body, "./", canonical=BASE + "/",
           extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
@@ -190,7 +194,7 @@ def build_products(ps):
               "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
               "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
                          "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition"}}
-        desc_html = "".join(f"<p>✔ {e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
+        desc_html = "".join(f'<img src="{e(u)}" alt="" loading="lazy" style="margin:0 auto 10px;max-width:100%">' for u in p["images"]) + "".join(f"<p>✔ {e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
         if not desc_html:
             desc_html = '<p style="color:#888">상세 정보 준비중이에요.</p>' 
         body = f'''<div class="wrap page"><div class="crumb"><a href="../index.html">홈</a> › <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
@@ -201,9 +205,10 @@ def build_products(ps):
 {f'<div><span class="d-save">💚 네이버 최저가 {won(p["naver_low"])}보다 {won(p["save"])} 저렴</span></div>' if p["save"] else ""}{f'<div><span class="d-save">🎁 {e(p["event"])}</span></div>' if p["event"] else ""}</div>
 <dl class="d-info"><dt>배송비</dt><dd>{"무료배송" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
 <dt>배송</dt><dd>영업일 1~3일 내 출발</dd><dt>원산지</dt><dd>{e(p["origin"] or "상세설명 참조")}</dd></dl>
+{('<label class="opt-label">' + e(p["option_name"]) + '</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(f'<option value="{i}">{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + '</select>') if p["options"] else ""}
 <div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric"><button id="plus" aria-label="더하기">+</button></div>
 <div class="d-total"><span>총 상품금액</span><strong id="d-total">{won(p["price"])}</strong></div>
-<div class="d-btns" id="buy" data-id="{p["id"]}" data-price="{p["price"]}">
+<div class="d-btns" id="buy" data-id="{p["id"]}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
 <button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-green" id="buy-now">바로 구매</button></div>
 </div></div></div>
 <div class="d-desc"><div class="card"><h2>상품 상세정보</h2>{desc_html}</div>
@@ -336,7 +341,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier")} for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name")} for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))
 
 

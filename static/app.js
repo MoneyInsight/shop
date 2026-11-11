@@ -14,10 +14,10 @@
   const getCart = () => store.get("cart", []);
   const setCart = (c) => { store.set("cart", c); updateBadge(); };
 
-  function addToCart(id, qty) {
+  function addToCart(id, qty, opt) {
     const c = getCart();
-    const it = c.find((x) => x.id === id);
-    if (it) it.qty += qty; else c.push({ id, qty });
+    const it = c.find((x) => x.id === id && (x.opt ?? null) === (opt ?? null));
+    if (it) it.qty += qty; else c.push(opt == null ? { id, qty } : { id, qty, opt });
     setCart(c);
   }
   function updateBadge() {
@@ -36,7 +36,10 @@
   // 금액 계산: 상품금액 + 상품별 배송비(같은 상품은 1회), 무료배송 기준 이상이면 0
   function calc(cart, products) {
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
-    const lines = cart.filter((x) => map[x.id]).map((x) => ({ ...map[x.id], qty: x.qty }));
+    const lines = cart.filter((x) => map[x.id]).map((x) => {
+      const p = map[x.id], o = x.opt != null && p.options ? p.options[x.opt] : null;
+      return { ...p, qty: x.qty, opt: x.opt, price: p.price + (o ? o.add : 0), name: p.name + (o ? ` [${o.v}]` : "") };
+    });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     let shipping = lines.reduce((a, l) => a + (l.shipping_fee || 0), 0);
     if (CFG.free_shipping_over && subtotal >= CFG.free_shipping_over) shipping = 0;
@@ -105,22 +108,29 @@
     const el = $("#buy");
     if (!el) return;
     document.body.classList.add("has-buybar");
-    const id = el.dataset.id, price = Number(el.dataset.price);
-    const inp = $("#qty");
+    const id = el.dataset.id, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]");
+    const inp = $("#qty"), sel = $("#opt");
+    const optIdx = () => (sel && sel.value !== "" ? Number(sel.value) : null);
     const sync = () => {
       let v = Math.max(1, Math.min(99, parseInt(inp.value) || 1));
       inp.value = v;
-      $("#d-total").textContent = won(price * v);
+      const o = optIdx();
+      $("#d-total").textContent = won((base + (o != null ? adds[o] : 0)) * v);
     };
+    if (sel) sel.onchange = sync;
+    const needOpt = () => { if (sel && sel.value === "") { alert("옵션을 선택해 주세요."); sel.focus(); return true; } return false; };
     $("#minus").onclick = () => { inp.value = +inp.value - 1; sync(); };
     $("#plus").onclick = () => { inp.value = +inp.value + 1; sync(); };
     inp.oninput = sync;
     $("#add-cart").onclick = () => {
-      addToCart(id, +inp.value);
+      if (needOpt()) return;
+      addToCart(id, +inp.value, optIdx());
       if (confirm("장바구니에 담았어요. 장바구니로 이동할까요?")) location.href = ROOT + "cart.html";
     };
     $("#buy-now").onclick = () => {
-      store.set("buynow", [{ id, qty: +inp.value }]);
+      if (needOpt()) return;
+      const o = optIdx();
+      store.set("buynow", [o == null ? { id, qty: +inp.value } : { id, qty: +inp.value, opt: o }]);
       location.href = ROOT + "checkout.html?mode=now";
     };
     sync();
@@ -137,12 +147,12 @@
         $("#cart-sum").innerHTML = ""; return;
       }
       const { lines, subtotal, shipping, total } = calc(cart, await loadProducts());
-      box.innerHTML = lines.map((l) => `<div class="c-row">
+      box.innerHTML = lines.map((l, i) => `<div class="c-row">
         <img src="${ROOT}${esc(l.image)}" alt="">
         <div><a class="nm" href="${ROOT}product/${l.id}.html">${esc(l.name)}</a>
           <div style="color:#888;font-size:14px">${won(l.price)} · ${l.shipping_fee ? "배송비 " + won(l.shipping_fee) : "무료배송"}</div>
-          <div class="qty" style="margin-top:8px"><button data-a="-" data-id="${l.id}">−</button><input value="${l.qty}" readonly><button data-a="+" data-id="${l.id}">+</button></div>
-          <button class="x" data-a="x" data-id="${l.id}">삭제</button></div>
+          <div class="qty" style="margin-top:8px"><button data-a="-" data-k="${i}">−</button><input value="${l.qty}" readonly><button data-a="+" data-k="${i}">+</button></div>
+          <button class="x" data-a="x" data-k="${i}">삭제</button></div>
         <strong>${won(l.price * l.qty)}</strong></div>`).join("");
       $("#cart-sum").innerHTML = `<div class="sum"><div><span>상품금액</span><span>${won(subtotal)}</span></div>
         <div><span>배송비</span><span>${won(shipping)}</span></div>
@@ -153,10 +163,11 @@
       const b = e.target.closest("button[data-a]");
       if (!b) return;
       let c = getCart();
-      const it = c.find((x) => x.id === b.dataset.id);
+      const k = Number(b.dataset.k), it = c[k];
+      if (!it) return;
       if (b.dataset.a === "+") it.qty = Math.min(99, it.qty + 1);
       if (b.dataset.a === "-") it.qty = Math.max(1, it.qty - 1);
-      if (b.dataset.a === "x") c = c.filter((x) => x.id !== b.dataset.id);
+      if (b.dataset.a === "x") c = c.filter((_, j) => j !== k);
       setCart(c); render();
     });
     render();
@@ -210,7 +221,7 @@
           customerEmail: order.customer.email || undefined,
           customerMobilePhone: order.customer.phone.replace(/\D/g, ""),
           metadata: {
-            items: cart.map((x) => x.id + "x" + x.qty).join(",").slice(0, 100),
+            items: cart.map((x) => x.id + (x.opt != null ? "-" + x.opt : "") + "x" + x.qty).join(",").slice(0, 100),
             receiver: (order.customer.name + "/" + order.customer.phone).slice(0, 100),
             address: ("[" + order.customer.zip + "] " + order.customer.addr).slice(0, 100),
             memo: (order.customer.memo || "-").slice(0, 100),

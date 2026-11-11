@@ -33,6 +33,10 @@ ALIASES = {
     "summary": ["한 줄 소개", "한줄소개"],
     "event": ["홍보문구", "이벤트문구"],
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
+    "opt_name": ["옵션명"],
+    "opt_values": ["옵션값"],
+    "opt_prices": ["옵션가"],
+    "options": ["옵션"],
 }
 
 # 상품명 키워드로 쇼핑몰 카테고리 자동 분류 (쇼핑몰카테고리 열이 비어 있을 때)
@@ -41,7 +45,7 @@ KEYWORDS = [
     ("fashion", "부츠 로퍼 구두 단화 슈즈 브라 거들 니트 모자 벨트 반바지 우산 가방 파우치 선글라스 앞치마"),
     ("pet", "강아지 고양이 애견 반려 펫 목줄 하네스 리드줄 개껌 방묘문"),
     ("kitchen", "팬 냄비 도마 찜기 텀블러 보온병 식기 수저 주방 싱크 육수통 곰솥 계량 튀김 소분 용기 커피 쌀통 쌀독 뒤주"),
-    ("food", "엿 차 티백 간장 기름 오란다 감초 홍차 과자 캡슐커피"),
+    ("food", "인진쑥엿 티백 간장 맛기름 오란다 감초 홍차 과자 캡슐커피 아이스티 게간장 호박팥차"),
     ("digital", "케이블 HDMI 랜 충전 USB 외장하드 SSD 마우스 케이스 갤럭시 아이패드 거치대 모니터 안테나 멀티코드 조명 LED"),
     ("office", "볼펜 형광펜 샤프 연필 마카 화일 리갈패드 재단기 수정테이프 문서 명찰 화이트보드 보면대"),
     ("tools", "공구 엔드밀 인서트 렌치 측정기 게이지 하조기 사다리 펌프 밴드쏘 검전기 조정기 호스 대차 카트 수레 구루마 밀차 핸드카 파렛트"),
@@ -90,6 +94,26 @@ def _find_header(rows):
                         col[key] = cells.index(_norm(n)); break
             return i, col
     return None, None
+
+
+def parse_options(get, r, discount):
+    """옵션을 [{"v": "블랙 / M", "add": 추가금}] 로. 두 가지 형식 지원:
+       ① 옵션 열: '블랙 M=0|블랙 L=1000'   ② 옵션명/옵션값/옵션가 열(줄바꿈 구분, 값은 쉼표로 조합)"""
+    opts = []
+    raw = get(r, "options")
+    if raw:
+        for part in raw.split("|"):
+            if not part.strip():
+                continue
+            v, _, add = part.partition("=")
+            opts.append((v.strip(), _num(add)))
+    elif get(r, "opt_values"):
+        vals = get(r, "opt_values").split("\n")
+        prices = get(r, "opt_prices").split("\n")
+        for i, v in enumerate(vals):
+            if v.strip():
+                opts.append((" / ".join(x.strip() for x in v.split(",") if x.strip()), _num(prices[i]) if i < len(prices) else 0))
+    return [{"v": v[:60], "add": math.ceil(a * (1 - discount) / 10) * 10 if a > 0 else (-math.floor(-a * (1 - discount) / 10) * 10 if a < 0 else 0)} for v, a in opts][:200]
 
 
 def guess_category(name, cats):
@@ -148,6 +172,8 @@ def load(data_dir, cats, discount=0.05):
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": detail if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
+                "options": parse_options(get, r, discount), "option_name": get(r, "opt_name").replace("\n", " / "),
+                "images": [x for x in re.split(r"[|\n,]", get(r, "images")) if x.strip().startswith("http")][:9],
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")

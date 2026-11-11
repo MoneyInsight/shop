@@ -83,9 +83,15 @@ async function confirm(req, env) {
     const p = map[it.id];
     const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
     if (!p) return fail("판매하지 않는 상품이 포함되어 있어요.");
-    subtotal += p.price * qty; shipping += p.shipping_fee || 0;
+    let unit = p.price, optName = "";
+    if (it.opt != null && it.opt !== "") {
+      const o = (p.options || [])[Number(it.opt)];
+      if (!o) return fail("선택한 옵션을 찾을 수 없어요. 다시 주문해 주세요.");
+      unit += o.add; optName = o.v;
+    } else if ((p.options || []).length) return fail("옵션이 선택되지 않은 상품이 있어요.");
+    subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name, qty, price: p.price, supplier: sup.supplier, supply_price: sup.supply_price });
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
