@@ -510,7 +510,11 @@ export async function handle(req, env, path) {
     if (path === "/inquiry/add") return await inquiryAdd(req, env);
     if (path === "/coupon/check") return await couponCheck(req, env);
     if (path.startsWith("/admin/")) {
-      if (!env.ADMIN_PASSWORD || (req.headers.get("Authorization") || "") !== "Bearer " + env.ADMIN_PASSWORD) return fail("비밀번호가 틀렸어요.", 401);
+      const want = String(env.ADMIN_PASSWORD || "").trim();
+      if (!want) return fail("서버에 관리자 비밀번호(ADMIN_PASSWORD)가 아직 적용되지 않았어요. Netlify에서 값을 확인하고 다시 배포해 주세요.", 401);
+      let got = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/, "").trim();
+      try { got = decodeURIComponent(got); } catch (e) { /* 그대로 비교 */ }
+      if (got.trim() !== want) return fail("비밀번호가 틀렸어요.", 401);
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/approve-seller") return await approveSeller(req, env);
       if (path === "/admin/approve-product") return await approveProduct(req, env);

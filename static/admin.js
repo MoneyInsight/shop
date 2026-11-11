@@ -10,8 +10,12 @@
   let PW = sessionStorage.getItem("admin_pw") || "", D = null, tab = "dash", orderFilter = "전체";
 
   const call = async (path, body) => {
-    const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + PW }, body: JSON.stringify(body || {}) });
-    const d = await r.json();
+    let r, d;
+    try {
+      // 한글·특수문자 비밀번호도 보낼 수 있게 인코딩
+      r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + encodeURIComponent(PW.trim()) }, body: JSON.stringify(body || {}) });
+    } catch (e) { throw new Error("서버에 연결하지 못했어요. (" + API + ")"); }
+    try { d = await r.json(); } catch (e) { throw new Error("서버 응답이 올바르지 않아요. (상태 " + r.status + ") 서버 배포가 실패했을 수 있어요."); }
     if (!r.ok) throw new Error(d.message || "오류가 났어요.");
     return d;
   };

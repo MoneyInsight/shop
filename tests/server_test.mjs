@@ -54,4 +54,9 @@ r = await call("/admin/order-cancel", { orderId: "ORD1", reason: "반품 환불"
 r = await call("/order/lookup", { orderId: "ORD1", phone: "01012345678" }); ok("환불 후 상태", r.d.order.status === "반품완료", r.d.order?.status);
 r = await call("/confirm", { paymentKey: "pk2", orderId: "ORD2", amount: 5000, items: [{ id: "B1", qty: 1 }], customer: cust }); 
 r = await call("/order/cancel", { orderId: "ORD2", phone: "01012345678", reason: "실수" }); ok("결제완료 즉시 취소", r.d.order?.status === "취소완료", r);
+{ const q = async (h, e2) => (await handle(new Request("https://api.test/admin/list", { method: "POST", headers: { Authorization: h }, body: "{}" }), e2 || env, "/admin/list")).status;
+  ok("비번 인코딩 허용", (await q("Bearer " + encodeURIComponent("pw"))) === 200);
+  ok("한글 비번", (await q("Bearer " + encodeURIComponent("비번1!"), { ...env, ADMIN_PASSWORD: " 비번1! " })) === 200);
+  ok("틀린 비번", (await q("Bearer nope")) === 401);
+  ok("비번 미설정", (await q("Bearer x", { ...env, ADMIN_PASSWORD: "" })) === 401); }
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);
