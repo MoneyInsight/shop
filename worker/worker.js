@@ -492,8 +492,13 @@ async function rejectProduct(req, env) {
 /** 공통 처리기: Cloudflare·Netlify 둘 다 사용 */
 export async function handle(req, env, path) {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
-  if (req.method !== "POST") return fail("Not found", 404);
   path = path || new URL(req.url).pathname;
+  if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
+    const pw = String(env.ADMIN_PASSWORD || "").trim();
+    return json({ ok: true, version: "2026-11-12b", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+      kv: !!env.SHOP, toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+  }
+  if (req.method !== "POST") return fail("Not found", 404);
   try {
     if (path === "/confirm") return await confirm(req, env);
     if (path === "/seller/apply") return await sellerApply(req, env);

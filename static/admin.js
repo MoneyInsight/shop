@@ -139,5 +139,15 @@
     try { await load(); } catch (e) { alert(e.message); }
   };
   $("#admin-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#admin-enter").click(); });
+  // 서버 상태 표시: 로그인 실패 원인 확인용
+  (async () => {
+    const box = document.createElement("p"); box.className = "muted"; box.style.marginTop = "14px";
+    $("#admin-login").appendChild(box);
+    if (!API) { box.textContent = "서버 주소가 설정되지 않았어요."; return; }
+    try {
+      const h = await (await fetch(API + "/health", { cache: "no-store" })).json();
+      box.textContent = `서버 연결됨 · 버전 ${h.version || "예전"} · 관리자 비밀번호 ${h.adminPassword || "확인 불가(예전 버전)"} · 결제 ${h.toss || "-"}`;
+    } catch (e) { box.textContent = "서버에 연결하지 못했어요: " + API; }
+  })();
   if (PW && API) load().catch(() => {});
 })();
