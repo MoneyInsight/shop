@@ -31,6 +31,7 @@ ALIASES = {
     "status": ["판매상태", "상품상태"],
     "mall_category": ["쇼핑몰카테고리", "자체몰카테고리"],
     "event": ["홍보문구", "이벤트문구"],
+    "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
 }
 
 # 상품명 키워드로 쇼핑몰 카테고리 자동 분류 (쇼핑몰카테고리 열이 비어 있을 때)
@@ -101,6 +102,7 @@ def guess_category(name, cats):
 def load(data_dir, cats, discount=0.05):
     """data_dir 안의 스마트스토어 양식 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
+    excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
     cat_by_name = {c["name"]: c["slug"] for c in cats}
     for path in sorted(Path(data_dir).glob("*")):
         if path.name == "products.csv" or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
@@ -125,6 +127,10 @@ def load(data_dir, cats, discount=0.05):
             ship = _num(get(r, "ship_fee")) if "무료" not in get(r, "ship_type") else 0
             base = price - disc + ship
             sale = math.ceil(base * (1 - discount) / 10) * 10
+            low = _num(get(r, "naver_low"))
+            if low and sale >= low:
+                excluded.append({"name": name, "price": sale, "naver_low": low, "file": path.name})
+                continue
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"
             mc = get(r, "mall_category")
@@ -142,4 +148,6 @@ def load(data_dir, cats, discount=0.05):
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
-    return products, warns
+    if excluded:
+        warns.append(f"네이버 최저가보다 비싸서 등록 안 한 상품 {len(excluded)}개 (관리자 페이지에서 확인)")
+    return products, warns, excluded

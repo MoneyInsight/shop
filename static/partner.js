@@ -38,13 +38,17 @@
 
   // ---------- 가격 미리보기 ----------
   const costIn = $("#market-in");
+  const lowIn = $("#naver-low-in");
+  if (lowIn && costIn) lowIn.addEventListener("input", () => costIn.dispatchEvent(new Event("input")));
   if (costIn) costIn.addEventListener("input", () => {
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
     const price = Math.ceil(c * 0.95 / 10) * 10, card = Math.round(price * 0.034), fee = Math.round(price * 0.03), settle = Math.floor(price * 0.936);
     $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (고객 5% 할인)<br>
       공급사 정산금 <b>${won(settle)}</b> = 판매가 − 카드수수료 ${won(card)} − 플랫폼 3% ${won(fee)}<br>
-      같은 상품을 오픈마켓(수수료 12%)에서 팔 때 정산금 약 <b>${won(Math.floor(c * 0.88))}</b>`;
+      같은 상품을 오픈마켓(수수료 12%)에서 팔 때 정산금 약 <b>${won(Math.floor(c * 0.88))}</b>` +
+      (() => { const low = parseInt(($("#naver-low-in").value || "").replace(/\D/g, "")) || 0;
+        return !low ? "" : price < low ? `<br>✅ 네이버 최저가 ${won(low)}보다 ${won(low - price)} 싸요 — 등록 가능` : `<br>❌ 네이버 최저가 ${won(low)}보다 비싸요 — 등록 불가`; })();
   });
 
   // ---------- 관리자 ----------
@@ -69,7 +73,7 @@
       <img src="${p.image_url || ""}" alt="">
       <div><b>${esc(p.name)}</b> <small>(${esc(p.supplier)})</small><br>
       <small>오픈마켓가 ${won(p.market_price)} · 정산금 ${won(p.supply_price)} · 자동 판매가 <b>${won(p.suggested_price)}</b></small><br>
-      <small>${esc(p.summary)}</small></div>
+      <small>네이버 최저가 ${won(p.naver_low)}</small><br><small>${esc(p.summary)}</small></div>
       <div style="display:flex;flex-direction:column;gap:6px"><input data-price="${p.id}" value="${p.suggested_price}" style="width:110px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0 8px">
       <button class="chip on" data-act="approve-product" data-id="${p.id}">승인</button><button class="chip" data-act="reject-product" data-id="${p.id}">반려</button></div></div>`).join("") : "<p>대기 중인 상품이 없어요.</p>";
     $("#orders").innerHTML = d.orders.length ? d.orders.map((o) => `<div class="c-row" style="grid-template-columns:1fr auto">
@@ -78,6 +82,15 @@
       <ul style="margin:6px 0 0 18px;font-size:14px">${o.lines.map((l) => `<li>[${esc(l.supplier)}] ${esc(l.name)} × ${l.qty} — 정산금 ${won(l.supply_price * l.qty)}</li>`).join("")}</ul></div>
       <span class="chip">${esc(o.status || "결제완료")}</span></div>`).join("") : "<p>주문이 없어요.</p>";
   }
+
+  async function loadPriceCheck() {
+    const box = $("#price-check"); if (!box) return;
+    try {
+      const list = await (await fetch("price_check.json", { cache: "no-cache" })).json();
+      box.innerHTML = list.length ? list.map((x) => `<div class="c-row" style="grid-template-columns:1fr auto"><div>${esc(x.name)}<br><small>${esc(x.file)}</small></div><div style="text-align:right;font-size:14px">우리 ${won(x.price)}<br>네이버 ${won(x.naver_low)}</div></div>`).join("") : "<p>없어요 👍</p>";
+    } catch (e) { box.innerHTML = "<p>없어요 👍</p>"; }
+  }
+  loadPriceCheck();
 
   document.addEventListener("click", async (ev) => {
     const b = ev.target.closest("button[data-act]");
