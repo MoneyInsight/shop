@@ -27,7 +27,7 @@ export default async (req) => {
     SITE_URL: e("SITE_URL", "https://moneyinsight.github.io/shop"),
     MARGIN_RATE: e("MARGIN_RATE", "0.03"),
     CARD_FEE: e("CARD_FEE", "0.034"),
-    SUPPLIER_MARGIN: e("SUPPLIER_MARGIN", "0.07"),
+    SUPPLIER_MARGIN: e("SUPPLIER_MARGIN", "0.08"),
     MIN_MARGIN: e("MIN_MARGIN", "0"),
     FREE_SHIPPING_OVER: e("FREE_SHIPPING_OVER", "0"),
   };

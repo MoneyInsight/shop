@@ -56,12 +56,11 @@ async function ghPut(env, path, contentB64, message, sha) {
 }
 
 // ---------- 가격 ----------
-// 판매가 = 원가(상품+배송비) × (1 + 공급사 7% + 플랫폼 3%) = 원가 × 1.10 (10원 단위 올림)
-// 공급사 정산금 = 원가 × 1.07 − 카드수수료(판매가 × 3.4%)
+// 판매가 = 원가(상품+배송비) × (1 + 공급사 8% + 플랫폼 3%) ÷ (1 − 카드수수료 3.4%) (10원 단위 올림)
+// 공급사 정산금 = 원가 × 1.08 (수수료 공제 없음)
 const priceFromCost = (env, cost) =>
-  Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07) + Number(env.MARGIN_RATE || 0.03)) / 10) * 10;
-const settleFromCost = (env, cost) =>
-  Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.07)) - priceFromCost(env, cost) * Number(env.CARD_FEE || 0.034));
+  Math.ceil(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.08) + Number(env.MARGIN_RATE || 0.03)) / (1 - Number(env.CARD_FEE || 0.034)) / 10) * 10;
+const settleFromCost = (env, cost) => Math.floor(cost * (1 + Number(env.SUPPLIER_MARGIN || 0.08)));
 function supplyFromCost(env, cost) { return settleFromCost(env, cost); }
 function suggestPrice(env, supply) {
   const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);

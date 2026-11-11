@@ -41,10 +41,10 @@
   if (costIn) costIn.addEventListener("input", () => {
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
-    const price = Math.ceil(c * 1.10 / 10) * 10, card = Math.round(price * 0.034), settle = Math.floor(c * 1.07 - card);
-    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 판매가 <b style="color:#e5322d">${won(price)}</b> (원가+10%)<br>
-      공급사 정산금 <b>${won(settle)}</b> = 원가+7% − 카드수수료 ${won(card)}<br>
-      같은 판매가로 오픈마켓(수수료 12%)에 팔면 정산금 약 <b>${won(Math.floor(price * 0.88))}</b>`;
+    const price = Math.ceil(c * 1.11 / 0.966 / 10) * 10, settle = Math.floor(c * 1.08);
+    $("#price-preview").innerHTML = `원가 <b>${won(c)}</b> → 판매가 <b style="color:#e5322d">${won(price)}</b><br>
+      공급사 정산금 <b>${won(settle)}</b> = 원가 + 8% (카드수수료 등 공제 없음)<br>
+      오픈마켓(수수료 12%)에서 같은 정산금을 받으려면 판매가 약 <b>${won(Math.ceil(settle / 0.88 / 10) * 10)}</b>`;
   });
 
   // ---------- 관리자 ----------
