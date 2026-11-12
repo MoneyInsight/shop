@@ -133,7 +133,7 @@ async function confirm(req, env) {
   const itemName = lines[0].name.slice(0, 40) + (lines.length > 1 ? ` 외 ${lines.length - 1}건` : "");
   await kakao(env, "ORDER_DONE", customer?.phone, { 고객명: customer?.name, 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 링크: siteLink(env, "orders.html?id=" + orderId) });
   await kakao(env, "ADMIN_ORDER", env.ADMIN_PHONE, { 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 고객명: customer?.name, 링크: siteLink(env, "admin.html") });
-  await notify(env, `🛒 새 주문 ${orderId}\n${lines.map((l) => `- ${l.name} × ${l.qty}`).join("\n")}\n결제 ${Number(amount).toLocaleString()}원 / ${customer?.name || ""}`);
+  await notify(env, `🛒 새 주문 ${Number(amount).toLocaleString()}원\n${orderId}\n${lines.map((l) => `- ${l.name.slice(0, 30)} × ${l.qty}`).join("\n")}\n받는 분 ${customer?.name || ""}`);
   return json({ ok: true, orderId });
 }
 
@@ -404,11 +404,54 @@ const digits = (s) => String(s || "").replace(/\D/g, "");
 const maskName = (s) => { s = String(s || "고객"); return s.length <= 1 ? s + "*" : s[0] + "*".repeat(Math.min(s.length - 1, 2)); };
 const clip = (s, n) => String(s || "").replace(/<[^>]*>/g, "").trim().slice(0, n);
 
+// 대표님 알림: 카카오톡 "나와의 채팅"(무료) + 웹훅(선택)
 async function notify(env, text) {
+  await kakaoMemo(env, text);
   if (!env.NOTIFY_WEBHOOK) return;
   try {
     await fetch(env.NOTIFY_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, content: text }) });
   } catch (e) { /* 알림 실패는 주문에 영향 없음 */ }
+}
+
+// ---------- 카카오톡 나에게 보내기 (무료) ----------
+// 카카오 디벨로퍼스 앱의 REST API 키(KAKAO_REST_KEY, 선택: KAKAO_CLIENT_SECRET)만 있으면,
+// 관리자 페이지에서 [카카오톡 연결]을 한 번 눌러 로그인하면 이후 알림이 대표님 카톡 "나와의 채팅"으로 옴
+const form = (o) => new URLSearchParams(Object.fromEntries(Object.entries(o).filter(([, v]) => v))).toString();
+async function kakaoToken(env, params) {
+  const r = await fetch("https://kauth.kakao.com/oauth/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: form({ client_id: env.KAKAO_REST_KEY, client_secret: env.KAKAO_CLIENT_SECRET, ...params }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.access_token) throw new Error(d.error_description || d.msg || "카카오 인증 실패");
+  const old = (await env.SHOP.get("kakao:me", "json")) || {};
+  const t = { access: d.access_token, exp: Date.now() + (d.expires_in || 3600) * 1000 - 60000, refresh: d.refresh_token || old.refresh, connectedAt: old.connectedAt || new Date().toISOString() };
+  await env.SHOP.put("kakao:me", JSON.stringify(t));
+  return t;
+}
+async function kakaoMemo(env, text, path) {
+  if (!env.KAKAO_REST_KEY || !env.SHOP) return false;
+  try {
+    let t = await env.SHOP.get("kakao:me", "json");
+    if (!t || !t.refresh) return false;  // 아직 연결 안 함
+    if (!t.access || Date.now() > t.exp) t = await kakaoToken(env, { grant_type: "refresh_token", refresh_token: t.refresh });
+    const url = siteLink(env, path || "admin.html");
+    const tpl = { object_type: "text", text: String(text).slice(0, 200), link: { web_url: url, mobile_web_url: url }, button_title: "확인하기" };
+    const r = await fetch("https://kapi.kakao.com/v2/api/talk/memo/default/send", { method: "POST",
+      headers: { Authorization: "Bearer " + t.access, "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" }, body: form({ template_object: JSON.stringify(tpl) }) });
+    return r.ok;
+  } catch (e) { return false; }
+}
+async function adminKakaoConnect(req, env) {
+  const { code, redirect_uri } = await req.json();
+  if (!env.KAKAO_REST_KEY) return fail("서버에 KAKAO_REST_KEY가 아직 없어요.");
+  if (!code) return fail("카카오 인증 코드가 없어요.");
+  try { await kakaoToken(env, { grant_type: "authorization_code", redirect_uri, code }); }
+  catch (e) { return fail("카카오 연결 실패: " + e.message); }
+  const sent = await kakaoMemo(env, "✅ 땡잡았땡 알림이 연결되었습니다. 이제 주문·가격 제안·문의가 들어오면 이 채팅으로 알려드려요.");
+  return json({ ok: true, message: sent ? "연결됐어요. 카카오톡 ‘나와의 채팅’에 테스트 알림을 보냈어요." : "연결은 됐는데 테스트 알림을 못 보냈어요. 동의항목 ‘카카오톡 메시지 전송’을 확인해 주세요." });
+}
+async function adminKakaoTest(env) {
+  const sent = await kakaoMemo(env, "🔔 땡잡았땡 테스트 알림입니다.");
+  return sent ? json({ ok: true, message: "카카오톡 ‘나와의 채팅’으로 보냈어요." }) : fail("보내지 못했어요. 카카오톡 연결을 다시 해 주세요.");
 }
 
 async function tossCancel(env, paymentKey, reason, amount) {
@@ -658,7 +701,9 @@ async function adminList(env) {
   const coupons = await kvList(env, "coupon:");
   const offers = (await kvList(env, "offer:")).map(offerState).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200);
   stats.offers = offers.filter((o) => o.status === "대기").length;
-  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, offers, statuses: ORDER_STATUS });
+  const km = await env.SHOP.get("kakao:me", "json");
+  const kakaoMe = { clientId: env.KAKAO_REST_KEY || "", connected: !!(km && km.refresh), connectedAt: km?.connectedAt || "" };
+  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, offers, kakaoMe, statuses: ORDER_STATUS });
 }
 
 async function approveSeller(req, env) {
@@ -719,7 +764,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12e", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-12f", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
@@ -749,6 +794,8 @@ export async function handle(req, env, path) {
       try { got = decodeURIComponent(got); } catch (e) { /* 그대로 비교 */ }
       if (got.trim() !== want) return fail("비밀번호가 틀렸어요.", 401);
       if (path === "/admin/list") return await adminList(env);
+      if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
+      if (path === "/admin/kakao-test") return await adminKakaoTest(env);
       if (path === "/admin/approve-seller") return await approveSeller(req, env);
       if (path === "/admin/approve-product") return await approveProduct(req, env);
       if (path === "/admin/reject-product") return await rejectProduct(req, env);

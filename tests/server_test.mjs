@@ -104,4 +104,21 @@ ok("주문 알림톡 고객·대표", r.s === 200 && bodies.some((b) => b.messag
 r = await call("/admin/order-update", { orderId: "ORD5", status: "배송중", courier: "CJ대한통운", tracking: "999" }, true);
 ok("출고 알림톡", bodies.some((b) => b.message.kakaoOptions.templateId === "t5" && b.message.kakaoOptions.variables["#{송장번호}"] === "999"), bodies.at(-1));
 r = await call("/health"); 
+// ── 카카오톡 나에게 보내기 (무료) ──
+{ const memo = [], f1 = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    if (String(u).includes("kauth.kakao.com")) { const p = new URLSearchParams(o.body); return new Response(JSON.stringify(p.get("code") === "bad" ? { error_description: "invalid code" } : { access_token: "AT" + p.get("grant_type"), refresh_token: "RT", expires_in: 3600 }), { status: p.get("code") === "bad" ? 400 : 200 }); }
+    if (String(u).includes("kapi.kakao.com")) { memo.push(JSON.parse(new URLSearchParams(o.body).get("template_object"))); return new Response("{}"); }
+    return f1(u, o); };
+  r = await call("/admin/kakao-connect", { code: "x", redirect_uri: "https://s/admin.html" }, true); ok("REST 키 없으면 안내", r.s === 400, r);
+  env.KAKAO_REST_KEY = "rest";
+  r = await call("/admin/list", {}, true); ok("연결 전 상태", r.d.kakaoMe.clientId === "rest" && !r.d.kakaoMe.connected, r.d.kakaoMe);
+  r = await call("/admin/kakao-connect", { code: "bad", redirect_uri: "https://s/admin.html" }, true); ok("잘못된 코드 거절", r.s === 400, r);
+  r = await call("/admin/kakao-connect", { code: "good", redirect_uri: "https://s/admin.html" }, true); ok("카카오 연결 + 테스트 알림", r.s === 200 && memo.length === 1, [r, memo]);
+  r = await call("/confirm", { paymentKey: "pk6", orderId: "ORD6", amount: 5000, items: [{ id: "B1", qty: 1 }], customer: cust });
+  ok("주문 시 대표 카톡 알림", memo.some((m) => m.text.includes("새 주문") && m.text.includes("ORD6") && m.text.length <= 200), memo.at(-1));
+  const t0 = JSON.parse(mem.get("kakao:me")); t0.exp = 0; mem.set("kakao:me", JSON.stringify(t0));
+  r = await call("/inquiry/add", { name: "김", contact: "010", type: "배송", text: "언제 오나요??" });
+  ok("토큰 만료 시 자동 갱신 후 알림", JSON.parse(mem.get("kakao:me")).access === "ATrefresh_token" && memo.some((m) => m.text.includes("1:1 문의")), JSON.parse(mem.get("kakao:me")));
+  r = await call("/admin/list", {}, true); ok("연결 후 상태", r.d.kakaoMe.connected, r.d.kakaoMe); }
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);

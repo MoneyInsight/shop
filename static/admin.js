@@ -47,6 +47,7 @@
         <li>답변 대기 가격 제안 <b>${s.offers || 0}</b>건 (직영 상품은 여기서, 공급사 상품은 공급사가 응답)</li>
         <li>답변 대기 문의 <b>${D.qnas.filter((q) => !q.answer).length + D.inquiries.filter((q) => !q.answer).length}</b>건</li>
         <li>공급사 입점 신청 <b>${D.apps.filter((a) => !a.code).length}</b>건 · 상품 승인 대기 <b>${D.pending.length}</b>건</li></ul></div>
+      <div class="card"><h2>카카오톡 알림 <small>무료 · 나와의 채팅</small></h2>${kakaoCard()}</div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;
     if (tab === "orders") {
       const filters = ["전체", "결제완료", "상품준비중", "배송중", "배송완료", "구매확정"];
@@ -100,6 +101,17 @@
     return "";
   }
 
+  const kakaoRedirect = () => location.origin + location.pathname;
+  function kakaoCard() {
+    const k = D.kakaoMe || {};
+    if (!k.clientId) return `<p class="muted">서버에 카카오 REST API 키(KAKAO_REST_KEY)를 넣으면 연결 버튼이 생겨요. 연결하면 주문·가격 제안·문의·취소 요청이 들어올 때 대표님 카카오톡 ‘나와의 채팅’으로 바로 알림이 와요.</p>`;
+    return k.connected
+      ? `<p>연결됨 <span class="muted">(${dt(k.connectedAt)})</span> — 주문·제안·문의가 오면 카카오톡 ‘나와의 채팅’으로 알려드려요.</p>
+         <div class="act-row"><button class="mini-btn" data-act="kakao-test">테스트 알림 보내기</button><button class="mini-btn ghost" data-act="kakao-connect">다시 연결</button></div>`
+      : `<p class="muted">아직 연결되지 않았어요. 버튼을 누르고 대표님 카카오 계정으로 로그인한 뒤 ‘카카오톡 메시지 전송’에 동의해 주세요.</p>
+         <button class="btn btn-dark sm" style="margin-top:10px" data-act="kakao-connect">카카오톡 연결하기</button>`;
+  }
+
   function paint() {
     $("#adm-tabs").innerHTML = TABS.map(([k, n]) => `<button class="chip${k === tab ? " on" : ""}" data-tab="${k}">${n}</button>`).join("");
     $("#adm-view").innerHTML = view();
@@ -128,6 +140,11 @@
     const act = b.dataset.act, id = b.dataset.id, key = b.dataset.key, row = b.closest("tr");
     try {
       if (act === "export") return exportCsv();
+      if (act === "kakao-connect") {
+        location.href = "https://kauth.kakao.com/oauth/authorize?" + new URLSearchParams({ client_id: D.kakaoMe.clientId, redirect_uri: kakaoRedirect(), response_type: "code", scope: "talk_message" });
+        return;
+      }
+      if (act === "kakao-test") { alert((await call("/admin/kakao-test")).message); return; }
       if (act === "order-save") await call("/admin/order-update", { orderId: id, status: $('[data-f="status"]', row).value, courier: $('[data-f="courier"]', row).value, tracking: $('[data-f="tracking"]', row).value });
       if (act === "order-refund") {
         const amt = prompt("환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", "");
@@ -163,5 +180,11 @@
       box.textContent = `서버 연결됨 · 버전 ${h.version || "예전"} · 관리자 비밀번호 ${h.adminPassword || "확인 불가(예전 버전)"} · 결제 ${h.toss || "-"}`;
     } catch (e) { box.textContent = "서버에 연결하지 못했어요: " + API; }
   })();
-  if (PW && API) load().catch(() => {});
+  // 카카오 로그인 후 돌아왔을 때: 인증 코드로 연결 마무리
+  const kcode = new URLSearchParams(location.search).get("code");
+  if (kcode) history.replaceState(null, "", location.pathname);
+  if (PW && API) load().then(async () => {
+    if (!kcode) return;
+    try { alert((await call("/admin/kakao-connect", { code: kcode, redirect_uri: kakaoRedirect() })).message); await load(); } catch (e) { alert(e.message); }
+  }).catch(() => { if (kcode) alert("관리자 로그인 후 ‘카카오톡 연결하기’를 다시 눌러 주세요."); });
 })();
