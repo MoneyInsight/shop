@@ -120,7 +120,8 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <meta property="og:description" content="{e(desc)}"><meta property="og:site_name" content="{name}">
 {f'<meta property="og:image" content="{og_img}">' if og_img else ""}
 {verify}<meta name="theme-color" content="#16171a">
-<link rel="icon" href="{root}favicon.svg" type="image/svg+xml"><link rel="manifest" href="{root}manifest.json">
+<link rel="icon" href="{root}favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="{root}icons/icon-180.png"><link rel="manifest" href="{root}manifest.json">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="{name}">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap">
@@ -128,7 +129,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
 <div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
-<nav><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
 <div class="head-icons"><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
@@ -141,7 +142,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p></div>
 <div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
-<div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li></ul></div></div>
+<div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
 <p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}<br>
 주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])}<br>
 고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
@@ -371,8 +372,12 @@ def build_shop_pages():
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">땡</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
-    write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "start_url": "./index.html", "display": "standalone",
-          "background_color": "#fbfaf8", "theme_color": "#16171a", "icons": [{"src": "favicon.svg", "sizes": "any", "type": "image/svg+xml"}]}, ensure_ascii=False))
+    write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
+          "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#16171a",
+          "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+          "shortcuts": [{"name": "주문·배송 조회", "url": "./orders.html"}, {"name": "장바구니", "url": "./cart.html"}]}, ensure_ascii=False))
+    simple("offline.html", "인터넷 연결을 확인해 주세요", '<div class="done-box"><p>지금은 인터넷에 연결되어 있지 않습니다.<br>연결된 뒤 다시 시도해 주세요.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="index.html">다시 시도</a></div>')
 
 
 def build_policies():
@@ -468,7 +473,8 @@ def main():
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
-    for f in ("style.css", "app.js", "partner.js", "admin.js"):
+    shutil.copytree(ROOT / "static" / "icons", OUT / "icons")
+    for f in ("style.css", "app.js", "partner.js", "admin.js", "sw.js"):
         shutil.copy(ROOT / "static" / f, OUT / f)
     if (ROOT / "uploads").exists():
         shutil.copytree(ROOT / "uploads", OUT / "uploads")

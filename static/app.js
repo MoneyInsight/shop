@@ -494,6 +494,19 @@
     };
   }
 
+  // ── 앱 설치 (홈 화면에 추가) ──
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register(ROOT + "sw.js").catch(() => {});
+  let installEvt = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $$(".install-link").forEach((a) => (a.style.display = "")); });
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
+  if (isIos) $$(".install-link").forEach((a) => (a.style.display = ""));
+  document.addEventListener("click", async (e) => {
+    if (!e.target.closest(".install-link")) return;
+    e.preventDefault();
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $$(".install-link").forEach((a) => (a.style.display = "none")); }
+    else alert("사파리 아래쪽 ‘공유’ 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하면 앱처럼 설치돼요.");
+  });
+
   updateCounts(); markWished();
   initListing(); initRecent(); initDetail(); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs();
 })();
