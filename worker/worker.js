@@ -7,6 +7,9 @@
  *  - POST /admin/approve-seller    관리자: 입점 승인 → 입점코드 발급
  *  - POST /admin/approve-product   관리자: 상품 승인 → 깃허브 products.csv에 추가 → 자동 재배포
  *  - POST /admin/reject-product    관리자: 상품 반려
+ *  - POST /offer/add · /offer/check            고객: 대량 구매(3개+) 가격 제안(최대 3%) · 결과 확인
+ *  - POST /seller/offers · /seller/offer-reply 공급사: 입점코드로 제안 확인·수락/거절
+ *  - POST /admin/offer-reply                   관리자: 직영 상품 제안 수락/거절
  *
  * 환경변수(Secrets): TOSS_SECRET_KEY, ADMIN_PASSWORD, GITHUB_TOKEN
  * 환경변수(Vars):    GITHUB_REPO(예: myid/shop), SITE_URL, MARGIN_RATE(0.07), MIN_MARGIN(0)
@@ -57,10 +60,10 @@ async function ghPut(env, path, contentB64, message, sha) {
 
 // ---------- 가격 ----------
 // 기준: 공급사가 입력한 "오픈마켓 판매가"(무료배송 기준)
-// 판매가 = 오픈마켓 판매가 × (1 − 고객할인 5%)  (10원 단위 올림)
+// 판매가 = 오픈마켓 판매가 (일괄 할인 없음 — 대량 구매는 가격 제안으로)
 // 플랫폼 몫 = 판매가 × 3%,  카드수수료 = 판매가 × 3.4%
 // 공급사 정산금 = 판매가 − 카드수수료 − 플랫폼 몫  (나머지 전부)
-const priceFromMarket = (env, market) => Math.ceil(market * (1 - Number(env.CUSTOMER_DISCOUNT || 0.05)) / 10) * 10;
+const priceFromMarket = (env, market) => Math.ceil(market * (1 - Number(env.CUSTOMER_DISCOUNT || 0)) / 10) * 10;
 const settleFromPrice = (env, price) => Math.floor(price * (1 - Number(env.CARD_FEE || 0.034) - Number(env.MARGIN_RATE || 0.03)));
 function suggestPrice(env, supply) {
   const rate = Number(env.MARGIN_RATE || 0.07), min = Number(env.MIN_MARGIN || 0);
@@ -78,7 +81,7 @@ async function confirm(req, env) {
   const products = await (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
   const map = Object.fromEntries(products.map((p) => [p.id, p]));
   let subtotal = 0, shipping = 0;
-  const lines = [];
+  const lines = [], usedOffers = [];
   for (const it of items) {
     const p = map[it.id];
     const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
@@ -89,9 +92,16 @@ async function confirm(req, env) {
       if (!o) return fail("선택한 옵션을 찾을 수 없어요. 다시 주문해 주세요.");
       unit += o.add; optName = o.v;
     } else if ((p.options || []).length) return fail("옵션이 선택되지 않은 상품이 있어요.");
+    let offerId = "";
+    if (it.offer) {  // 수락된 가격 제안: 제안 내용과 똑같을 때만 제안가 적용
+      const of = await env.SHOP.get("offer:" + it.offer, "json");
+      const why = offerUsable(of, p.id, it.opt, qty, customer?.phone);
+      if (why) return fail(why);
+      unit = of.price; offerId = of.id; usedOffers.push(of);
+    }
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price });
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
@@ -115,6 +125,7 @@ async function confirm(req, env) {
   const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, lines, customer, method: pay.method, paymentKey,
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   await env.SHOP.put("order:" + orderId, JSON.stringify(order));
+  for (const uo of usedOffers) { uo.status = "주문완료"; uo.orderId = orderId; await env.SHOP.put("offer:" + uo.id, JSON.stringify(uo)); }
   if (couponCode) {
     const c = await env.SHOP.get("coupon:" + couponCode, "json");
     if (c) { c.used = (c.used || 0) + 1; await env.SHOP.put("coupon:" + couponCode, JSON.stringify(c)); }
@@ -179,6 +190,114 @@ async function closeReport(req, env) {
   return json({ ok: true });
 }
 
+
+// ---------- 대량 구매 가격 제안 (3개 이상, 최대 3% 할인) ----------
+const OFFER_MIN_QTY = 3, OFFER_MAX_RATE = 0.03;
+const HOUR = 3600 * 1000;
+const offerFloor = (unit) => Math.ceil((unit * (1 - OFFER_MAX_RATE)) / 10) * 10;
+const isPast = (iso) => iso && Date.parse(iso) < Date.now();
+
+async function siteProducts(env) {
+  return (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
+}
+
+// 만료 처리 반영: 응답 대기 48시간, 수락 후 결제 72시간
+function offerState(of) {
+  if (of.status === "대기" && isPast(of.expiresAt)) of.status = "기간만료";
+  if (of.status === "수락" && isPast(of.payBy)) of.status = "기간만료";
+  return of;
+}
+function offerUsable(of, pid, opt, qty, phone) {
+  if (!of) return "가격 제안을 찾을 수 없어요.";
+  offerState(of);
+  if (of.status === "주문완료") return "이미 주문에 사용한 가격 제안이에요.";
+  if (of.status !== "수락") return "아직 수락되지 않았거나 기간이 지난 가격 제안이에요.";
+  const o = opt == null || opt === "" ? null : Number(opt);
+  if (String(of.product_id) !== String(pid) || (of.opt ?? null) !== o || of.qty !== qty) return "가격 제안과 상품·옵션·수량이 달라요. 제안 내역에서 다시 주문해 주세요.";
+  if (digits(phone) !== of.phone) return "가격 제안을 보낸 연락처로 주문해 주세요.";
+  return "";
+}
+const publicOffer = (of) => ({
+  id: of.id, product_id: of.product_id, product_name: of.product_name, opt: of.opt ?? null, opt_name: of.opt_name || "", qty: of.qty,
+  unit: of.unit, price: of.price, status: of.status, note: of.note || "", createdAt: of.createdAt, expiresAt: of.expiresAt, payBy: of.payBy || "", orderId: of.orderId || "",
+});
+
+async function offerAdd(req, env) {
+  const d = await req.json();
+  const p = (await siteProducts(env)).find((x) => String(x.id) === String(d.product_id));
+  if (!p) return fail("판매하지 않는 상품이에요.");
+  let unit = p.price, optName = "", opt = null;
+  if ((p.options || []).length) {
+    if (d.opt == null || d.opt === "") return fail("옵션을 선택해 주세요.");
+    const o = p.options[Number(d.opt)];
+    if (!o) return fail("옵션을 찾을 수 없어요.");
+    opt = Number(d.opt); unit += o.add; optName = o.v;
+  }
+  const qty = parseInt(d.qty) || 0;
+  if (qty < OFFER_MIN_QTY || qty > 999) return fail(`가격 제안은 ${OFFER_MIN_QTY}개 이상 구매할 때 할 수 있어요.`);
+  const price = parseInt(d.price) || 0, floor = offerFloor(unit);
+  if (price >= unit) return fail("제안 가격은 판매가보다 낮아야 해요.");
+  if (price < floor) return fail(`개당 ${floor.toLocaleString()}원(최대 3% 할인)까지 제안할 수 있어요.`);
+  const name = clip(d.name, 20), phone = digits(d.phone);
+  if (!name || phone.length < 10) return fail("이름과 연락처를 정확히 입력해 주세요.");
+  // 같은 연락처로 같은 상품에 대기 중인 제안이 있으면 막기
+  const mine = (await kvList(env, "offer:")).filter((x) => x.phone === phone && offerState(x).status === "대기");
+  if (mine.some((x) => String(x.product_id) === String(p.id))) return fail("이 상품에 이미 답변을 기다리는 제안이 있어요.");
+  if (mine.length >= 5) return fail("답변 대기 중인 제안이 너무 많아요. 답변을 받은 뒤 다시 제안해 주세요.");
+  const sup = (await env.SHOP.get("supply:" + p.id, "json")) || {};
+  const now = Date.now(), id = "OF" + rid(7);
+  const of = { id, key: "offer:" + id, product_id: String(p.id), product_name: p.name, opt, opt_name: optName, qty, unit, price,
+    name, phone, memo: clip(d.memo, 200), supplier: sup.supplier || p.supplier || "직영", seller_code: sup.seller_code || "",
+    status: "대기", createdAt: new Date(now).toISOString(), expiresAt: new Date(now + 48 * HOUR).toISOString() };
+  await env.SHOP.put(of.key, JSON.stringify(of));
+  await notify(env, `🤝 가격 제안 ${id} [${of.supplier}]\n${p.name}${optName ? ` [${optName}]` : ""} × ${qty}\n개당 ${unit.toLocaleString()}원 → ${price.toLocaleString()}원 제안`);
+  return json({ ok: true, offer: publicOffer(of), message: "가격 제안을 보냈어요. 판매자가 수락하면 제안 가격으로 주문할 수 있어요. (답변 대기 48시간)" });
+}
+
+async function offerCheck(req, env) {
+  const { ids, phone } = await req.json();
+  const p = digits(phone), out = [];
+  for (const id of (Array.isArray(ids) ? ids : [ids]).slice(0, 30)) {
+    const of = await env.SHOP.get("offer:" + String(id).trim().toUpperCase(), "json");
+    if (of && of.phone === p) out.push(publicOffer(offerState(of)));
+  }
+  return json({ offers: out });
+}
+
+async function replyOffer(env, of, accept, note) {
+  offerState(of);
+  if (of.status !== "대기") return fail(`이미 처리된 제안이에요. (${of.status})`);
+  of.status = accept ? "수락" : "거절";
+  of.note = clip(note, 200);
+  of.respondedAt = new Date().toISOString();
+  if (accept) of.payBy = new Date(Date.now() + 72 * HOUR).toISOString();
+  await env.SHOP.put("offer:" + of.id, JSON.stringify(of));
+  return json({ ok: true, message: accept ? "수락했어요. 고객이 72시간 안에 제안가로 주문할 수 있어요." : "거절했어요." });
+}
+
+// 공급사: 입점코드로 자기 상품에 들어온 제안만 보기·답변
+async function sellerOffers(req, env) {
+  const { code } = await req.json();
+  const seller = code && (await env.SHOP.get("seller:" + String(code).toUpperCase(), "json"));
+  if (!seller) return fail("입점코드가 올바르지 않아요.", 403);
+  const list = (await kvList(env, "offer:")).filter((x) => x.seller_code === seller.code).map(offerState)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100);
+  return json({ company: seller.company, offers: list.map((x) => ({ ...publicOffer(x), name: maskName(x.name), memo: x.memo || "" })) });
+}
+async function sellerOfferReply(req, env) {
+  const { code, id, accept, note } = await req.json();
+  const seller = code && (await env.SHOP.get("seller:" + String(code).toUpperCase(), "json"));
+  if (!seller) return fail("입점코드가 올바르지 않아요.", 403);
+  const of = await env.SHOP.get("offer:" + id, "json");
+  if (!of || of.seller_code !== seller.code) return fail("제안을 찾을 수 없어요.");
+  return replyOffer(env, of, !!accept, note);
+}
+async function adminOfferReply(req, env) {
+  const { id, accept, note } = await req.json();
+  const of = await env.SHOP.get("offer:" + id, "json");
+  if (!of) return fail("제안을 찾을 수 없어요.");
+  return replyOffer(env, of, !!accept, note);
+}
 
 // ---------- 공통 도우미 ----------
 const digits = (s) => String(s || "").replace(/\D/g, "");
@@ -434,7 +553,9 @@ async function adminList(env) {
   const inquiries = (await kvList(env, "inquiry:")).sort(byAt).slice(0, 200).map((q) => ({ ...q, key: "inquiry:" + q.id }));
   const reviews = (await kvList(env, "review:")).sort(byAt).slice(0, 200);
   const coupons = await kvList(env, "coupon:");
-  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, statuses: ORDER_STATUS });
+  const offers = (await kvList(env, "offer:")).map(offerState).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200);
+  stats.offers = offers.filter((o) => o.status === "대기").length;
+  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, offers, statuses: ORDER_STATUS });
 }
 
 async function approveSeller(req, env) {
@@ -495,7 +616,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12c", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-12d", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
@@ -514,6 +635,10 @@ export async function handle(req, env, path) {
     if (path === "/qna/add") return await qnaAdd(req, env);
     if (path === "/inquiry/add") return await inquiryAdd(req, env);
     if (path === "/coupon/check") return await couponCheck(req, env);
+    if (path === "/offer/add") return await offerAdd(req, env);
+    if (path === "/offer/check") return await offerCheck(req, env);
+    if (path === "/seller/offers") return await sellerOffers(req, env);
+    if (path === "/seller/offer-reply") return await sellerOfferReply(req, env);
     if (path.startsWith("/admin/")) {
       const want = String(env.ADMIN_PASSWORD || "").trim();
       if (!want) return fail("서버에 관리자 비밀번호(ADMIN_PASSWORD)가 아직 적용되지 않았어요. Netlify에서 값을 확인하고 다시 배포해 주세요.", 401);
@@ -530,6 +655,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/answer") return await adminAnswer(req, env);
       if (path === "/admin/delete") return await adminDelete(req, env);
       if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
+      if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
     }
     return fail("Not found", 404);
   } catch (e) {

@@ -35,7 +35,7 @@ def placeholder_svg(p):
 def load_products():
     import product_import
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
-    ss_rows, warns, excluded = product_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0.05), CFG.get("pricing"))
+    ss_rows, warns, excluded = product_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0), CFG.get("pricing"))
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
     for w in warns:
         print("⚠️", w)
@@ -109,7 +109,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer")}
     name = e(CFG["shop_name"])
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
@@ -266,6 +266,14 @@ def build_products(ps):
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button><button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button></div>
+<div class="offer-box"><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
+<div class="offer-form" id="offer-form" hidden><div class="offer-calc" id="offer-calc"></div>
+<div class="offer-rates" id="offer-rates"></div>
+<label class="opt-label" for="offer-price">개당 제안 가격</label><input class="field" id="offer-price" inputmode="numeric">
+<div class="row2"><input class="field" id="offer-name" placeholder="이름"><input class="field" id="offer-phone" inputmode="tel" placeholder="연락처 010-0000-0000"></div>
+<textarea class="field" id="offer-memo" placeholder="판매자에게 남길 말 (선택)" style="height:64px"></textarea>
+<button class="btn btn-dark" id="offer-send" type="button">가격 제안 보내기</button>
+<p class="muted" style="margin-top:8px">판매자가 48시간 안에 답변하고, 수락되면 72시간 안에 제안 가격으로 주문할 수 있어요. 결과는 <a href="../orders.html#offers" style="text-decoration:underline">주문조회 › 가격 제안</a>에서 확인하세요.</p></div></div>
 <div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
@@ -315,6 +323,7 @@ FAQ = [
     ("환불은 언제 되나요?", "취소는 즉시, 반품은 상품이 도착해 확인된 뒤 3영업일 안에 결제하신 수단으로 환불됩니다. 카드사 사정에 따라 3~7영업일이 더 걸릴 수 있습니다."),
     ("어떤 결제 수단을 쓸 수 있나요?", "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다."),
     ("현금영수증이나 세금계산서를 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 세금계산서가 필요하시면 1:1 문의로 사업자 정보를 남겨 주세요."),
+    ("여러 개 사면 할인되나요?", "같은 상품을 3개 이상 사실 때 상품 페이지의 ‘대량 구매 가격 제안’으로 개당 최대 3%까지 낮은 가격을 제안하실 수 있습니다. 판매자가 48시간 안에 답변하며, 수락되면 72시간 안에 제안 가격으로 주문하실 수 있습니다. 결과는 주문·배송 조회 아래 ‘가격 제안 내역’에서 확인하세요."),
     ("쿠폰은 어디에 입력하나요?", "주문서의 결제 금액 영역에서 쿠폰 코드를 입력하고 적용 버튼을 누르시면 됩니다."),
     ("리뷰는 누구나 쓸 수 있나요?", "실제로 구매하신 분만 작성하실 수 있습니다. 상품이 발송된 뒤 상품 페이지에서 주문번호와 연락처를 입력해 작성해 주세요."),
 ]
@@ -357,7 +366,11 @@ def build_shop_pages():
 <label for="o-phone">연락처</label><input id="o-phone" inputmode="tel" placeholder="010-0000-0000">
 <button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button></div>
 <div class="card" id="my-orders" style="display:none"></div></div>
-<div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>''')
+<div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
+<div class="narrow" id="offers" style="margin-top:28px;max-width:760px"><div class="card form"><h2>가격 제안 내역</h2>
+<p class="muted">대량 구매 가격 제안의 답변을 확인하고, 수락된 제안은 바로 주문할 수 있어요.</p>
+<div id="offer-mine"></div>
+<label for="of-id" style="margin-top:14px">제안번호로 찾기</label><div class="row"><input id="of-id" placeholder="예) OFAB12CDE"><input id="of-phone" inputmode="tel" placeholder="연락처"><button type="button" id="of-btn">확인</button></div></div></div>''')
     faq = "".join(f"<details><summary>{e(q)}</summary><p>{e(a)}</p></details>" for q, a in FAQ)
     simple("cs.html", "고객센터", f'''<div class="policy" style="margin-top:0"><div class="cs-grid">
 <div>{I_PHONE}<b>{e(BIZ["phone"])}</b>{e(BIZ["cs_hours"])}</div>
@@ -439,7 +452,7 @@ def build_partner_pages():
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" >{cats}</select>
 <label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
 <label>네이버 최저가 (선택 · 적으면 이보다 비쌀 때 등록 안 돼요)</label><input name="naver_low" inputmode="numeric" id="naver-low-in">
-<div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 − 5% / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
+<div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 그대로 / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)<br>고객이 3개 이상 살 때 최대 3%까지 가격 제안을 할 수 있고, 수락 여부는 공급사가 정해요.</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">
@@ -448,13 +461,17 @@ def build_partner_pages():
 <button class="btn btn-dark" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
 <div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록</h2>
 <p style="color:#555;font-size:15px">땡잡았땡 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
-가격은 <b>오픈마켓 판매가(무료배송 기준)</b>만 적으면 자동으로 5% 싸게 계산되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요. 네이버 최저가보다 비싼 상품은 등록되지 않아요.</p>
+가격은 <b>오픈마켓 판매가(무료배송 기준)</b>이 그대로 판매가가 되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요. 네이버 최저가보다 비싼 상품은 등록되지 않아요.</p>
 <a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>땡잡았땡 상품등록 양식 내려받기 (.xlsx)</a>
 <label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>주문 즉시 발주 안내</li></ul></div></div></div>''',
+<div class="card form" id="offer-seller"><h2>4. 가격 제안 확인·응답</h2>
+<p style="color:#555;font-size:15px">고객이 3개 이상 구매하면서 최대 3% 낮은 가격을 제안할 수 있어요. 48시간 안에 수락하거나 거절해 주세요. 수락하면 고객이 72시간 안에 그 가격으로 주문할 수 있어요.</p>
+<label>입점코드</label><div class="row"><input id="offer-code" placeholder="승인 시 받은 코드"><button type="button" id="offer-load">제안 불러오기</button></div>
+<div id="offer-list" style="margin-top:14px;font-size:14px"></div></div>
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>주문 즉시 발주 안내</li><li>대량 구매 가격 제안은 공급사가 직접 수락</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="narrow"><div class="card form" id="admin-login"><label for="admin-pw">관리자 비밀번호</label><input id="admin-pw" type="password" autocomplete="current-password">
 <button class="btn btn-dark" style="margin-top:14px" id="admin-enter">들어가기</button></div></div>

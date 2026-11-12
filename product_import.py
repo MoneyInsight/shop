@@ -2,9 +2,9 @@
 data/ 폴더의 .xlsx / .csv 를 읽어 쇼핑몰 상품으로 바꿉니다.
 열 순서는 상관없고 열 이름으로 찾습니다. (다른 판매채널에서 내려받은 엑셀의 흔한 열 이름도 함께 인식)
 
-가격 규칙 (전 상품 무료배송, 고객은 오픈마켓보다 5% 싸게):
-  기준가 = 오픈마켓 판매가(무료배송 기준) [또는 판매가 − 즉시할인 + 기본배송비]
-  쇼핑몰 판매가 = 기준가 × 0.95 (10원 단위 올림),  정가 표시 = 기준가
+가격 규칙 (전 상품 무료배송, 일괄 할인 없음 — 3개 이상 대량 구매는 고객이 최대 3%까지 가격 제안):
+  쇼핑몰 판매가 = 오픈마켓 판매가(무료배송 기준) [또는 판매가 − 즉시할인 + 기본배송비]
+  공급가가 있으면 원가 기반 얇은 마진 가격
 """
 import csv, math, re
 from pathlib import Path
@@ -164,7 +164,7 @@ def price_from_cost(cost, pricing):
     return math.ceil((cost + net * 1.1) / (1 - pricing.get("card_fee", 0.034)) / 10) * 10
 
 
-def load(data_dir, cats, discount=0.05, pricing=None):
+def load(data_dir, cats, discount=0, pricing=None):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품

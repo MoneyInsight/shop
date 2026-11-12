@@ -36,6 +36,41 @@
     });
   });
 
+  // ---------- 가격 제안 응답 ----------
+  const offerBtn = $("#offer-load");
+  if (offerBtn) {
+    const post = async (path, body) => {
+      const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message === "Not found" || !d.message ? "이 기능은 서버 연결 후 사용할 수 있어요." : d.message);
+      return d;
+    };
+    const loadOffers = async () => {
+      if (!API && noApi()) return;
+      const code = $("#offer-code").value.trim(), box = $("#offer-list");
+      if (!code) { alert("입점코드를 입력해 주세요."); return; }
+      try {
+        const d = await post("/seller/offers", { code });
+        box.innerHTML = d.offers.length ? d.offers.map((o) => `<div class="c-row" style="grid-template-columns:1fr auto;border-bottom:1px solid var(--line2);padding:12px 0">
+          <div><b>${esc(o.product_name)}</b>${o.opt_name ? ` [${esc(o.opt_name)}]` : ""} × ${o.qty}개<br>
+          개당 ${won(o.unit)} → <b style="color:var(--sale)">${won(o.price)}</b> (−${((1 - o.price / o.unit) * 100).toFixed(1)}%) · 합계 ${won(o.price * o.qty)}<br>
+          <span class="muted">${esc(o.id)} · ${esc(o.name)} · ${new Date(o.createdAt).toLocaleString("ko-KR")}${o.memo ? "<br>메모: " + esc(o.memo) : ""}</span></div>
+          <div>${o.status === "대기" ? `<button class="mini-btn" data-offer="${esc(o.id)}" data-accept="1">수락</button><button class="mini-btn ghost" data-offer="${esc(o.id)}">거절</button>` : `<span class="state">${esc(o.status)}</span>`}</div></div>`).join("")
+          : `<p class="muted">들어온 가격 제안이 없어요.</p>`;
+      } catch (e) { box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+    };
+    offerBtn.addEventListener("click", loadOffers);
+    $("#offer-list").addEventListener("click", async (ev) => {
+      const b = ev.target.closest("[data-offer]"); if (!b) return;
+      const accept = !!b.dataset.accept;
+      const note = accept ? "" : prompt("거절 사유를 남길 수 있어요 (선택)", "") ?? null;
+      if (note === null) return;
+      if (accept && !confirm("이 가격으로 판매할까요? 수락하면 고객이 72시간 안에 이 가격으로 주문할 수 있어요.")) return;
+      try { const d = await post("/seller/offer-reply", { code: $("#offer-code").value.trim(), id: b.dataset.offer, accept, note }); alert(d.message); loadOffers(); }
+      catch (e) { alert(e.message); }
+    });
+  }
+
   // ---------- 가격 미리보기 ----------
   const costIn = $("#market-in");
   const lowIn = $("#naver-low-in");
@@ -43,8 +78,8 @@
   if (costIn) costIn.addEventListener("input", () => {
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
-    const price = Math.ceil(c * 0.95 / 10) * 10, card = Math.round(price * 0.034), fee = Math.round(price * 0.03), settle = Math.floor(price * 0.936);
-    $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (고객 5% 할인)<br>
+    const price = Math.ceil(c / 10) * 10, card = Math.round(price * 0.034), fee = Math.round(price * 0.03), settle = Math.floor(price * 0.936);
+    $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (오픈마켓가 그대로)<br>
       공급사 정산금 <b>${won(settle)}</b> = 판매가 − 카드수수료 ${won(card)} − 플랫폼 3% ${won(fee)}<br>
       같은 상품을 오픈마켓(수수료 12%)에서 팔 때 정산금 약 <b>${won(Math.floor(c * 0.88))}</b>` +
       (() => { const low = parseInt(($("#naver-low-in").value || "").replace(/\D/g, "")) || 0;

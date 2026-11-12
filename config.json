@@ -130,5 +130,10 @@
   },
   "show_naver": false,
   "show_supplier": false,
-  "adult_verified": false
+  "adult_verified": false,
+  "customer_discount": 0,
+  "offer": {
+    "min_qty": 3,
+    "max_rate": 0.03
+  }
 }

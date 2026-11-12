@@ -62,7 +62,8 @@
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
     const lines = cart.filter((x) => map[x.id]).map((x) => {
       const p = map[x.id], o = x.opt != null && p.options ? p.options[x.opt] : null;
-      return { ...p, qty: x.qty, opt: x.opt, price: p.price + (o ? o.add : 0), optName: o ? o.v : "" };
+      const list = p.price + (o ? o.add : 0);
+      return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, offer: x.offer || "", optName: o ? o.v : "" };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     let shipping = lines.reduce((a, l) => a + (l.shipping_fee || 0), 0);
@@ -199,6 +200,54 @@
       store.set("buynow", [o == null ? { id, qty: +inp.value } : { id, qty: +inp.value, opt: o }]);
       location.href = ROOT + "checkout.html?mode=now";
     };
+    // 대량 구매 가격 제안 (3개 이상, 최대 3%)
+    const OF = CFG.offer || { min_qty: 3, max_rate: 0.03 };
+    const ofForm = $("#offer-form");
+    if (ofForm) {
+      const unitNow = () => base + (optIdx() != null ? adds[optIdx()] : 0);
+      const floor = () => Math.ceil(unitNow() * (1 - OF.max_rate) / 10) * 10;
+      const ratePrice = (r) => Math.max(floor(), Math.ceil(unitNow() * (1 - r) / 10) * 10);
+      const paintOffer = () => {
+        const q = +inp.value, u = unitNow(), p = parseInt(digits($("#offer-price").value)) || 0;
+        $("#offer-rates").innerHTML = [0.01, 0.02, 0.03].map((r) => `<button type="button" class="chip${p === ratePrice(r) ? " on" : ""}" data-rate="${r}">${r * 100}% 낮게 · ${won(ratePrice(r))}</button>`).join("");
+        $("#offer-calc").innerHTML = q < OF.min_qty ? `<b>수량을 ${OF.min_qty}개 이상</b>으로 늘려 주세요. (지금 ${q}개)`
+          : `판매가 개당 ${won(u)} × ${q}개 = ${won(u * q)}` + (p ? `<br>제안가 개당 <b>${won(p)}</b> × ${q}개 = <b>${won(p * q)}</b> <span style="color:var(--sale)">(−${won((u - p) * q)})</span>` : "");
+      };
+      $("#offer-open").onclick = () => {
+        if (needOpt()) return;
+        ofForm.hidden = !ofForm.hidden;
+        if (!ofForm.hidden) {
+          if (+inp.value < OF.min_qty) { inp.value = OF.min_qty; sync(); }
+          const a = store.get("addr", null);
+          if (a) { if (!$("#offer-name").value) $("#offer-name").value = a.name || ""; if (!$("#offer-phone").value) $("#offer-phone").value = a.phone || ""; }
+          if (!$("#offer-price").value) $("#offer-price").value = ratePrice(0.03);
+          paintOffer();
+        }
+      };
+      $("#offer-rates").onclick = (e) => { const b = e.target.closest("[data-rate]"); if (b) { $("#offer-price").value = ratePrice(+b.dataset.rate); paintOffer(); } };
+      $("#offer-price").oninput = paintOffer;
+      [inp, sel].forEach((x) => x && x.addEventListener("input", () => { if (!ofForm.hidden) { $("#offer-price").value = ratePrice(0.03); paintOffer(); } }));
+      if (sel) sel.addEventListener("change", () => { if (!ofForm.hidden) { $("#offer-price").value = ratePrice(0.03); paintOffer(); } });
+      $("#minus").addEventListener("click", () => !ofForm.hidden && paintOffer());
+      $("#plus").addEventListener("click", () => !ofForm.hidden && paintOffer());
+      $("#offer-send").onclick = async () => {
+        if (needOpt()) return;
+        const q = +inp.value, u = unitNow(), p = parseInt(digits($("#offer-price").value)) || 0;
+        if (q < OF.min_qty) { alert(`가격 제안은 ${OF.min_qty}개 이상 구매할 때 할 수 있어요.`); return; }
+        if (!p || p >= u) { alert("제안 가격은 판매가보다 낮게 적어 주세요."); return; }
+        if (p < floor()) { alert(`개당 ${won(floor())}(최대 ${OF.max_rate * 100}% 할인)까지 제안할 수 있어요.`); return; }
+        const name = $("#offer-name").value.trim(), phone = $("#offer-phone").value.trim();
+        if (!name || digits(phone).length < 10) { alert("이름과 연락처를 정확히 입력해 주세요."); return; }
+        const b = $("#offer-send"); b.disabled = true;
+        const { ok, d } = await api("/offer/add", { product_id: id, opt: optIdx(), qty: q, price: p, name, phone, memo: $("#offer-memo").value });
+        b.disabled = false;
+        if (ok) {
+          store.set("my_offers", [{ id: d.offer.id, phone, at: new Date().toISOString() }, ...store.get("my_offers", [])].slice(0, 30));
+          alert(d.message + "\n제안번호: " + d.offer.id);
+          ofForm.hidden = true;
+        } else alert(d.message);
+      };
+    }
     const wt = $(".wish-toggle");
     wt.classList.toggle("on", getWish().includes(id));
     wt.onclick = () => wt.classList.toggle("on", toggleWish(id));
@@ -322,7 +371,7 @@
     let sums = calc(cart, products, 0);
 
     $("#order-items").innerHTML = sums.lines.map((l) => `<div class="c-row"><img src="${esc(img(l.image))}" alt=""><div><div class="nm">${esc(l.name)}</div>
-      <div class="muted">${l.optName ? esc(l.optName) + " · " : ""}${l.qty}개</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");
+      <div class="muted">${l.optName ? esc(l.optName) + " · " : ""}${l.qty}개${l.offer ? ` · <span style="color:var(--sale)">제안가 개당 ${won(l.price)}</span> <del>${won(l.list)}</del>` : ""}</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");
     const paint = async () => {
       sums = calc(cart, products, discount);
       $("#order-sum").innerHTML = `<div class="sum"><div><span>상품 금액</span><span>${won(sums.subtotal)}</span></div>
@@ -336,6 +385,11 @@
     // 배송지 불러오기 · 메모 · 주소검색
     const saved = store.get("addr", null);
     if (saved) ["name", "phone", "email", "zip", "addr1", "addr2"].forEach((k) => { if (saved[k]) $("#" + k).value = saved[k]; });
+    const offerItem = cart.find((x) => x.offer);
+    if (offerItem) {
+      if (offerItem.phone) $("#phone").value = offerItem.phone;
+      $("#order-items").insertAdjacentHTML("afterend", `<p class="note" style="margin-top:12px">가격 제안이 수락된 주문이에요. 제안을 보낸 연락처로 주문해 주셔야 제안 가격이 적용돼요.</p>`);
+    }
     $("#memo-sel").onchange = (e) => { const v = e.target.value; $("#memo").style.display = v === "직접 입력" ? "" : "none"; $("#memo").value = v === "직접 입력" ? "" : v; };
     $("#find-addr").onclick = () => new daum.Postcode({ oncomplete: (d) => { $("#zip").value = d.zonecode; $("#addr1").value = d.roadAddress || d.jibunAddress; $("#addr2").focus(); } }).open();
     // 약관 전체 동의
@@ -490,6 +544,44 @@
       $("#my-orders").innerHTML = `<h2>이 기기에서 주문한 내역</h2>` + mine.map((m, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(m.name || m.orderId)}</div><div class="muted">${esc(m.orderId)} · ${date(m.at)}</div></div><button class="mini-btn" data-i="${i}">조회</button></div>`).join("");
       $("#my-orders").style.display = "";
       $("#my-orders").onclick = (e) => { const b = e.target.closest("button[data-i]"); if (b) { const m = mine[+b.dataset.i]; $("#o-id").value = m.orderId; $("#o-phone").value = m.phone; lookup(m.orderId, m.phone); } };
+    }
+    // 가격 제안 내역
+    const OFS = { "대기": "답변 대기", "수락": "수락됨", "거절": "거절됨", "기간만료": "기간 만료", "주문완료": "주문 완료" };
+    const offerRow = (o, phone) => `<div class="c-row" style="grid-template-columns:1fr auto;align-items:center"><div>
+      <a class="nm" href="${ROOT}product/${encodeURIComponent(o.product_id)}.html">${esc(o.product_name)}</a>${o.opt_name ? ` <span class="muted">[${esc(o.opt_name)}]</span>` : ""}
+      <div class="muted">${esc(o.id)} · ${o.qty}개 · 개당 <del>${won(o.unit)}</del> → <b style="color:var(--ink)">${won(o.price)}</b> · 합계 ${won(o.price * o.qty)}</div>
+      <div class="muted">${o.status === "대기" ? `답변 기한 ${date(o.expiresAt)}` : o.status === "수락" ? `<b style="color:var(--ok)">${date(o.payBy)}까지 주문하세요</b>` : o.status === "주문완료" ? `주문 ${esc(o.orderId)}` : ""}${o.note ? " · 판매자: " + esc(o.note) : ""}</div></div>
+      <div><span class="state${o.status === "수락" ? " done" : ""}">${OFS[o.status] || esc(o.status)}</span>
+      ${o.status === "수락" ? `<br><button class="btn btn-dark sm" style="margin-top:8px" data-buy="${esc(o.id)}" data-phone="${esc(phone)}">제안가로 주문</button>` : ""}</div></div>`;
+    let shownOffers = [];
+    const showOffers = async (ids, phone, box) => {
+      const { ok, d } = await api("/offer/check", { ids, phone });
+      if (!ok) { box.innerHTML = `<p class="muted">${esc(d.message)}</p>`; return; }
+      shownOffers = shownOffers.filter((x) => !d.offers.some((y) => y.id === x.id)).concat(d.offers.map((x) => ({ ...x, phone })));
+      box.innerHTML = d.offers.length ? d.offers.map((o) => offerRow(o, phone)).join("") : `<p class="muted">제안을 찾을 수 없어요. 제안번호와 연락처를 확인해 주세요.</p>`;
+    };
+    const offersSec = $("#offers");
+    if (offersSec) {
+      const myOf = store.get("my_offers", []);
+      const groups = {};
+      myOf.forEach((m) => (groups[digits(m.phone)] = groups[digits(m.phone)] || []).push(m.id));
+      const mineBox = $("#offer-mine");
+      mineBox.innerHTML = myOf.length ? "" : `<p class="muted" style="margin:10px 0 0">이 기기에서 보낸 제안이 없어요. 상품 페이지에서 3개 이상 선택한 뒤 ‘대량 구매 가격 제안’을 눌러 보세요.</p>`;
+      Object.entries(groups).forEach(([ph, ids]) => { const div = document.createElement("div"); mineBox.appendChild(div); showOffers(ids, ph, div); });
+      $("#of-btn").onclick = () => {
+        const idv = $("#of-id").value.trim().toUpperCase(), ph = $("#of-phone").value.trim();
+        if (!idv || !ph) { alert("제안번호와 연락처를 입력해 주세요."); return; }
+        let div = $("#offer-found"); if (!div) { div = document.createElement("div"); div.id = "offer-found"; div.style.marginTop = "14px"; offersSec.querySelector(".card").appendChild(div); }
+        showOffers([idv], ph, div);
+      };
+      offersSec.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-buy]"); if (!b) return;
+        const o = shownOffers.find((x) => x.id === b.dataset.buy); if (!o) return;
+        const item = { id: o.product_id, qty: o.qty, offer: o.id, offer_price: o.price, phone: b.dataset.phone };
+        if (o.opt != null) item.opt = o.opt;
+        store.set("buynow", [item]);
+        location.href = ROOT + "checkout.html?mode=now";
+      });
     }
     const qid = new URLSearchParams(location.search).get("id");
     if (qid) { const m = mine.find((x) => x.orderId === qid); $("#o-id").value = qid; if (m) { $("#o-phone").value = m.phone; lookup(qid, m.phone); } }

@@ -59,4 +59,32 @@ r = await call("/order/cancel", { orderId: "ORD2", phone: "01012345678", reason:
   ok("한글 비번", (await q("Bearer " + encodeURIComponent("비번1!"), { ...env, ADMIN_PASSWORD: " 비번1! " })) === 200);
   ok("틀린 비번", (await q("Bearer nope")) === 401);
   ok("비번 미설정", (await q("Bearer x", { ...env, ADMIN_PASSWORD: "" })) === 401); }
+// ── 대량 구매 가격 제안 ──
+mem.set("seller:SELL1", JSON.stringify({ code: "SELL1", company: "공급사A" }));
+mem.set("supply:B1", JSON.stringify({ supplier: "공급사A", seller_code: "SELL1", supply_price: 4000 }));
+const c2 = { ...cust, phone: "010-5555-6666" };
+r = await call("/offer/add", { product_id: "B1", qty: 2, price: 4900, name: "김", phone: c2.phone }); ok("제안 2개 거절", r.s === 400, r);
+r = await call("/offer/add", { product_id: "B1", qty: 3, price: 4800, name: "김", phone: c2.phone }); ok("제안 3% 초과 거절", r.s === 400, r);
+r = await call("/offer/add", { product_id: "B1", qty: 3, price: 5000, name: "김", phone: c2.phone }); ok("판매가 이상 거절", r.s === 400, r);
+r = await call("/offer/add", { product_id: "A1", qty: 3, price: 9700, name: "김", phone: c2.phone }); ok("옵션 없이 제안 거절", r.s === 400, r);
+r = await call("/offer/add", { product_id: "B1", qty: 3, price: 4850, name: "김철수", phone: c2.phone, memo: "빨리요" }); ok("제안 등록", r.s === 200 && r.d.offer.status === "대기", r);
+const OFID = r.d.offer?.id;
+r = await call("/offer/add", { product_id: "B1", qty: 4, price: 4900, name: "김철수", phone: c2.phone }); ok("같은 상품 중복 제안 거절", r.s === 400, r);
+r = await call("/confirm", { paymentKey: "pk3", orderId: "ORD3", amount: 14550, items: [{ id: "B1", qty: 3, offer: OFID }], customer: c2 }); ok("수락 전 제안가 결제 거절", r.s === 400, r);
+r = await call("/seller/offers", { code: "WRONG" }); ok("공급사 코드 틀림", r.s === 403, r);
+r = await call("/seller/offers", { code: "sell1" }); ok("공급사 제안 목록", r.d.offers.length === 1 && r.d.offers[0].name === "김**" && !JSON.stringify(r.d).includes("55556666"), r);
+r = await call("/seller/offer-reply", { code: "SELL1", id: OFID, accept: true }); ok("공급사 수락", r.s === 200, r);
+r = await call("/seller/offer-reply", { code: "SELL1", id: OFID, accept: false }); ok("중복 응답 거절", r.s === 400, r);
+r = await call("/offer/check", { ids: [OFID], phone: "01000000000" }); ok("다른 연락처 조회 안 됨", r.d.offers.length === 0, r);
+r = await call("/offer/check", { ids: [OFID], phone: c2.phone }); ok("제안 조회", r.d.offers[0]?.status === "수락" && r.d.offers[0].payBy, r);
+r = await call("/confirm", { paymentKey: "pk3", orderId: "ORD3", amount: 14550, items: [{ id: "B1", qty: 3, offer: OFID }], customer: cust }); ok("다른 연락처로 제안가 결제 거절", r.s === 400, r);
+r = await call("/confirm", { paymentKey: "pk3", orderId: "ORD3", amount: 19400, items: [{ id: "B1", qty: 4, offer: OFID }], customer: c2 }); ok("수량 바꿔 결제 거절", r.s === 400, r);
+r = await call("/confirm", { paymentKey: "pk3", orderId: "ORD3", amount: 14550, items: [{ id: "B1", qty: 3, offer: OFID }], customer: c2 }); ok("제안가 결제", r.s === 200, r);
+r = await call("/confirm", { paymentKey: "pk4", orderId: "ORD4", amount: 14550, items: [{ id: "B1", qty: 3, offer: OFID }], customer: c2 }); ok("제안 재사용 거절", r.s === 400, r);
+r = await call("/offer/add", { product_id: "A1", opt: 1, qty: 5, price: 10190, name: "이", phone: "01077778888" }); ok("직영 옵션 제안", r.s === 200 && r.d.offer.unit === 10500, r);
+r = await call("/admin/offer-reply", { id: r.d.offer.id, accept: false, note: "재고 부족" }, true); ok("관리자 거절", r.s === 200, r);
+r = await call("/admin/list", {}, true); ok("관리자 제안 목록", r.d.offers.length === 2 && r.d.offers.some((o) => o.status === "주문완료" && o.orderId === "ORD3"), r.d.offers);
+{ const o = JSON.parse(mem.get("offer:" + OFID)); ok("주문에 제안 기록", JSON.parse(mem.get("order:ORD3")).lines[0].offer === OFID && o.status === "주문완료"); }
+{ const k = [...mem.keys()].find((x) => x.startsWith("offer:") && x !== "offer:" + OFID); const o = JSON.parse(mem.get(k)); o.status = "대기"; o.expiresAt = "2000-01-01T00:00:00Z"; mem.set(k, JSON.stringify(o));
+  r = await call("/admin/offer-reply", { id: o.id, accept: true }, true); ok("만료 제안 수락 거절", r.s === 400, r); }
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);

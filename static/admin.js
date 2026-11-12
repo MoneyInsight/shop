@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -44,6 +44,7 @@
       <div class="card" style="margin-top:16px"><h2>처리할 일</h2><ul class="why">
         <li>출고 대기 주문 <b>${s.toShip}</b>건 — 발주하고 송장번호를 입력해 주세요.</li>
         <li>취소·반품·교환 요청 <b>${s.claims}</b>건</li>
+        <li>답변 대기 가격 제안 <b>${s.offers || 0}</b>건 (직영 상품은 여기서, 공급사 상품은 공급사가 응답)</li>
         <li>답변 대기 문의 <b>${D.qnas.filter((q) => !q.answer).length + D.inquiries.filter((q) => !q.answer).length}</b>건</li>
         <li>공급사 입점 신청 <b>${D.apps.filter((a) => !a.code).length}</b>건 · 상품 승인 대기 <b>${D.pending.length}</b>건</li></ul></div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;
@@ -67,6 +68,17 @@
     if (tab === "reviews") return `<div class="card"><h2>리뷰 <small>${D.reviews.length}건</small></h2>${D.reviews.length ? `<table class="adm-table"><tr><th>일시</th><th>상품</th><th>별점</th><th>내용</th><th></th></tr>
       ${D.reviews.map((r) => `<tr><td>${dt(r.at)}</td><td>${esc(r.product_name)}<br><span class="muted">${esc(r.orderId)} · ${esc(r.name)}</span></td><td>${"★".repeat(r.rating)}</td><td style="white-space:normal">${esc(r.text)}</td>
       <td><button class="ghost" data-act="delete" data-key="${esc(r.key)}">삭제</button></td></tr>`).join("")}</table>` : `<p class="empty">리뷰가 없어요.</p>`}</div>`;
+    if (tab === "offers") {
+      const L = D.offers || [];
+      return `<div class="card"><h2>대량 구매 가격 제안 <small>${L.length}건</small></h2>
+        <p class="muted" style="margin-bottom:12px">3개 이상 구매 시 최대 3% 제안. 직영 상품은 여기서 수락·거절하고, 공급사 상품은 공급사 페이지에서 공급사가 응답해요(급하면 여기서 대신 처리 가능).</p>
+        ${L.length ? `<table class="adm-table"><tr><th>제안</th><th>상품</th><th>가격</th><th>고객</th><th>상태</th></tr>${L.map((o) => `<tr>
+        <td><b>${esc(o.id)}</b><br><span class="muted">${dt(o.createdAt)}</span></td>
+        <td style="white-space:normal">${esc(o.product_name)}${o.opt_name ? ` [${esc(o.opt_name)}]` : ""} × ${o.qty}<br><span class="muted">[${esc(o.supplier)}]</span></td>
+        <td>${won(o.unit)} → <b>${won(o.price)}</b><br><span class="muted">−${((1 - o.price / o.unit) * 100).toFixed(1)}% · 합계 ${won(o.price * o.qty)}</span></td>
+        <td>${esc(o.name)}<br>${esc(o.phone)}${o.memo ? `<br><span class="muted">${esc(o.memo)}</span>` : ""}</td>
+        <td>${o.status === "대기" ? `<button data-act="offer-yes" data-id="${esc(o.id)}">수락</button><button class="ghost" data-act="offer-no" data-id="${esc(o.id)}">거절</button>` : `${esc(o.status)}${o.orderId ? "<br>" + esc(o.orderId) : ""}`}</td></tr>`).join("")}</table>` : `<p class="empty">가격 제안이 없어요.</p>`}</div>`;
+    }
     if (tab === "coupons") return `<div class="card form"><h2>쿠폰 만들기</h2>
         <div class="row"><input id="c-code" placeholder="코드 (예: WELCOME)"><input id="c-name" placeholder="쿠폰 이름"></div>
         <div class="row" style="margin-top:8px"><select id="c-type"><option value="amount">정액 (원)</option><option value="percent">정률 (%)</option></select><input id="c-value" placeholder="할인 값" inputmode="numeric"><input id="c-min" placeholder="최소 주문금액" inputmode="numeric"></div>
@@ -126,6 +138,8 @@
       if (act === "answer") await call("/admin/answer", { key, answer: $('[data-f="answer"]', row).value });
       if (act === "delete") { if (!confirm("삭제할까요?")) return; await call("/admin/delete", { key }); }
       if (act === "coupon-save") await call("/admin/coupon-save", { code: $("#c-code").value, name: $("#c-name").value, type: $("#c-type").value, value: $("#c-value").value, min_order: $("#c-min").value, max_discount: $("#c-maxd").value, max_uses: $("#c-uses").value, expires: $("#c-exp").value });
+      if (act === "offer-yes") { if (!confirm("이 가격으로 판매할까요?")) return; await call("/admin/offer-reply", { id, accept: true }); }
+      if (act === "offer-no") { const note = prompt("거절 사유 (선택)", ""); if (note === null) return; await call("/admin/offer-reply", { id, accept: false, note }); }
       if (act === "approve-seller") await call("/admin/approve-seller", { id });
       if (act === "approve-product") await call("/admin/approve-product", { id, price: Number($(`input[data-price="${id}"]`).value) });
       if (act === "reject-product") await call("/admin/reject-product", { id });
