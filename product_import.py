@@ -208,7 +208,7 @@ def load(data_dir, cats, discount=0, pricing=None):
                 "id": code, "name": name[:100], "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
-                "event": get(r, "event") or "오픈마켓보다 5% 저렴 · 무료배송", "badge": "", "summary": get(r, "summary"),
+                "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": clean_html(detail) if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
