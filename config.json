@@ -25,13 +25,28 @@
     },
     {
       "slug": "furniture",
-      "name": "가구·수납",
+      "name": "가구·인테리어",
       "emoji": "🗄️"
     },
     {
       "slug": "kitchen",
       "name": "주방",
       "emoji": "🍳"
+    },
+    {
+      "slug": "bath",
+      "name": "욕실·청소",
+      "emoji": "🧼"
+    },
+    {
+      "slug": "beauty",
+      "name": "뷰티·미용",
+      "emoji": "💄"
+    },
+    {
+      "slug": "health",
+      "name": "건강·안마",
+      "emoji": "💆"
     },
     {
       "slug": "tools",

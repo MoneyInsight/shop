@@ -131,6 +131,23 @@ def parse_options(get, r, discount):
     return [{"v": v[:60], "add": math.ceil(a * (1 - discount) / 10) * 10 if a > 0 else (-math.floor(-a * (1 - discount) / 10) * 10 if a < 0 else 0)} for v, a in opts][:200]
 
 
+# 스마트스토어 카테고리코드 → 쇼핑몰 카테고리 (대표님 스마트스토어 상품의 코드 기준으로 묶음)
+SS_CATEGORY = [(int(a.split("-")[0]), int(a.split("-")[-1]), b) for a, b in
+               (x.split() for x in "50000022 leisure|50000216 kitchen|50000233 garden|50000243 fashion|50000255-50000256 digital|50000290-50000319 beauty|50000375 beauty|50000381 pet|50000406-50000407 beauty|50000434 digital|50000435 fashion|50000444 beauty|50000458 bath|50000478 kids|50000539-50000570 fashion|50000580 kids|50000639-50000836 fashion|50000850 living|50000867 furniture|50000964 office|50000966-50000968 furniture|50000970-50000976 sleep|50000981-50000983 furniture|50001054 furniture|50001061 living|50001062 tools|50001069 furniture|50001179-50001304 leisure|50001307-50001347 furniture|50001350 leisure|50001360 furniture|50001434-50001555 leisure|50001571-50001588 digital|50001605-50001610 leisure|50001615-50001769 digital|50001796-50001805 garden|50001810 living|50001819-50001834 health|50001836 kitchen|50001837 living|50001840-50001849 bath|50001853 season|50001878 food|50001931-50001932 health|50001937-50001939 bath|50001945-50001946 health|50001991 beauty|50002012 office|50002019 food|50002057 fashion|50002063 health|50002068 sleep|50002074-50002130 digital|50002272-50002274 bath|50002310 living|50002312 health|50002328-50002356 digital|50002384-50002432 food|50002466-50002475 furniture|50002477-50002479 living|50002490 kitchen|50002513-50002557 season|50002583 kitchen|50002622 food|50002639-50002667 leisure|50002696 bath|50002697-50002700 living|50002701 garden|50002703 furniture|50002705-50002710 living|50002783-50002868 leisure|50002925 digital|50002988-50003048 leisure|50003118-50003148 digital|50003166-50003188 leisure|50003232-50003266 furniture|50003282-50003329 tools|50003330-50003350 furniture|50003370-50003376 garden|50003383-50003468 tools|50003479-50003500 sleep|50003502 health|50003514-50003526 furniture|50003527 kitchen|50003540-50003548 tools|50003550-50003598 office|50003631 fashion|50003642-50003656 sleep|50003692 tools|50003695 furniture|50003696 living|50003734-50003751 office|50003766 living|50003767-50003789 office|50003791 tools|50003817-50003859 fashion|50003884-50003899 office|50003912-50003959 car|50003988-50004024 fashion|50004060-50004112 car|50004146-50004147 fashion|50004152-50004174 jewelry|50004190-50004191 fashion|50004193-50004194 jewelry|50004367-50004368 living|50004381-50004397 beauty|50004450-50004485 kids|50004516-50004578 kitchen|50004581 beauty|50004637-50004639 digital|50004757-50004843 kitchen|50004844 living|50005256 kitchen|50005260 furniture|50005289 beauty|50005401 bath|50006195 tools|50006203-50006371 digital|50006374-50006376 leisure|50006637-50006738 pet|50006839 leisure|50006877 furniture|50006909 living|50006958 tools|50007048 sleep|50007150-50007161 pet|50007217 digital|50007238-50007241 leisure|50007508 living|50007608-50007828 office|50007849 living|50007968 office|50007969 digital|50008049-50008288 office|50008290 bath|50008409-50008428 pet|50008471-50008728 bath|50008888 office|50009000 furniture|50009060 tools|50009182 leisure|50009200 season|50009240 leisure|50009420 kitchen|50009460-50009540 leisure|50009600 food|50009740 kitchen|50011861-50014121 food|50014920-50015080 car|50015601-50015980 pet|50016541 kids|50016880-50016920 sleep|50017221 jewelry|50017960-50017980 digital|50019399 living|50019539-50019679 bath|50019780 tools|50019999 health|50020199 living|50020579 tools|50020639 furniture|50020679 sleep|50022259-50022260 kitchen|50022359 living|50022739 food|50022839 leisure|50022859-50022879 food|50023499 furniture|50023879 fashion".split("|"))]
+
+
+def cat_from_code(code, cats):
+    try:
+        n = int(str(code).strip())
+    except ValueError:
+        return ""
+    slugs = {c["slug"] for c in cats}
+    for lo, hi, slug in SS_CATEGORY:
+        if lo <= n <= hi and slug in slugs:
+            return slug
+    return ""
+
+
 def guess_category(name, cats):
     slugs = {c["slug"] for c in cats}
     name = re.sub(r"블랙|팬던트|팬츠|팬트리|화분대", " ", name)  # 짧은 키워드(랙·팬·화분)가 엉뚱하게 걸리지 않게
@@ -184,7 +201,7 @@ def load(data_dir, cats, discount=0.05, pricing=None):
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"
             mc = get(r, "mall_category")
-            cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else guess_category(name, cats))
+            cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else "") or cat_from_code(get(r, "category_id"), cats) or guess_category(name, cats)
             img = get(r, "image")
             detail = get(r, "detail")
             products.append({
