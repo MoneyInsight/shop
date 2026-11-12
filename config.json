@@ -124,11 +124,11 @@
   "min_margin_won": 0,
   "worker_url": "https://ttaengjab.netlify.app/api",
   "pricing": {
-    "net_margin": 0.15,
+    "net_margin": 0.12,
     "min_margin_won": 1500,
     "card_fee": 0.034,
     "ops_cost_won": 300,
-    "_설명": "판매가 = (도매가 + 건당 운영비 + 순이익×1.1) ÷ (1-카드수수료). 운영비 300원 = 카톡 알림톡 4~5건(약 70원) + 서버·도메인 분담 + 반품·CS 예비비"
+    "_설명": "판매가 = 카드수수료 3.4%·부가세 차액·건당 운영비 300원을 모두 뺀 뒤 도매가(배송비 포함)의 12%(최소 1,500원)가 정확히 남도록 계산"
   },
   "show_naver": false,
   "show_supplier": false,

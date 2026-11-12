@@ -158,11 +158,12 @@ def guess_category(name, cats):
 
 
 def price_from_cost(cost, pricing):
-    """원가(공급가+배송비)에서 판매가 계산: 카드수수료·부가세 빼고 순마진이 net_margin(최소 min_margin_won) 남게, 10원 단위 올림
-    판매가 X: (X×(1−카드) − 원가) × 10/11 = 순마진  →  X = (원가 + 순마진×1.1) / (1 − 카드)"""
+    """원가(공급가+배송비)에서 판매가 계산: 카드수수료·부가세·운영비 빼고 원가의 net_margin(최소 min_margin_won)이 남게, 10원 단위 올림"""
     net = max(cost * pricing.get("net_margin", 0.05), pricing.get("min_margin_won", 500))
     ops = pricing.get("ops_cost_won", 0)  # 건당 운영비(알림톡·서버·반품 예비비)
-    return math.ceil((cost + ops + net * 1.1) / (1 - pricing.get("card_fee", 0.034)) / 10) * 10
+    # 남는 돈 = 판매가 − 카드수수료 − 부가세차액((판매가−원가)/11) − 원가 − 운영비 = net 이 되도록 판매가를 역산
+    card = pricing.get("card_fee", 0.034)
+    return math.ceil((cost * 10 / 11 + ops + net) / (1 - card - 1 / 11) / 10) * 10
 
 
 def load(data_dir, cats, discount=0, pricing=None):
