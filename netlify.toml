@@ -1,6 +1,7 @@
 # Netlify는 서버(API)만 담당합니다. 쇼핑몰 화면은 GitHub Pages에서 제공합니다.
-# 빌드 과정에서 파이썬을 쓰지 않으므로 화면 생성 오류가 서버 배포를 막지 않습니다.
 [build]
   command = "echo api only"
   publish = "netlify/public"
   functions = "netlify/functions"
+  # 서버 코드가 바뀐 경우에만 배포 (상품·화면 수정으로 크레딧이 소모되지 않게)
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- worker netlify netlify.toml package.json"
