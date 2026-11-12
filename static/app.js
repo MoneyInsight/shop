@@ -44,7 +44,10 @@
     if (!API) return { ok: false, d: { message: "서비스 준비 중이에요. 고객센터로 문의해 주세요." } };
     try {
       const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
-      return { ok: r.ok, d: await r.json() };
+      const d = await r.json();
+      // 서버가 아직 이 기능을 지원하지 않는 버전일 때(연결 전) 영어 오류 대신 안내 문구
+      if (!r.ok && (d.message === "Not found" || !d.message)) d.message = "이 기능은 준비 중이에요. 고객센터로 문의해 주세요.";
+      return { ok: r.ok, d };
     } catch (e) { return { ok: false, d: { message: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." } }; }
   }
 
@@ -88,6 +91,12 @@
     if ($("#listing")?.dataset.mode === "wish") initListing();
   });
   function markWished() { const w = getWish(); $$("[data-wish]").forEach((b) => b.classList.toggle("on", w.includes(b.dataset.wish))); }
+
+  // ── 사진을 못 불러오면 대체 그림 ──
+  document.addEventListener("error", (e) => {
+    const t = e.target;
+    if (t.tagName === "IMG" && !t.dataset.fb) { t.dataset.fb = 1; t.src = ROOT + "noimg.svg"; }
+  }, true);
 
   // ── 검색창 ──
   $$("form.search").forEach((f) => f.addEventListener("submit", (e) => {
@@ -345,6 +354,10 @@
     };
 
     await paint();
+    if (typeof TossPayments === "undefined") {
+      $("#payment-method").innerHTML = `<p class="note" style="margin:0">결제 모듈을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 새로고침해 주세요.</p>`;
+      $("#pay-btn").disabled = true; return;
+    }
     const tp = TossPayments(CFG.toss_client_key);
     widgets = tp.widgets({ customerKey: TossPayments.ANONYMOUS });
     await widgets.setAmount({ currency: "KRW", value: sums.total });

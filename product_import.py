@@ -43,6 +43,11 @@ ALIASES = {
 
 # 상품명 키워드로 쇼핑몰 카테고리 자동 분류 (쇼핑몰카테고리 열이 비어 있을 때)
 KEYWORDS = [
+    ("pet", "강아지 고양이 애견 반려 펫 목줄 하네스 리드줄 개껌 방묘문 개줄"),
+    ("kids", "아기 유아 어린이 아동 완구 장난감 교구 놀이방 퍼즐 블럭 도미노 트램폴린 줄넘기 분유 유치원 아이들"),
+    ("car", "차량 자동차 앞유리 트렁크 주차 테슬라 세차"),
+    ("leisure", "캠핑 골프 낚시 등산 자전거 헬스 웨지 퍼터 텐트 떡밥 드라이버커버 야구"),
+    ("garden", "원예 화분 모종 씨앗 농업 예초기 분무기 가드닝 텃밭 서리방지 농산물"),
     ("jewelry", "14K 14k 금침 귀걸이 목걸이 반지 팔찌 피어싱 실버 골드필드 크리스탈 귀찌 큐빅"),
     ("fashion", "부츠 로퍼 구두 단화 슈즈 브라 거들 니트 모자 벨트 반바지 우산 가방 파우치 선글라스 앞치마"),
     ("pet", "강아지 고양이 애견 반려 펫 목줄 하네스 리드줄 개껌 방묘문"),
@@ -128,6 +133,7 @@ def parse_options(get, r, discount):
 
 def guess_category(name, cats):
     slugs = {c["slug"] for c in cats}
+    name = re.sub(r"블랙|팬던트|팬츠|팬트리|화분대", " ", name)  # 짧은 키워드(랙·팬·화분)가 엉뚱하게 걸리지 않게
     for slug, words in KEYWORDS:
         if slug in slugs and any(w in name for w in words.split()):
             return slug

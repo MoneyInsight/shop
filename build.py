@@ -4,7 +4,7 @@
 생성물: 메인·카테고리·상품상세·검색·장바구니·주문결제·완료/실패·약관·공급사·관리자 페이지,
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
-import csv, json, html, shutil, datetime, hashlib
+import re, csv, json, html, shutil, datetime, hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -51,6 +51,8 @@ def load_products():
         p["normal_price"] = int(p["normal_price"] or 0) or p["price"]
         p["shipping_fee"] = int(p["shipping_fee"] or 0)
         p["category_name"] = CAT_NAME.get(p["category"], "기타")
+        br = re.sub(r"\(주\)|주식회사|㈜", "", p.get("brand", "")).strip()
+        p["brand"] = "" if re.fullmatch(r"[A-Za-z.\s]{1,3}", br) or "partner" in br.lower() or "협력사" in br else br
         p["naver_low"] = int(p.get("naver_low") or 0) if CFG.get("show_naver", True) else 0
         p["save"] = p["naver_low"] - p["price"] if p["naver_low"] > p["price"] else 0
         p["desc_lines"] = [x for x in p["description"].split("|") if x.strip()]
@@ -143,8 +145,8 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
-<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}<br>
-주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])}<br>
+<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
+주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
 고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
 © {datetime.date.today().year} {name}. All rights reserved.</p>
 </div></footer>
@@ -371,6 +373,7 @@ def build_shop_pages():
 <button class="btn btn-dark" id="inq-btn" style="margin-top:8px">문의 보내기</button></div></div>''')
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
+    write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
     write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">땡</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
           "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#16171a",
@@ -391,12 +394,26 @@ def build_policies():
 <h3>제6조 (분쟁 해결)</h3><p>분쟁이 생기면 고객센터({e(BIZ["phone"])})로 접수해 주시면 성실히 처리합니다. 해결되지 않으면 공정거래위원회 또는 시·도지사가 의뢰하는 분쟁조정기관의 조정을 따를 수 있습니다.</p>
 <p style="margin-top:20px;color:#888">시행일: {datetime.date.today():%Y-%m-%d}</p></div>''')
     simple("privacy.html", "개인정보처리방침", f'''<div class="card policy">
-<h3>1. 수집 항목</h3><p>주문 시: 받는 분 이름, 연락처, 주소, 이메일(선택), 배송 메모. 결제 정보는 토스페이먼츠가 직접 처리하며 회사는 카드번호를 저장하지 않습니다.</p>
-<h3>2. 이용 목적</h3><p>주문 처리, 상품 배송, 고객 문의 응대, 교환·환불 처리.</p>
-<h3>3. 보유 기간</h3><p>「전자상거래법」에 따라 계약·청약철회 기록 5년, 대금결제·재화 공급 기록 5년, 소비자 불만·분쟁처리 기록 3년 보관 후 파기합니다.</p>
-<h3>4. 제3자 제공 및 위탁</h3><p>결제 처리: (주)토스페이먼츠 / 배송: 택배사 및 상품 공급사(배송에 필요한 이름·연락처·주소에 한함).</p>
-<h3>5. 이용자의 권리</h3><p>이용자는 언제든 개인정보 열람·정정·삭제·처리정지를 요청할 수 있습니다.</p>
-<h3>6. 개인정보 보호책임자</h3><p>{e(BIZ["privacy_officer"])} / {e(BIZ["phone"])} / {e(BIZ["email"])}</p>
+<p>{e(c)}(이하 "회사")는 「개인정보 보호법」에 따라 이용자의 개인정보를 보호하고 관련 고충을 신속하게 처리하기 위해 다음과 같이 개인정보처리방침을 둡니다.</p>
+<h3>1. 수집하는 개인정보 항목과 수집 방법</h3>
+<ul style="padding-left:18px;list-style:disc"><li>주문 시: 받는 분 이름, 연락처, 주소, 배송 메모, 이메일(선택)</li>
+<li>상품 문의·1:1 문의 시: 이름, 연락처 또는 이메일(선택), 문의 내용</li><li>리뷰 작성 시: 주문번호, 연락처(구매 확인용), 리뷰 내용</li>
+<li>공급사 입점 신청 시: 회사명, 사업자등록번호, 담당자 이름, 연락처, 이메일</li>
+<li>결제 정보(카드번호 등)는 결제대행사가 직접 처리하며 회사는 저장하지 않습니다.</li></ul>
+<h3>2. 이용 목적</h3><p>주문 확인과 상품 배송, 결제·환불 처리, 교환·반품 처리, 고객 문의 응대, 리뷰 작성 자격 확인, 공급사 입점 심사.</p>
+<h3>3. 보유 및 이용 기간</h3><p>「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 계약 또는 청약철회 등에 관한 기록 5년, 대금결제 및 재화 등의 공급에 관한 기록 5년, 소비자의 불만 또는 분쟁처리에 관한 기록 3년간 보관한 뒤 지체 없이 파기합니다. 문의 내용은 답변 완료 후 3년간 보관합니다.</p>
+<h3>4. 개인정보의 제3자 제공</h3><p>회사는 배송을 위해 필요한 범위에서만 개인정보를 제공합니다.</p>
+<table class="notice-table"><tr><th>제공받는 자</th><td>택배사, 해당 상품의 공급사</td></tr><tr><th>제공 항목</th><td>받는 분 이름, 연락처, 주소, 배송 메모</td></tr>
+<tr><th>이용 목적</th><td>상품 배송</td></tr><tr><th>보유 기간</th><td>배송 완료 후 3개월</td></tr></table>
+<h3>5. 개인정보 처리 위탁</h3>
+<table class="notice-table"><tr><th>(주)토스페이먼츠</th><td>결제 처리 및 결제 도용 방지</td></tr><tr><th>Netlify, Inc. (미국)</th><td>주문·문의 데이터 보관 및 서버 운영 (국외 이전: 주문·문의 시 네트워크를 통해 전송, 위 보유 기간 동안 보관)</td></tr>
+<tr><th>GitHub, Inc. (미국)</th><td>웹사이트 호스팅 (개인정보는 저장하지 않음)</td></tr></table>
+<h3>6. 이용자 기기에 저장되는 정보</h3><p>장바구니, 찜, 최근 본 상품, 배송지(저장을 선택한 경우), 주문번호는 이용자의 브라우저에만 저장되며 회사 서버로 전송되지 않습니다. 브라우저 설정에서 사이트 데이터를 삭제하면 지워집니다.</p>
+<h3>7. 이용자의 권리와 행사 방법</h3><p>이용자는 언제든지 자신의 개인정보에 대해 열람, 정정, 삭제, 처리정지를 요청할 수 있습니다. 고객센터({e(BIZ["phone"])}) 또는 이메일({e(BIZ["email"])})로 요청하시면 지체 없이 처리합니다. 만 14세 미만 아동의 개인정보는 수집하지 않습니다.</p>
+<h3>8. 파기 절차와 방법</h3><p>보유 기간이 지나거나 처리 목적이 달성된 개인정보는 복구할 수 없는 방법으로 지체 없이 삭제합니다.</p>
+<h3>9. 안전성 확보 조치</h3><p>전송 구간 암호화(HTTPS), 관리자 접근 통제, 결제 정보 미보관 등의 조치를 하고 있습니다.</p>
+<h3>10. 개인정보 보호책임자</h3><p>{e(BIZ["privacy_officer"])} · {e(BIZ["phone"])} · {e(BIZ["email"])}</p>
+<h3>11. 권익침해 구제 방법</h3><p>개인정보침해신고센터(privacy.kisa.or.kr, 국번 없이 118), 개인정보분쟁조정위원회(www.kopico.go.kr, 1833-6972), 경찰청 사이버수사국(ecrm.police.go.kr, 182)</p>
 <p style="margin-top:20px;color:#888">시행일: {datetime.date.today():%Y-%m-%d}</p></div>''')
     simple("refund.html", "교환·환불 안내", f'''<div class="card policy">
 <h3>신청 기간</h3><p>단순 변심: 상품 수령 후 7일 이내 / 상품 불량·오배송: 수령 후 3개월 이내 또는 사실을 안 날부터 30일 이내</p>
@@ -410,7 +427,7 @@ def build_partner_pages():
     cats = "".join(f'<option value="{c["slug"]}">{e(c["name"])}</option>' for c in CATS)
     simple("seller.html", "공급사 입점", f'''<div class="main"><div>
 <div class="card"><h2>공급사 입점 안내</h2><p style="color:#555">{e(CFG["shop_name"])}에 상품을 공급해 주실 도매·제조 공급사를 모집해요.
-상품을 올려주시면 검수 후 쇼핑몰과 네이버 가격비교에 노출하고, 주문이 들어오면 발주서를 보내드려요. 공급사는 고객에게 직접 배송만 해주시면 돼요.</p>
+상품을 올려주시면 검수 후 쇼핑몰에 노출하고, 주문이 들어오면 발주서를 보내드려요. 공급사는 고객에게 직접 배송만 해주시면 돼요.</p>
 <ol style="padding-left:20px;margin-top:10px;color:#333"><li>아래에서 입점 신청 → 승인되면 <b>입점코드</b>를 받아요</li><li>입점코드로 상품 등록 (공급가·배송비·사진·설명)</li><li>검수 후 판매 시작, 주문 시 발주 안내</li></ol></div>
 <div class="card form" id="apply-form"><h2>1. 입점 신청</h2>
 <label>회사명</label><input name="company"><label>사업자등록번호</label><input name="biz_no" placeholder="000-00-00000">
@@ -437,7 +454,7 @@ def build_partner_pages():
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>네이버 가격비교 노출</li><li>주문 즉시 발주 안내</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>주문 즉시 발주 안내</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="narrow"><div class="card form" id="admin-login"><label for="admin-pw">관리자 비밀번호</label><input id="admin-pw" type="password" autocomplete="current-password">
 <button class="btn btn-dark" style="margin-top:14px" id="admin-enter">들어가기</button></div></div>

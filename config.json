@@ -74,6 +74,26 @@
       "emoji": "🐶"
     },
     {
+      "slug": "kids",
+      "name": "유아·완구",
+      "emoji": "🧸"
+    },
+    {
+      "slug": "leisure",
+      "name": "스포츠·레저",
+      "emoji": "⛺"
+    },
+    {
+      "slug": "car",
+      "name": "자동차용품",
+      "emoji": "🚗"
+    },
+    {
+      "slug": "garden",
+      "name": "원예·농업",
+      "emoji": "🌱"
+    },
+    {
       "slug": "food",
       "name": "식품",
       "emoji": "🍱"
