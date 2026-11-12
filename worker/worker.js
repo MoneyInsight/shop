@@ -130,6 +130,9 @@ async function confirm(req, env) {
     const c = await env.SHOP.get("coupon:" + couponCode, "json");
     if (c) { c.used = (c.used || 0) + 1; await env.SHOP.put("coupon:" + couponCode, JSON.stringify(c)); }
   }
+  const itemName = lines[0].name.slice(0, 40) + (lines.length > 1 ? ` 외 ${lines.length - 1}건` : "");
+  await kakao(env, "ORDER_DONE", customer?.phone, { 고객명: customer?.name, 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 링크: siteLink(env, "orders.html?id=" + orderId) });
+  await kakao(env, "ADMIN_ORDER", env.ADMIN_PHONE, { 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 고객명: customer?.name, 링크: siteLink(env, "admin.html") });
   await notify(env, `🛒 새 주문 ${orderId}\n${lines.map((l) => `- ${l.name} × ${l.qty}`).join("\n")}\n결제 ${Number(amount).toLocaleString()}원 / ${customer?.name || ""}`);
   return json({ ok: true, orderId });
 }
@@ -250,6 +253,9 @@ async function offerAdd(req, env) {
     name, phone, memo: clip(d.memo, 200), supplier: sup.supplier || p.supplier || "직영", seller_code: sup.seller_code || "",
     status: "대기", createdAt: new Date(now).toISOString(), expiresAt: new Date(now + 48 * HOUR).toISOString() };
   await env.SHOP.put(of.key, JSON.stringify(of));
+  const sellerRec = of.seller_code ? await env.SHOP.get("seller:" + of.seller_code, "json") : null;
+  await kakao(env, "OFFER_NEW", sellerRec ? sellerRec.phone : env.ADMIN_PHONE, { 상품명: (p.name + (optName ? ` [${optName}]` : "")).slice(0, 60), 수량: qty,
+    판매가: won0(unit), 제안가: won0(price), 제안번호: id, 기한: kst(of.expiresAt), 링크: siteLink(env, sellerRec ? "seller.html#offer-seller" : "admin.html") });
   await notify(env, `🤝 가격 제안 ${id} [${of.supplier}]\n${p.name}${optName ? ` [${optName}]` : ""} × ${qty}\n개당 ${unit.toLocaleString()}원 → ${price.toLocaleString()}원 제안`);
   return json({ ok: true, offer: publicOffer(of), message: "가격 제안을 보냈어요. 판매자가 수락하면 제안 가격으로 주문할 수 있어요. (답변 대기 48시간)" });
 }
@@ -272,6 +278,9 @@ async function replyOffer(env, of, accept, note) {
   of.respondedAt = new Date().toISOString();
   if (accept) of.payBy = new Date(Date.now() + 72 * HOUR).toISOString();
   await env.SHOP.put("offer:" + of.id, JSON.stringify(of));
+  const nm = (of.product_name + (of.opt_name ? ` [${of.opt_name}]` : "")).slice(0, 60);
+  if (accept) await kakao(env, "OFFER_ACCEPT", of.phone, { 고객명: of.name, 상품명: nm, 수량: of.qty, 제안가: won0(of.price), 합계: won0(of.price * of.qty), 제안번호: of.id, 기한: kst(of.payBy), 링크: siteLink(env, "orders.html#offers") });
+  else await kakao(env, "OFFER_REJECT", of.phone, { 고객명: of.name, 상품명: nm, 제안번호: of.id, 사유: of.note || "-", 링크: siteLink(env, "product/" + encodeURIComponent(of.product_id) + ".html") });
   return json({ ok: true, message: accept ? "수락했어요. 고객이 72시간 안에 제안가로 주문할 수 있어요." : "거절했어요." });
 }
 
@@ -298,6 +307,97 @@ async function adminOfferReply(req, env) {
   if (!of) return fail("제안을 찾을 수 없어요.");
   return replyOffer(env, of, !!accept, note);
 }
+
+// ---------- 카카오 알림톡 (솔라피) ----------
+// 키가 없으면 아무것도 보내지 않음 → 지금은 꺼진 상태로 대기, 나중에 환경변수만 넣으면 작동
+// 필요한 환경변수: SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_PFID(카카오 채널 ID), SOLAPI_SENDER(등록한 발신번호),
+//                ADMIN_PHONE(대표 알림 받을 번호), KAKAO_TPL_<템플릿키>(카카오 승인된 템플릿 ID)
+// 템플릿 문구는 아래 TEMPLATES와 카카오에 등록한 문구가 글자 하나까지 같아야 함 (docs/알림톡_템플릿.md)
+export const TEMPLATES = {
+  OFFER_NEW: { to: "공급사(직영은 대표)", when: "고객이 가격 제안을 보냈을 때", text:
+`[땡잡았땡] 새 가격 제안이 도착했습니다.
+
+상품: #{상품명}
+수량: #{수량}개
+판매가: 개당 #{판매가}원
+제안가: 개당 #{제안가}원
+제안번호: #{제안번호}
+
+#{기한}까지 수락 또는 거절해 주세요. 기한이 지나면 자동으로 만료됩니다.
+
+응답하기: #{링크}` },
+  OFFER_ACCEPT: { to: "고객", when: "가격 제안이 수락됐을 때", text:
+`[땡잡았땡] #{고객명}님, 가격 제안이 수락되었습니다.
+
+상품: #{상품명}
+수량: #{수량}개
+제안가: 개당 #{제안가}원 (합계 #{합계}원)
+제안번호: #{제안번호}
+
+#{기한}까지 아래 링크에서 주문하시면 제안 가격이 적용됩니다.
+
+주문하기: #{링크}` },
+  OFFER_REJECT: { to: "고객", when: "가격 제안이 거절됐을 때", text:
+`[땡잡았땡] #{고객명}님, 보내주신 가격 제안이 이번에는 수락되지 않았습니다.
+
+상품: #{상품명}
+제안번호: #{제안번호}
+판매자 메시지: #{사유}
+
+판매가로는 언제든 바로 주문하실 수 있습니다.
+
+상품 보기: #{링크}` },
+  ORDER_DONE: { to: "고객", when: "결제가 완료됐을 때", text:
+`[땡잡았땡] #{고객명}님, 주문이 완료되었습니다.
+
+주문번호: #{주문번호}
+상품: #{상품명}
+결제금액: #{결제금액}원
+
+영업일 기준 1~3일 안에 출고되며, 출고되면 다시 알려드립니다.
+
+주문 조회: #{링크}` },
+  SHIPPED: { to: "고객", when: "송장번호를 넣고 배송중으로 바꿨을 때", text:
+`[땡잡았땡] #{고객명}님, 주문하신 상품이 출고되었습니다.
+
+주문번호: #{주문번호}
+택배사: #{택배사}
+송장번호: #{송장번호}
+
+배송 조회: #{링크}` },
+  ADMIN_ORDER: { to: "대표", when: "새 주문이 들어왔을 때", text:
+`[땡잡았땡] 새 주문이 들어왔습니다.
+
+주문번호: #{주문번호}
+상품: #{상품명}
+결제금액: #{결제금액}원
+받는 분: #{고객명}
+
+발주와 송장 입력을 진행해 주세요.
+
+관리자: #{링크}` },
+};
+const kakaoReady = (env) => !!(env.SOLAPI_API_KEY && env.SOLAPI_API_SECRET && env.SOLAPI_PFID && env.SOLAPI_SENDER);
+const siteLink = (env, path) => String(env.SITE_URL || "").replace(/\/$/, "") + "/" + path;
+
+async function kakao(env, key, to, vars) {
+  const tpl = TEMPLATES[key], templateId = env["KAKAO_TPL_" + key], phone = digits(to);
+  if (!tpl || !templateId || !kakaoReady(env) || phone.length < 10) return false;  // 설정 전에는 조용히 건너뜀
+  const variables = Object.fromEntries(Object.entries(vars).map(([k, v]) => ["#{" + k + "}", String(v ?? "-").slice(0, 200) || "-"]));
+  const date = new Date().toISOString(), salt = rid(16);
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SOLAPI_API_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = [...new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(date + salt)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  try {
+    const r = await fetch("https://api.solapi.com/messages/v4/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${sig}` },
+      body: JSON.stringify({ message: { to: phone, from: digits(env.SOLAPI_SENDER), kakaoOptions: { pfId: env.SOLAPI_PFID, templateId, variables, disableSms: env.KAKAO_SMS_FALLBACK !== "1" } } }),
+    });
+    return r.ok;
+  } catch (e) { return false; }  // 알림 실패는 주문·제안 처리에 영향 없음
+}
+const won0 = (n) => Number(n || 0).toLocaleString("ko-KR");
+const kst = (iso) => new Date(new Date(iso).getTime() + 9 * HOUR).toISOString().slice(5, 16).replace("-", "/").replace("T", " ");
 
 // ---------- 공통 도우미 ----------
 const digits = (s) => String(s || "").replace(/\D/g, "");
@@ -479,6 +579,9 @@ async function adminOrderUpdate(req, env) {
   if (status && status !== o.status) {
     if (!ORDER_STATUS.includes(status)) return fail("알 수 없는 상태예요.");
     setStatus(o, status);
+    if (status === "배송중" && o.tracking && !o.shipNotified) {
+      o.shipNotified = await kakao(env, "SHIPPED", o.customer?.phone, { 고객명: o.customer?.name, 주문번호: o.orderId, 택배사: o.courier || "-", 송장번호: o.tracking, 링크: siteLink(env, "orders.html?id=" + o.orderId) });
+    }
     if (o.claim && /완료$/.test(status)) o.claim.status = "완료";
   }
   await env.SHOP.put("order:" + orderId, JSON.stringify(o));
@@ -616,8 +719,8 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12d", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
-      kv: !!env.SHOP, toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+    return json({ ok: true, version: "2026-11-12e", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+      kv: !!env.SHOP, kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
   try {

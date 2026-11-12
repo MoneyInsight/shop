@@ -60,7 +60,7 @@ r = await call("/order/cancel", { orderId: "ORD2", phone: "01012345678", reason:
   ok("틀린 비번", (await q("Bearer nope")) === 401);
   ok("비번 미설정", (await q("Bearer x", { ...env, ADMIN_PASSWORD: "" })) === 401); }
 // ── 대량 구매 가격 제안 ──
-mem.set("seller:SELL1", JSON.stringify({ code: "SELL1", company: "공급사A" }));
+mem.set("seller:SELL1", JSON.stringify({ code: "SELL1", company: "공급사A", phone: "010-7777-1111" }));
 mem.set("supply:B1", JSON.stringify({ supplier: "공급사A", seller_code: "SELL1", supply_price: 4000 }));
 const c2 = { ...cust, phone: "010-5555-6666" };
 r = await call("/offer/add", { product_id: "B1", qty: 2, price: 4900, name: "김", phone: c2.phone }); ok("제안 2개 거절", r.s === 400, r);
@@ -87,4 +87,21 @@ r = await call("/admin/list", {}, true); ok("관리자 제안 목록", r.d.offer
 { const o = JSON.parse(mem.get("offer:" + OFID)); ok("주문에 제안 기록", JSON.parse(mem.get("order:ORD3")).lines[0].offer === OFID && o.status === "주문완료"); }
 { const k = [...mem.keys()].find((x) => x.startsWith("offer:") && x !== "offer:" + OFID); const o = JSON.parse(mem.get(k)); o.status = "대기"; o.expiresAt = "2000-01-01T00:00:00Z"; mem.set(k, JSON.stringify(o));
   r = await call("/admin/offer-reply", { id: o.id, accept: true }, true); ok("만료 제안 수락 거절", r.s === 400, r); }
+// ── 알림톡: 키 없으면 안 보냄, 키 있으면 솔라피 호출 ──
+ok("키 없을 때 알림톡 미발송", !calls.some((u) => u.includes("solapi")));
+Object.assign(env, { SOLAPI_API_KEY: "k", SOLAPI_API_SECRET: "s", SOLAPI_PFID: "pf", SOLAPI_SENDER: "031-291-1004", ADMIN_PHONE: "01099998888",
+  KAKAO_TPL_OFFER_NEW: "t1", KAKAO_TPL_OFFER_ACCEPT: "t2", KAKAO_TPL_ORDER_DONE: "t3", KAKAO_TPL_ADMIN_ORDER: "t4", KAKAO_TPL_SHIPPED: "t5" });
+const bodies = [];
+const f0 = globalThis.fetch;
+globalThis.fetch = async (u, o) => { if (String(u).includes("solapi")) { bodies.push(JSON.parse(o.body)); return new Response("{}"); } return f0(u, o); };
+r = await call("/offer/add", { product_id: "B1", qty: 3, price: 4900, name: "박영희", phone: "010-3333-4444" });
+ok("제안 알림톡 → 공급사", bodies.some((b) => b.message.kakaoOptions.templateId === "t1" && b.message.to === "01077771111"), bodies);
+const of3 = r.d.offer.id;
+r = await call("/seller/offer-reply", { code: "SELL1", id: of3, accept: true });
+ok("수락 알림톡 → 고객", bodies.some((b) => b.message.kakaoOptions.templateId === "t2" && b.message.to === "01033334444" && b.message.kakaoOptions.variables["#{제안가}"] === "4,900"), bodies.at(-1));
+r = await call("/confirm", { paymentKey: "pk5", orderId: "ORD5", amount: 14700, items: [{ id: "B1", qty: 3, offer: of3 }], customer: { ...cust, phone: "010-3333-4444" } });
+ok("주문 알림톡 고객·대표", r.s === 200 && bodies.some((b) => b.message.kakaoOptions.templateId === "t3") && bodies.some((b) => b.message.kakaoOptions.templateId === "t4" && b.message.to === "01099998888"), bodies.slice(-2));
+r = await call("/admin/order-update", { orderId: "ORD5", status: "배송중", courier: "CJ대한통운", tracking: "999" }, true);
+ok("출고 알림톡", bodies.some((b) => b.message.kakaoOptions.templateId === "t5" && b.message.kakaoOptions.variables["#{송장번호}"] === "999"), bodies.at(-1));
+r = await call("/health"); 
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);
