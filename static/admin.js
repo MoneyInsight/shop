@@ -47,6 +47,8 @@
         <li>답변 대기 가격 제안 <b>${s.offers || 0}</b>건 (직영 상품은 여기서, 공급사 상품은 공급사가 응답)</li>
         <li>답변 대기 문의 <b>${D.qnas.filter((q) => !q.answer).length + D.inquiries.filter((q) => !q.answer).length}</b>건</li>
         <li>공급사 입점 신청 <b>${D.apps.filter((a) => !a.code).length}</b>건 · 상품 승인 대기 <b>${D.pending.length}</b>건</li></ul></div>
+      <div class="card"><h2>이 기기로 주문 알림 <small>무료 · 웹 푸시</small></h2><p class="muted">휴대폰에서 관리자 페이지를 열고 켜 두면 주문·가격 제안·문의가 올 때 알림이 떠요. (아이폰은 홈 화면에 앱 설치 후)</p>
+        <div class="act-row"><button class="mini-btn" data-act="push-on">이 기기 알림 켜기</button><button class="mini-btn ghost" data-act="push-test">테스트 알림</button></div></div>
       <div class="card"><h2>카카오톡 알림 <small>무료 · 나와의 채팅</small></h2>${kakaoCard()}</div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;
     if (tab === "orders") {
@@ -145,6 +147,16 @@
         return;
       }
       if (act === "kakao-test") { alert((await call("/admin/kakao-test")).message); return; }
+      if (act === "push-test") { alert((await call("/admin/push-test")).message); return; }
+      if (act === "push-on") {
+        if (!("serviceWorker" in navigator && "PushManager" in window) || location.protocol !== "https:") { alert("이 브라우저는 알림을 지원하지 않아요. (아이폰은 홈 화면에 추가한 앱에서)"); return; }
+        if (await Notification.requestPermission() !== "granted") { alert("브라우저 설정에서 알림을 허용해 주세요."); return; }
+        const key = (await (await fetch(API + "/push/key", { method: "POST" })).json()).key;
+        const reg = await navigator.serviceWorker.register("sw.js?api=" + encodeURIComponent(API)).then(() => navigator.serviceWorker.ready);
+        const u8 = Uint8Array.from(atob((key + "===".slice((key.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+        const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8 }));
+        alert((await call("/admin/push-subscribe", { sub: sub.toJSON() })).message); return;
+      }
       if (act === "order-save") await call("/admin/order-update", { orderId: id, status: $('[data-f="status"]', row).value, courier: $('[data-f="courier"]', row).value, tracking: $('[data-f="tracking"]', row).value });
       if (act === "order-refund") {
         const amt = prompt("환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", "");

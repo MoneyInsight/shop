@@ -271,6 +271,7 @@ def build_products(ps):
 <div class="offer-rates" id="offer-rates"></div>
 <label class="opt-label" for="offer-price">개당 제안 가격</label><input class="field" id="offer-price" inputmode="numeric">
 <div class="row2"><input class="field" id="offer-name" placeholder="이름"><input class="field" id="offer-phone" inputmode="tel" placeholder="연락처 010-0000-0000"></div>
+<input class="field" id="offer-email" type="email" placeholder="이메일 (선택 · 답변을 메일로도 받기)">
 <textarea class="field" id="offer-memo" placeholder="판매자에게 남길 말 (선택)" style="height:64px"></textarea>
 <button class="btn btn-dark" id="offer-send" type="button">가격 제안 보내기</button>
 <p class="muted" style="margin-top:8px">판매자가 48시간 안에 답변하고, 수락되면 72시간 안에 제안 가격으로 주문할 수 있어요. 결과는 <a href="../orders.html#offers" style="text-decoration:underline">주문조회 › 가격 제안</a>에서 확인하세요.</p></div></div>
@@ -342,7 +343,7 @@ def build_shop_pages():
 <div class="card form"><h2>배송지</h2>
 <label for="name">받는 분</label><input id="name" autocomplete="name">
 <label for="phone">연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
-<label for="email">이메일 (선택)</label><input id="email" type="email" autocomplete="email">
+<label for="email">이메일 (선택 · 주문·배송 알림 메일)</label><input id="email" type="email" autocomplete="email">
 <label for="zip">주소</label><div class="row"><input id="zip" placeholder="우편번호" readonly><button type="button" id="find-addr">주소 찾기</button></div>
 <input id="addr1" placeholder="기본 주소" readonly style="margin-top:8px" aria-label="기본 주소"><input id="addr2" placeholder="상세 주소" style="margin-top:8px" aria-label="상세 주소" autocomplete="address-line2">
 <label for="memo-sel">배송 메모</label><select id="memo-sel"><option value="">선택 안 함</option><option>문 앞에 놓아 주세요</option><option>경비실에 맡겨 주세요</option><option>배송 전에 연락 주세요</option><option>부재 시 문 앞에 놓아 주세요</option><option>직접 입력</option></select>

@@ -131,7 +131,7 @@ async function confirm(req, env) {
     if (c) { c.used = (c.used || 0) + 1; await env.SHOP.put("coupon:" + couponCode, JSON.stringify(c)); }
   }
   const itemName = lines[0].name.slice(0, 40) + (lines.length > 1 ? ` 외 ${lines.length - 1}건` : "");
-  await kakao(env, "ORDER_DONE", customer?.phone, { 고객명: customer?.name, 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 링크: siteLink(env, "orders.html?id=" + orderId) });
+  await alertCustomer(env, "ORDER_DONE", { phone: customer?.phone, email: customer?.email }, { 고객명: customer?.name, 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 링크: siteLink(env, "orders.html?id=" + orderId) });
   await kakao(env, "ADMIN_ORDER", env.ADMIN_PHONE, { 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 고객명: customer?.name, 링크: siteLink(env, "admin.html") });
   await notify(env, `🛒 새 주문 ${Number(amount).toLocaleString()}원\n${orderId}\n${lines.map((l) => `- ${l.name.slice(0, 30)} × ${l.qty}`).join("\n")}\n받는 분 ${customer?.name || ""}`);
   return json({ ok: true, orderId });
@@ -250,7 +250,7 @@ async function offerAdd(req, env) {
   const sup = (await env.SHOP.get("supply:" + p.id, "json")) || {};
   const now = Date.now(), id = "OF" + rid(7);
   const of = { id, key: "offer:" + id, product_id: String(p.id), product_name: p.name, opt, opt_name: optName, qty, unit, price,
-    name, phone, memo: clip(d.memo, 200), supplier: sup.supplier || p.supplier || "직영", seller_code: sup.seller_code || "",
+    name, phone, email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email || "") ? String(d.email).slice(0, 80) : "", memo: clip(d.memo, 200), supplier: sup.supplier || p.supplier || "직영", seller_code: sup.seller_code || "",
     status: "대기", createdAt: new Date(now).toISOString(), expiresAt: new Date(now + 48 * HOUR).toISOString() };
   await env.SHOP.put(of.key, JSON.stringify(of));
   const sellerRec = of.seller_code ? await env.SHOP.get("seller:" + of.seller_code, "json") : null;
@@ -279,8 +279,8 @@ async function replyOffer(env, of, accept, note) {
   if (accept) of.payBy = new Date(Date.now() + 72 * HOUR).toISOString();
   await env.SHOP.put("offer:" + of.id, JSON.stringify(of));
   const nm = (of.product_name + (of.opt_name ? ` [${of.opt_name}]` : "")).slice(0, 60);
-  if (accept) await kakao(env, "OFFER_ACCEPT", of.phone, { 고객명: of.name, 상품명: nm, 수량: of.qty, 제안가: won0(of.price), 합계: won0(of.price * of.qty), 제안번호: of.id, 기한: kst(of.payBy), 링크: siteLink(env, "orders.html#offers") });
-  else await kakao(env, "OFFER_REJECT", of.phone, { 고객명: of.name, 상품명: nm, 제안번호: of.id, 사유: of.note || "-", 링크: siteLink(env, "product/" + encodeURIComponent(of.product_id) + ".html") });
+  if (accept) await alertCustomer(env, "OFFER_ACCEPT", { phone: of.phone, email: of.email }, { 고객명: of.name, 상품명: nm, 수량: of.qty, 제안가: won0(of.price), 합계: won0(of.price * of.qty), 제안번호: of.id, 기한: kst(of.payBy), 링크: siteLink(env, "orders.html#offers") });
+  else await alertCustomer(env, "OFFER_REJECT", { phone: of.phone, email: of.email }, { 고객명: of.name, 상품명: nm, 제안번호: of.id, 사유: of.note || "-", 링크: siteLink(env, "product/" + encodeURIComponent(of.product_id) + ".html") });
   return json({ ok: true, message: accept ? "수락했어요. 고객이 72시간 안에 제안가로 주문할 수 있어요." : "거절했어요." });
 }
 
@@ -407,10 +407,92 @@ const clip = (s, n) => String(s || "").replace(/<[^>]*>/g, "").trim().slice(0, n
 // 대표님 알림: 카카오톡 "나와의 채팅"(무료) + 웹훅(선택)
 async function notify(env, text) {
   await kakaoMemo(env, text);
+  await pushTo(env, "admin", { title: "땡잡았땡 관리자", body: text.slice(0, 180), url: siteLink(env, "admin.html") });
+  await email(env, env.ADMIN_EMAIL, "[땡잡았땡 관리자] " + text.split("\n")[0].slice(0, 60), text, siteLink(env, "admin.html"));
   if (!env.NOTIFY_WEBHOOK) return;
   try {
     await fetch(env.NOTIFY_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, content: text }) });
   } catch (e) { /* 알림 실패는 주문에 영향 없음 */ }
+}
+
+// ---------- 무료 알림: 웹 푸시 + 이메일 ----------
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const sha = async (s) => b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))).slice(0, 32);
+const fill = (text, vars) => text.replace(/#\{([^}]+)\}/g, (_, k) => String(vars[k] ?? "-"));
+
+// VAPID 키: 처음 쓸 때 서버가 스스로 만들어 저장 (사람이 키를 다룰 필요 없음)
+async function vapid(env) {
+  let v = await env.SHOP.get("vapid:keys", "json");
+  if (!v) {
+    const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+    v = { pub: b64u(await crypto.subtle.exportKey("raw", kp.publicKey)), jwk: await crypto.subtle.exportKey("jwk", kp.privateKey) };
+    await env.SHOP.put("vapid:keys", JSON.stringify(v));
+  }
+  return v;
+}
+async function pushTickle(env, endpoint) {
+  const v = await vapid(env);
+  const key = await crypto.subtle.importKey("jwk", v.jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const enc = (o) => b64u(new TextEncoder().encode(JSON.stringify(o)));
+  const unsigned = enc({ typ: "JWT", alg: "ES256" }) + "." + enc({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: "mailto:" + (env.ADMIN_EMAIL || "noreply@example.com") });
+  const sig = b64u(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(unsigned)));
+  return fetch(endpoint, { method: "POST", headers: { TTL: "86400", Urgency: "high", "Content-Length": "0", Authorization: `vapid t=${unsigned}.${sig}, k=${v.pub}` } });
+}
+// 내용은 서버에 보관하고 빈 푸시만 보냄 → 기기의 서비스워커가 /push/pull 로 내용을 가져와 표시
+async function pushTo(env, target, msg) {
+  if (!target) return 0;
+  const subs = (await kvList(env, "push:")).filter((x) => x.target === target);
+  let n = 0;
+  for (const sub of subs) {
+    await env.SHOP.put(`pmsg:${sub.id}:${Date.now()}${rid(3)}`, JSON.stringify({ ...msg, at: new Date().toISOString() }));
+    try {
+      const r = await pushTickle(env, sub.endpoint);
+      if (r.status === 404 || r.status === 410) await env.SHOP.delete("push:" + sub.id);  // 알림 끈 기기
+      else if (r.ok) n++;
+    } catch (e) { /* 다음 기기 */ }
+  }
+  return n;
+}
+async function pushSubscribe(env, sub, target) {
+  const endpoint = sub && sub.endpoint;
+  if (!/^https:\/\//.test(endpoint || "")) return fail("알림 구독 정보가 올바르지 않아요.");
+  const id = await sha(endpoint);
+  await env.SHOP.put("push:" + id, JSON.stringify({ id, endpoint, target, at: new Date().toISOString() }));
+  return json({ ok: true, message: "알림이 켜졌어요. 이 기기로 알려드릴게요." });
+}
+async function pushPull(req, env) {
+  const { endpoint } = await req.json();
+  if (!endpoint) return json({ messages: [] });
+  const id = await sha(endpoint), keys = (await env.SHOP.list({ prefix: `pmsg:${id}:` })).keys;
+  const messages = [];
+  for (const k of keys.slice(0, 10)) { const m = await env.SHOP.get(k.name, "json"); if (m) messages.push(m); await env.SHOP.delete(k.name); }
+  return json({ messages });
+}
+
+// 이메일 (Brevo 무료: 하루 300통) — BREVO_API_KEY, MAIL_FROM(인증한 보내는 주소) 있을 때만
+async function email(env, to, subject, text, url) {
+  if (!env.BREVO_API_KEY || !env.MAIL_FROM || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to || "")) return false;
+  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const body = esc(text).replace(/\n/g, "<br>");
+  const html = `<div style="font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:520px;margin:0 auto;padding:28px 24px;color:#16171a;line-height:1.7;font-size:15px">
+    <div style="font-size:22px;font-weight:700;margin-bottom:18px">땡잡았땡<span style="color:#9a7b4f">.</span></div>${body}
+    ${url ? `<p style="margin-top:24px"><a href="${esc(url)}" style="display:inline-block;background:#9a7b4f;color:#fff;text-decoration:none;padding:12px 26px;border-radius:24px;font-weight:600">바로 확인하기</a></p>` : ""}
+    <p style="margin-top:28px;color:#868a91;font-size:12px">이 메일은 발신 전용입니다. 문의는 쇼핑몰 고객센터를 이용해 주세요.</p></div>`;
+  try {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ sender: { name: env.MAIL_FROM_NAME || "땡잡았땡", email: env.MAIL_FROM }, to: [{ email: to }], subject, htmlContent: html, textContent: text + (url ? "\n\n" + url : "") }) });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+// 고객 알림 한 번에: 웹 푸시(무료) + 이메일(무료) + 알림톡(유료, 키 있을 때만)
+const ALERT_TITLE = { OFFER_ACCEPT: "가격 제안이 수락됐어요", OFFER_REJECT: "가격 제안 결과를 알려드려요", ORDER_DONE: "주문이 완료됐어요", SHIPPED: "상품이 출고됐어요" };
+async function alertCustomer(env, key, who, vars) {
+  const text = fill(TEMPLATES[key].text, vars), url = vars.링크;
+  await pushTo(env, "p:" + digits(who.phone), { title: ALERT_TITLE[key] || "땡잡았땡", body: text.replace(/^\[땡잡았땡\]\s*/, "").split("\n\n").slice(0, 2).join("\n").slice(0, 180), url });
+  const noLink = fill(TEMPLATES[key].text.split("\n\n").slice(0, -1).join("\n\n"), vars);  // 마지막 줄(링크)은 메일 버튼으로
+  await email(env, who.email, "[땡잡았땡] " + (ALERT_TITLE[key] || "알림"), noLink, url);
+  await kakao(env, key, who.phone, vars);
 }
 
 // ---------- 카카오톡 나에게 보내기 (무료) ----------
@@ -623,7 +705,8 @@ async function adminOrderUpdate(req, env) {
     if (!ORDER_STATUS.includes(status)) return fail("알 수 없는 상태예요.");
     setStatus(o, status);
     if (status === "배송중" && o.tracking && !o.shipNotified) {
-      o.shipNotified = await kakao(env, "SHIPPED", o.customer?.phone, { 고객명: o.customer?.name, 주문번호: o.orderId, 택배사: o.courier || "-", 송장번호: o.tracking, 링크: siteLink(env, "orders.html?id=" + o.orderId) });
+      o.shipNotified = true;
+      await alertCustomer(env, "SHIPPED", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 택배사: o.courier || "-", 송장번호: o.tracking, 링크: siteLink(env, "orders.html?id=" + o.orderId) });
     }
     if (o.claim && /완료$/.test(status)) o.claim.status = "완료";
   }
@@ -764,8 +847,8 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12f", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
-      kv: !!env.SHOP, kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+    return json({ ok: true, version: "2026-11-12g", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+      kv: !!env.SHOP, email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
   try {
@@ -784,6 +867,9 @@ export async function handle(req, env, path) {
     if (path === "/inquiry/add") return await inquiryAdd(req, env);
     if (path === "/coupon/check") return await couponCheck(req, env);
     if (path === "/offer/add") return await offerAdd(req, env);
+    if (path === "/push/key") return json({ key: (await vapid(env)).pub });
+    if (path === "/push/subscribe") { const d = await req.json(); if (digits(d.phone).length < 10) return fail("연락처를 확인해 주세요."); return await pushSubscribe(env, d.sub, "p:" + digits(d.phone)); }
+    if (path === "/push/pull") return await pushPull(req, env);
     if (path === "/offer/check") return await offerCheck(req, env);
     if (path === "/seller/offers") return await sellerOffers(req, env);
     if (path === "/seller/offer-reply") return await sellerOfferReply(req, env);
@@ -796,6 +882,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
       if (path === "/admin/kakao-test") return await adminKakaoTest(env);
+      if (path === "/admin/push-subscribe") return await pushSubscribe(env, (await req.json()).sub, "admin");
+      if (path === "/admin/push-test") { const n = await pushTo(env, "admin", { title: "땡잡았땡 관리자", body: "🔔 테스트 알림입니다.", url: siteLink(env, "admin.html") }); return n ? json({ ok: true, message: `${n}대 기기로 보냈어요.` }) : fail("알림을 켠 기기가 없어요."); }
       if (path === "/admin/approve-seller") return await approveSeller(req, env);
       if (path === "/admin/approve-product") return await approveProduct(req, env);
       if (path === "/admin/reject-product") return await rejectProduct(req, env);

@@ -121,4 +121,33 @@ r = await call("/health");
   r = await call("/inquiry/add", { name: "김", contact: "010", type: "배송", text: "언제 오나요??" });
   ok("토큰 만료 시 자동 갱신 후 알림", JSON.parse(mem.get("kakao:me")).access === "ATrefresh_token" && memo.some((m) => m.text.includes("1:1 문의")), JSON.parse(mem.get("kakao:me")));
   r = await call("/admin/list", {}, true); ok("연결 후 상태", r.d.kakaoMe.connected, r.d.kakaoMe); }
+// ── 무료 알림: 웹 푸시 + 이메일 ──
+{ const sent = [], mails = [], f2 = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    if (String(u).startsWith("https://push.test/")) { sent.push({ u: String(u), auth: o.headers.Authorization }); return new Response("", { status: String(u).endsWith("gone") ? 410 : 201 }); }
+    if (String(u).includes("api.brevo.com")) { mails.push(JSON.parse(o.body)); return new Response("{}"); }
+    return f2(u, o); };
+  r = await call("/push/key"); ok("푸시 키 자동 생성", r.d.key && r.d.key.length > 80, r);
+  const k1 = r.d.key; r = await call("/push/key"); ok("푸시 키 재사용", r.d.key === k1);
+  r = await call("/push/subscribe", { sub: { endpoint: "http://bad" }, phone: "010-3333-4444" }); ok("잘못된 구독 거절", r.s === 400, r);
+  r = await call("/push/subscribe", { sub: { endpoint: "https://push.test/c1" }, phone: "010-3333-4444" }); ok("고객 구독", r.s === 200, r);
+  r = await call("/push/subscribe", { sub: { endpoint: "https://push.test/gone" }, phone: "010-3333-4444" });
+  r = await call("/admin/push-subscribe", { sub: { endpoint: "https://push.test/a1" } }); ok("관리자 구독 인증 필요", r.s === 401, r);
+  r = await call("/admin/push-subscribe", { sub: { endpoint: "https://push.test/a1" } }, true); ok("관리자 구독", r.s === 200, r);
+  Object.assign(env, { BREVO_API_KEY: "bk", MAIL_FROM: "shop@test.kr", ADMIN_EMAIL: "boss@test.kr" });
+  r = await call("/admin/order-update", { orderId: "ORD6", status: "상품준비중" }, true);
+  mem.set("order:ORD7", JSON.stringify({ orderId: "ORD7", amount: 5000, lines: [{ id: "B1", name: "단품", qty: 1, price: 5000 }], customer: { name: "박영희", phone: "010-3333-4444", email: "young@test.kr" }, status: "상품준비중", paidAt: new Date().toISOString(), history: [] }));
+  r = await call("/admin/order-update", { orderId: "ORD7", status: "배송중", courier: "한진택배", tracking: "777" }, true);
+  ok("출고 → 고객 푸시", sent.some((x) => x.u.endsWith("/c1") && /^vapid t=.+\..+\..+, k=/.test(x.auth)), sent);
+  ok("만료 구독 자동 삭제", ![...mem.values()].some((v) => v.includes("push.test/gone")));
+  ok("출고 → 고객 메일", mails.some((m) => m.to[0].email === "young@test.kr" && m.htmlContent.includes("777") && !m.textContent.includes("배송 조회:")), mails.at(-1));
+  const id = (await import("node:crypto")).createHash("sha256").update("https://push.test/c1").digest("base64url").slice(0, 32);
+  r = await call("/push/pull", { endpoint: "https://push.test/c1" }); ok("푸시 내용 가져오기", r.d.messages.length === 1 && r.d.messages[0].title === "상품이 출고됐어요" && r.d.messages[0].body.includes("박영희"), r.d);
+  r = await call("/push/pull", { endpoint: "https://push.test/c1" }); ok("가져간 내용 삭제", r.d.messages.length === 0, r.d);
+  r = await call("/inquiry/add", { name: "김", contact: "010", type: "배송", text: "문의 드립니다" });
+  ok("관리자 푸시·메일", sent.some((x) => x.u.endsWith("/a1")) && mails.some((m) => m.to[0].email === "boss@test.kr"), [sent.length, mails.length]);
+  r = await call("/offer/add", { product_id: "B1", qty: 3, price: 4900, name: "최", phone: "010-1212-3434", email: "choi@test.kr" });
+  r = await call("/admin/offer-reply", { id: r.d.offer.id, accept: false, note: "재고 부족" }, true);
+  ok("제안 거절 메일", mails.some((m) => m.to[0].email === "choi@test.kr" && m.htmlContent.includes("재고 부족")), mails.at(-1));
+  r = await call("/health"); ok("상태: 메일 켜짐", r.d.email === "켜짐", r.d); }
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);

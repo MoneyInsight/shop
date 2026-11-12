@@ -19,9 +19,11 @@ function kv() {
 export default async (req) => {
   const e = (n, d = "") => Netlify.env.get(n) ?? d;
   const env = {
+    ...(Netlify.env.toObject ? Netlify.env.toObject() : {}),  // 카카오·솔라피·메일 등 새 환경변수도 모두 전달
     SHOP: kv(),
     TOSS_SECRET_KEY: e("TOSS_SECRET_KEY", "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6"),
     ADMIN_PASSWORD: e("ADMIN_PASSWORD"),
+    ADMIN_EMAIL: e("ADMIN_EMAIL", "scream0506@gmail.com"),
     NOTIFY_WEBHOOK: e("NOTIFY_WEBHOOK"),
     GITHUB_TOKEN: e("GITHUB_TOKEN"),
     GITHUB_REPO: e("GITHUB_REPO", "MoneyInsight/shop"),
@@ -29,7 +31,7 @@ export default async (req) => {
     MARGIN_RATE: e("MARGIN_RATE", "0.03"),
     CARD_FEE: e("CARD_FEE", "0.034"),
     MARKET_FEE: e("MARKET_FEE", "0.12"),
-    CUSTOMER_DISCOUNT: e("CUSTOMER_DISCOUNT", "0.05"),
+    CUSTOMER_DISCOUNT: e("CUSTOMER_DISCOUNT", "0"),
     SUPPLIER_MARGIN: e("SUPPLIER_MARGIN", "0.10"),
     MIN_MARGIN: e("MIN_MARGIN", "0"),
     FREE_SHIPPING_OVER: e("FREE_SHIPPING_OVER", "0"),

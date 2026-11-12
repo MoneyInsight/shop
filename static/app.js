@@ -51,6 +51,29 @@
     } catch (e) { return { ok: false, d: { message: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." } }; }
   }
 
+  // ── 웹 푸시 알림 켜기 (무료) ──
+  const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && location.protocol === "https:";
+  const b64toU8 = (s) => { const b = atob((s + "===".slice((s.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
+  async function enablePush(phone, path = "/push/subscribe") {
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (!pushSupported()) { alert(isIos ? "아이폰은 사파리 ‘공유 › 홈 화면에 추가’로 앱을 설치한 뒤, 앱에서 알림을 켤 수 있어요." : "이 브라우저는 알림을 지원하지 않아요. 크롬이나 앱 설치 후 이용해 주세요."); return false; }
+    if (await Notification.requestPermission() !== "granted") { alert("알림이 차단되어 있어요. 브라우저 설정에서 이 사이트의 알림을 허용해 주세요."); return false; }
+    const k = await api("/push/key", {});
+    if (!k.ok) { alert(k.d.message); return false; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64toU8(k.d.key) }));
+    const r = await api(path, { sub: sub.toJSON(), phone });
+    alert(r.d.message || (r.ok ? "알림이 켜졌어요." : "알림을 켜지 못했어요."));
+    if (r.ok) store.set("push_on", [...new Set([...store.get("push_on", []), digits(phone)])]);
+    return r.ok;
+  }
+  const pushBtn = (phone, label = "이 기기로 알림 받기") => store.get("push_on", []).includes(digits(phone)) ? `<p class="muted" style="margin-top:10px">🔔 이 기기로 알림을 받고 있어요.</p>`
+    : `<button class="btn btn-line sm push-on" data-phone="${esc(phone)}" style="margin-top:12px">🔔 ${label}</button>`;
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest(".push-on"); if (!b) return;
+    b.disabled = true; if (await enablePush(b.dataset.phone)) b.outerHTML = `<p class="muted" style="margin-top:10px">🔔 이 기기로 알림을 받고 있어요.</p>`; else b.disabled = false;
+  });
+
   let PRODUCTS = null;
   async function loadProducts() {
     if (!PRODUCTS) PRODUCTS = await (await fetch(ROOT + "products.json", { cache: "no-cache" })).json();
@@ -219,7 +242,7 @@
         if (!ofForm.hidden) {
           if (+inp.value < OF.min_qty) { inp.value = OF.min_qty; sync(); }
           const a = store.get("addr", null);
-          if (a) { if (!$("#offer-name").value) $("#offer-name").value = a.name || ""; if (!$("#offer-phone").value) $("#offer-phone").value = a.phone || ""; }
+          if (a) { if (!$("#offer-name").value) $("#offer-name").value = a.name || ""; if (!$("#offer-phone").value) $("#offer-phone").value = a.phone || ""; if (!$("#offer-email").value) $("#offer-email").value = a.email || ""; }
           if (!$("#offer-price").value) $("#offer-price").value = ratePrice(0.03);
           paintOffer();
         }
@@ -239,12 +262,12 @@
         const name = $("#offer-name").value.trim(), phone = $("#offer-phone").value.trim();
         if (!name || digits(phone).length < 10) { alert("이름과 연락처를 정확히 입력해 주세요."); return; }
         const b = $("#offer-send"); b.disabled = true;
-        const { ok, d } = await api("/offer/add", { product_id: id, opt: optIdx(), qty: q, price: p, name, phone, memo: $("#offer-memo").value });
+        const { ok, d } = await api("/offer/add", { product_id: id, opt: optIdx(), qty: q, price: p, name, phone, email: $("#offer-email").value.trim(), memo: $("#offer-memo").value });
         b.disabled = false;
         if (ok) {
           store.set("my_offers", [{ id: d.offer.id, phone, at: new Date().toISOString() }, ...store.get("my_offers", [])].slice(0, 30));
           alert(d.message + "\n제안번호: " + d.offer.id);
-          ofForm.hidden = true;
+          ofForm.innerHTML = `<div class="offer-calc"><b>제안을 보냈어요</b> (제안번호 ${esc(d.offer.id)})<br>판매자가 답하면 바로 알려드릴게요.${pushBtn(phone, "답변 오면 알림 받기")}</div>`;
         } else alert(d.message);
       };
     }
@@ -478,6 +501,7 @@
           <dt>주문번호</dt><dd><b>${esc(orderId)}</b></dd><dt>결제 금액</dt><dd>${won(amount)}</dd><dt>배송지</dt><dd>${esc(order.customer.addr)}</dd></dl>
         <p class="muted" style="margin-top:18px">영업일 기준 1~3일 안에 출고돼요. 주문번호와 연락처로 언제든 배송 상황을 확인할 수 있어요.</p>
         ${msg ? `<div class="note narrow" style="margin-top:16px">${esc(msg)}</div>` : ""}
+        <div style="margin-top:6px">${pushBtn(order.customer.phone, "배송 알림 받기")}</div>
         <div class="act-row" style="justify-content:center;margin-top:26px"><a class="btn btn-dark sm" href="${ROOT}orders.html?id=${encodeURIComponent(orderId)}">주문 조회</a><a class="btn btn-line sm" href="${ROOT}index.html">쇼핑 계속하기</a></div>`;
     } else {
       box.innerHTML = `<h2>결제가 완료되지 않았어요</h2><p>${esc(msg)}</p><a class="btn btn-dark sm" style="margin:22px auto 0;max-width:220px" href="${ROOT}cart.html">장바구니로</a>`;
@@ -567,7 +591,7 @@
       myOf.forEach((m) => (groups[digits(m.phone)] = groups[digits(m.phone)] || []).push(m.id));
       const mineBox = $("#offer-mine");
       mineBox.innerHTML = myOf.length ? "" : `<p class="muted" style="margin:10px 0 0">이 기기에서 보낸 제안이 없어요. 상품 페이지에서 3개 이상 선택한 뒤 ‘대량 구매 가격 제안’을 눌러 보세요.</p>`;
-      Object.entries(groups).forEach(([ph, ids]) => { const div = document.createElement("div"); mineBox.appendChild(div); showOffers(ids, ph, div); });
+      Object.entries(groups).forEach(([ph, ids]) => { const div = document.createElement("div"); mineBox.appendChild(div); showOffers(ids, ph, div).then(() => div.insertAdjacentHTML("beforeend", pushBtn(ph, "답변 오면 알림 받기"))); });
       $("#of-btn").onclick = () => {
         const idv = $("#of-id").value.trim().toUpperCase(), ph = $("#of-phone").value.trim();
         if (!idv || !ph) { alert("제안번호와 연락처를 입력해 주세요."); return; }
@@ -600,7 +624,7 @@
   }
 
   // ── 앱 설치 (홈 화면에 추가) ──
-  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register(ROOT + "sw.js").catch(() => {});
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register(ROOT + "sw.js?api=" + encodeURIComponent(API || "")).catch(() => {});
   let installEvt = null;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $$(".install-link").forEach((a) => (a.style.display = "")); });
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
