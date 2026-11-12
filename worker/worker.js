@@ -495,7 +495,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12b", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-12c", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
