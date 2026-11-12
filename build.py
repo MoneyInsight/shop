@@ -121,7 +121,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <meta property="og:type" content="website"><meta property="og:title" content="{e(title)}">
 <meta property="og:description" content="{e(desc)}"><meta property="og:site_name" content="{name}">
 {f'<meta property="og:image" content="{og_img}">' if og_img else ""}
-{verify}<meta name="theme-color" content="#16171a">
+{verify}<meta name="theme-color" content="#fdf8ef">
 <link rel="icon" href="{root}favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="{root}icons/icon-180.png"><link rel="manifest" href="{root}manifest.json">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="{name}">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -376,7 +376,7 @@ def build_shop_pages():
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
     write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">땡</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
-          "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#16171a",
+          "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#fdf8ef",
           "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
                     {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
           "shortcuts": [{"name": "주문·배송 조회", "url": "./orders.html"}, {"name": "장바구니", "url": "./cart.html"}]}, ensure_ascii=False))
