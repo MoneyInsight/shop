@@ -18,6 +18,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: 등록된 비밀값 점검 (값은 표시하지 않음)
+        env:
+          S1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          S2: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          S3: ${{ secrets.ADMIN_PASSWORD }}
+          S4: ${{ secrets.CF_API_TOKEN }}
+          S5: ${{ secrets.CF_ACCOUNT_ID }}
+          S6: ${{ secrets.CLOUDFLARE_TOKEN }}
+          S7: ${{ secrets.NAVER_CLIENT_ID }}
+          S8: ${{ secrets.DOMEME_API_KEY }}
+        run: |
+          for p in "CLOUDFLARE_API_TOKEN:$S1" "CLOUDFLARE_ACCOUNT_ID:$S2" "ADMIN_PASSWORD:$S3" "CF_API_TOKEN:$S4" "CF_ACCOUNT_ID:$S5" "CLOUDFLARE_TOKEN:$S6" "NAVER_CLIENT_ID:$S7" "DOMEME_API_KEY:$S8"; do
+            n="${p%%:*}"; v="${p#*:}"; [ -n "$v" ] && echo "있음: $n (${#v}자)" || echo "없음: $n"
+          done
       - name: Cloudflare 키 확인
         id: chk
         run: |
