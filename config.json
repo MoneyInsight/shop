@@ -124,7 +124,7 @@
   "min_margin_won": 0,
   "worker_url": "https://ttaengjab.netlify.app/api",
   "pricing": {
-    "net_margin": 0.1,
+    "net_margin": 0.15,
     "min_margin_won": 1500,
     "card_fee": 0.034,
     "ops_cost_won": 300,
