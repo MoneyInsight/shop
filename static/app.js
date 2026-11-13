@@ -32,7 +32,7 @@
     let w = getWish();
     const on = !w.includes(id);
     w = on ? [id, ...w].slice(0, 200) : w.filter((x) => x !== id);
-    store.set("wish", w); updateCounts();
+    store.set("wish", w); updateCounts(); memberSave({ wish: w });
     return on;
   }
   function updateCounts() {
@@ -49,6 +49,70 @@
       if (!r.ok && (d.message === "Not found" || !d.message)) d.message = "이 기능은 준비 중이에요. 고객센터로 문의해 주세요.";
       return { ok: r.ok, d };
     } catch (e) { return { ok: false, d: { message: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." } }; }
+  }
+
+  // ── 회원 (네이버·카카오·구글 간편 로그인) ──
+  const member = () => store.get("user", null);
+  const token = () => store.get("tk", "");
+  let saveTimer = null;
+  function memberSave(data) {
+    if (!token()) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => { const r = await api("/me/save", { token: token(), ...data }); if (r.ok) store.set("user", r.d.user); }, 600);
+  }
+  function paintLogin() {
+    const u = member();
+    $$(".login-link").forEach((a) => { a.href = ROOT + "login.html"; const t = a.querySelector(".login-txt"); if (t) t.textContent = u ? "내 정보" : "로그인"; });
+  }
+  async function memberRefresh() {
+    if (!token()) return null;
+    const r = await api("/me", { token: token() });
+    if (!r.ok) { store.set("tk", ""); store.set("user", null); paintLogin(); return null; }
+    store.set("user", r.d.user); paintLogin();
+    return r.d.user;
+  }
+  async function handleLoginHash() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (h.get("login_error")) { history.replaceState(null, "", location.pathname + location.search); alert(h.get("login_error")); return; }
+    if (!h.get("login")) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    store.set("tk", h.get("login"));
+    const u = await memberRefresh();
+    if (!u) { alert("로그인에 실패했어요. 다시 시도해 주세요."); return; }
+    // 이 기기의 찜·배송지를 회원 정보와 합치기
+    const wish = [...new Set([...getWish(), ...(u.wish || [])])].slice(0, 200);
+    store.set("wish", wish); updateCounts(); markWished();
+    if (u.addr && !store.get("addr", null)) store.set("addr", u.addr);
+    const addr = !u.addr && store.get("addr", null);
+    const r = await api("/me/save", { token: token(), wish, ...(addr ? { addr } : {}) });
+    if (r.ok) store.set("user", r.d.user);
+    if (h.get("new")) alert(`${u.name || "회원"}님, 땡잡았땡 가입을 환영해요!`);
+    const back = sessionStorage.getItem("login_back");
+    if (back) { sessionStorage.removeItem("login_back"); location.href = back; }
+  }
+  async function initLogin() {
+    const box = $("#login-box");
+    if (!box) return;
+    const health = API ? await fetch(API + "/health").then((r) => r.json()).catch(() => null) : null;
+    $$(".sns-btn").forEach((a) => {
+      const p = a.dataset.provider;
+      if (health?.login?.[p]) a.href = API + "/auth/start?provider=" + p + "&return=" + encodeURIComponent(location.href.split("#")[0].split("?")[0]);
+      else { a.classList.add("off"); a.onclick = (e) => { e.preventDefault(); alert("간편 로그인을 준비하고 있어요. 지금은 회원가입 없이 바로 주문하실 수 있어요."); }; }
+    });
+    const ref = document.referrer;
+    if (ref && ref.startsWith(location.origin) && !/login\.html/.test(ref)) sessionStorage.setItem("login_back", ref);
+    const u = member() && (await memberRefresh());
+    if (!u) return;
+    sessionStorage.removeItem("login_back");
+    box.hidden = true;
+    const me = $("#me-box"); me.hidden = false;
+    const NAME = { naver: "네이버", kakao: "카카오", google: "구글" };
+    me.innerHTML = `<div class="me-head"><h2 style="margin:0">${esc(u.name || "회원")}님</h2><span class="me-badge">${NAME[u.provider] || ""} 로그인</span></div>
+      <dl class="kv"><dt>이메일</dt><dd>${esc(u.email || "-")}</dd><dt>연락처</dt><dd>${esc(u.phone || "-")}</dd>
+      <dt>배송지</dt><dd>${u.addr ? `${esc(u.addr.name || "")} · [${esc(u.addr.zip || "")}] ${esc(u.addr.addr1 || "")} ${esc(u.addr.addr2 || "")}` : "첫 주문 때 ‘배송지 저장’을 선택하면 자동으로 채워져요"}</dd>
+      <dt>가입일</dt><dd>${date(u.joinedAt)}</dd></dl>
+      <div class="act-row" style="margin-top:18px"><a class="btn btn-dark sm" href="orders.html">내 주문 ${u.orderCount ? u.orderCount + "건" : ""}</a><a class="btn btn-line sm" href="wish.html">찜한 상품</a><button class="btn btn-line sm" id="logout">로그아웃</button></div>`;
+    $("#logout").onclick = async () => { await api("/auth/logout", { token: token() }); store.set("tk", ""); store.set("user", null); location.reload(); };
   }
 
   // ── 웹 푸시 알림 켜기 (무료) ──
@@ -487,7 +551,8 @@
 
     // 배송지 불러오기 · 메모 · 주소검색
     const saved = store.get("addr", null);
-    if (saved) ["name", "phone", "email", "zip", "addr1", "addr2"].forEach((k) => { if (saved[k]) $("#" + k).value = saved[k]; });
+    const prefill = saved || (member() && { name: member().name, phone: member().phone, email: member().email });
+    if (prefill) ["name", "phone", "email", "zip", "addr1", "addr2"].forEach((k) => { if (prefill[k]) $("#" + k).value = prefill[k]; });
     const offerItem = cart.find((x) => x.offer);
     if (offerItem) {
       if (offerItem.phone) $("#phone").value = offerItem.phone;
@@ -529,7 +594,7 @@
       for (const k in need) if (!f(k)) { alert(need[k] + "을(를) 입력해 주세요."); $("#" + k).focus(); return; }
       if (digits(f("phone")).length < 9) { alert("연락처를 정확히 입력해 주세요."); $("#phone").focus(); return; }
       if (!reqs.every((c) => c.checked)) { alert("필수 약관에 동의해 주세요."); return; }
-      if ($("#save-addr").checked) store.set("addr", { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr1: f("addr1"), addr2: f("addr2") });
+      if ($("#save-addr").checked) { store.set("addr", { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr1: f("addr1"), addr2: f("addr2") }); memberSave({ addr: store.get("addr") }); }
       else store.set("addr", null);
       const orderId = "T" + new Date().toISOString().slice(2, 10).replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8).toUpperCase();
       const first = sums.lines[0].name;
@@ -568,7 +633,7 @@
     }
     let ok = false, msg = "";
     if (API) {
-      const r = await api("/confirm", { paymentKey, orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon });
+      const r = await api("/confirm", { paymentKey, orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined });
       ok = r.ok; msg = ok ? "" : r.d.message || "결제 승인에 실패했어요.";
     } else { ok = true; msg = "테스트 모드: 결제 승인 서버가 연결되지 않아 실제 결제는 이루어지지 않았어요."; }
     if (ok) {
@@ -644,6 +709,15 @@
       render(d.order, phone);
     };
     $("#o-btn").onclick = () => lookup($("#o-id").value.trim(), $("#o-phone").value.trim());
+    if (token()) (async () => {  // 회원: 내 주문 전체
+      const r = await api("/me/orders", { token: token() });
+      if (!r.ok || !r.d.orders.length) return;
+      const list = r.d.orders, box = document.createElement("div");
+      box.className = "card"; box.style.marginBottom = "16px";
+      box.innerHTML = `<h2>${esc(member()?.name || "회원")}님의 주문</h2>` + list.map((o, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(o.lines[0].name)}${o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""}</div><div class="muted">${esc(o.orderId)} · ${date(o.paidAt)} · ${won(o.amount)} · <b>${esc(o.status)}</b></div></div><button class="mini-btn" data-m="${i}">보기</button></div>`).join("");
+      $("#o-id").closest(".narrow").prepend(box);
+      box.onclick = (e) => { const b = e.target.closest("button[data-m]"); if (b) { const o = list[+b.dataset.m]; render(o, o.phone); res.scrollIntoView({ behavior: "smooth" }); } };
+    })();
     if (mine.length) {
       $("#my-orders").innerHTML = `<h2>이 기기에서 주문한 내역</h2>` + mine.map((m, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(m.name || m.orderId)}</div><div class="muted">${esc(m.orderId)} · ${date(m.at)}</div></div><button class="mini-btn" data-i="${i}">조회</button></div>`).join("");
       $("#my-orders").style.display = "";
@@ -716,6 +790,6 @@
     else alert("사파리 아래쪽 ‘공유’ 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하면 앱처럼 설치돼요.");
   });
 
-  updateCounts(); markWished();
+  updateCounts(); markWished(); paintLogin(); handleLoginHash().then(initLogin);
   initListing(); initRecent(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs();
 })();

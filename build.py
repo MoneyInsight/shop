@@ -108,6 +108,7 @@ I_HEART = ico('<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 
 I_BAG = ico('<path d="M5.5 8h13l-1 12h-11z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>')
 I_BOX = ico('<path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>')
 I_HOME = ico('<path d="M4 11l8-7 8 7v8.5h-5.5V14h-5v5.5H4z"/>')
+I_USER = ico('<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1.2-3.8 4-5.6 7.5-5.6s6.3 1.8 7.5 5.6"/>')
 I_MENU = ico('<path d="M4 7h16M4 12h16M4 17h16"/>')
 I_TRUCK = ico('<path d="M2.5 6.5h11v10h-11zM13.5 10h4l3 3v3.5h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>')
 I_SHIELD = ico('<path d="M12 3.5l7 2.5v5.5c0 4.2-3 7.3-7 9-4-1.7-7-4.8-7-9V6z"/><path d="M9 12l2.2 2.200L15.2 10"/>')
@@ -154,7 +155,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
-<div class="head-icons"><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
+<div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
 <a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
 <a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
 </div></header>
@@ -404,6 +405,14 @@ def build_shop_pages():
 <p class="muted">대량 구매 가격 제안의 답변을 확인하고, 수락된 제안은 바로 주문할 수 있어요.</p>
 <div id="offer-mine"></div>
 <label for="of-id" style="margin-top:14px">제안번호로 찾기</label><div class="row"><input id="of-id" placeholder="예) OFAB12CDE"><input id="of-phone" inputmode="tel" placeholder="연락처"><button type="button" id="of-btn">확인</button></div></div></div>''')
+    simple("login.html", "로그인", f'''<div class="narrow"><div class="card login-box" id="login-box">
+<p class="login-lead">회원가입 없이 쓰던 계정으로 <b>3초 만에</b> 시작하세요</p>
+<a class="sns-btn naver" data-provider="naver" href="#"><span class="sns-ico">N</span>네이버로 시작하기</a>
+<a class="sns-btn kakao" data-provider="kakao" href="#"><span class="sns-ico">●</span>카카오로 시작하기</a>
+<a class="sns-btn google" data-provider="google" href="#"><span class="sns-ico">G</span>구글로 시작하기</a>
+<ul class="login-merit"><li>주문 내역·배송 조회를 어느 기기에서나</li><li>배송지 자동 입력으로 빠른 결제</li><li>찜한 상품·가격 제안 내역 보관</li></ul>
+<p class="muted" style="margin-top:14px">로그인하면 <a href="terms.html" style="text-decoration:underline">이용약관</a>과 <a href="privacy.html" style="text-decoration:underline">개인정보처리방침</a>에 동의한 것으로 봅니다. 회원이 아니어도 <a href="orders.html" style="text-decoration:underline">비회원 주문 조회</a>와 주문을 그대로 이용할 수 있어요.</p></div>
+<div class="card" id="me-box" hidden></div></div>''')
     faq = "".join(f"<details><summary>{e(q)}</summary><p>{e(a)}</p></details>" for q, a in FAQ)
     simple("cs.html", "고객센터", f'''<div class="policy" style="margin-top:0"><div class="cs-grid">
 <div>{I_PHONE}<b>{e(BIZ["phone"])}</b>{e(BIZ["cs_hours"])}</div>
@@ -444,17 +453,18 @@ def build_policies():
 <h3>1. 수집하는 개인정보 항목과 수집 방법</h3>
 <ul style="padding-left:18px;list-style:disc"><li>주문 시: 받는 분 이름, 연락처, 주소, 배송 메모, 이메일(선택)</li>
 <li>상품 문의·1:1 문의 시: 이름, 연락처 또는 이메일(선택), 문의 내용</li><li>리뷰 작성 시: 주문번호, 연락처(구매 확인용), 리뷰 내용</li>
+<li>간편 로그인(네이버·카카오·구글) 시: 각 서비스의 회원 고유번호, 이름(또는 별명), 이메일, 휴대전화번호(동의한 경우에 한함) — 이용자가 해당 서비스에서 제공에 동의한 항목만 받습니다. 비밀번호는 받지 않습니다.</li>
 <li>공급사 입점 신청 시: 회사명, 사업자등록번호, 담당자 이름, 연락처, 이메일</li>
 <li>결제 정보(카드번호 등)는 결제대행사가 직접 처리하며 회사는 저장하지 않습니다.</li></ul>
-<h3>2. 이용 목적</h3><p>주문 확인과 상품 배송, 결제·환불 처리, 교환·반품 처리, 고객 문의 응대, 리뷰 작성 자격 확인, 공급사 입점 심사.</p>
-<h3>3. 보유 및 이용 기간</h3><p>「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 계약 또는 청약철회 등에 관한 기록 5년, 대금결제 및 재화 등의 공급에 관한 기록 5년, 소비자의 불만 또는 분쟁처리에 관한 기록 3년간 보관한 뒤 지체 없이 파기합니다. 문의 내용은 답변 완료 후 3년간 보관합니다.</p>
+<h3>2. 이용 목적</h3><p>회원 식별과 로그인 유지, 주문 내역·배송지·찜 목록 보관, 주문 확인과 상품 배송, 결제·환불 처리, 교환·반품 처리, 고객 문의 응대, 리뷰 작성 자격 확인, 공급사 입점 심사.</p>
+<h3>3. 보유 및 이용 기간</h3><p>「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 계약 또는 청약철회 등에 관한 기록 5년, 대금결제 및 재화 등의 공급에 관한 기록 5년, 소비자의 불만 또는 분쟁처리에 관한 기록 3년간 보관한 뒤 지체 없이 파기합니다. 회원 정보는 탈퇴를 요청하실 때까지 보관하며, 1년 동안 로그인하지 않으면 분리 보관하거나 삭제합니다. 문의 내용은 답변 완료 후 3년간 보관합니다.</p>
 <h3>4. 개인정보의 제3자 제공</h3><p>회사는 배송을 위해 필요한 범위에서만 개인정보를 제공합니다.</p>
 <table class="notice-table"><tr><th>제공받는 자</th><td>택배사, 해당 상품의 공급사</td></tr><tr><th>제공 항목</th><td>받는 분 이름, 연락처, 주소, 배송 메모</td></tr>
 <tr><th>이용 목적</th><td>상품 배송</td></tr><tr><th>보유 기간</th><td>배송 완료 후 3개월</td></tr></table>
 <h3>5. 개인정보 처리 위탁</h3>
 <table class="notice-table"><tr><th>(주)토스페이먼츠</th><td>결제 처리 및 결제 도용 방지</td></tr><tr><th>Netlify, Inc. (미국)</th><td>주문·문의 데이터 보관 및 서버 운영 (국외 이전: 주문·문의 시 네트워크를 통해 전송, 위 보유 기간 동안 보관)</td></tr>
 <tr><th>GitHub, Inc. (미국)</th><td>웹사이트 호스팅 (개인정보는 저장하지 않음)</td></tr></table>
-<h3>6. 이용자 기기에 저장되는 정보</h3><p>장바구니, 찜, 최근 본 상품, 배송지(저장을 선택한 경우), 주문번호는 이용자의 브라우저에만 저장되며 회사 서버로 전송되지 않습니다. 브라우저 설정에서 사이트 데이터를 삭제하면 지워집니다.</p>
+<h3>6. 이용자 기기에 저장되는 정보</h3><p>장바구니, 찜, 최근 본 상품, 배송지(저장을 선택한 경우), 주문번호는 이용자의 브라우저에 저장됩니다. 로그인한 회원은 찜 목록과 저장을 선택한 배송지가 회원 정보에도 보관되어 다른 기기에서도 볼 수 있습니다. 로그인 상태는 브라우저에 저장된 로그인 키로 유지되며 30일이 지나면 만료됩니다. 브라우저 설정에서 사이트 데이터를 삭제하면 지워집니다.</p>
 <h3>7. 이용자의 권리와 행사 방법</h3><p>이용자는 언제든지 자신의 개인정보에 대해 열람, 정정, 삭제, 처리정지를 요청할 수 있습니다. 고객센터({e(BIZ["phone"])}) 또는 이메일({e(BIZ["email"])})로 요청하시면 지체 없이 처리합니다. 만 14세 미만 아동의 개인정보는 수집하지 않습니다.</p>
 <h3>8. 파기 절차와 방법</h3><p>보유 기간이 지나거나 처리 목적이 달성된 개인정보는 복구할 수 없는 방법으로 지체 없이 삭제합니다.</p>
 <h3>9. 안전성 확보 조치</h3><p>전송 구간 암호화(HTTPS), 관리자 접근 통제, 결제 정보 미보관 등의 조치를 하고 있습니다.</p>
@@ -529,7 +539,7 @@ def build_feeds(ps):
     today = datetime.date.today().isoformat()
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
                               "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} for p in ps]

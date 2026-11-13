@@ -17,6 +17,7 @@
  * 공급가는 이 서버(KV)에만 저장되고 공개 사이트에는 나가지 않습니다.
  */
 import * as catalog from "./catalog.js";
+import * as auth from "./auth.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -74,7 +75,7 @@ function suggestPrice(env, supply) {
 
 // ---------- 결제 승인 ----------
 async function confirm(req, env) {
-  const { paymentKey, orderId, amount, items, customer, coupon } = await req.json();
+  const { paymentKey, orderId, amount, items, customer, coupon, token } = await req.json();
   if (!paymentKey || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
 
@@ -127,6 +128,7 @@ async function confirm(req, env) {
   const now = new Date().toISOString();
   const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, lines, customer, method: pay.method, paymentKey,
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
+  if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
   await env.SHOP.put("order:" + orderId, JSON.stringify(order));
   for (const uo of usedOffers) { uo.status = "주문완료"; uo.orderId = orderId; await env.SHOP.put("offer:" + uo.id, JSON.stringify(uo)); }
   if (couponCode) {
@@ -861,7 +863,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-13b", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-13c", login: auth.loginStatus(env), adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
@@ -874,9 +876,30 @@ export async function handle(req, env, path) {
     } catch (e) { return fail("상품 조회 중 오류가 났어요.", 500); }
     return fail("Not found", 404);
   }
+  if (req.method === "GET" && path.startsWith("/auth/")) {  // 네이버·카카오·구글 로그인
+    if (!env.SHOP) return fail("서버 저장소가 없어요.", 503);
+    const base = env.API_URL ? String(env.API_URL).replace(/\/$/, "") : req.url.split("?")[0].slice(0, -path.length);  // API_URL: 서버 공개 주소(선택)
+    if (path === "/auth/start") return await auth.start(req, env, base);
+    const m = path.match(/^\/auth\/callback\/(naver|kakao|google)$/);
+    if (m) return await auth.callback(req, env, base, m[1]);
+    return fail("Not found", 404);
+  }
   if (req.method !== "POST") return fail("Not found", 404);
   try {
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/me" || path === "/me/save" || path === "/me/orders" || path === "/auth/logout") {
+      const d = await req.json().catch(() => ({}));
+      if (path === "/auth/logout") return json(await auth.logout(env, d));
+      if (path === "/me/orders") {
+        const u = await auth.userFromToken(env, d.token);
+        if (!u) return fail("다시 로그인해 주세요.", 401);
+        const list = [];
+        for (const id of (u.orders || []).slice(0, 50)) { const o = await env.SHOP.get("order:" + id, "json"); if (o) list.push({ ...publicOrder(o), phone: o.customer?.phone || "" }); }
+        return json({ orders: list });
+      }
+      const r = path === "/me" ? await auth.me(env, d) : await auth.save(env, d);
+      return r ? json(r) : fail("다시 로그인해 주세요.", 401);
+    }
     if (path === "/seller/apply") return await sellerApply(req, env);
     if (path === "/seller/product") return await sellerProduct(req, env);
     if (path === "/report-price") return await reportPrice(req, env);

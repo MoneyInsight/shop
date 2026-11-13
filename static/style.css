@@ -370,3 +370,17 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .p-card.is-soldout .p-thumb img{opacity:.45;filter:grayscale(.6)}
 .soldout-cover{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(22,23,26,.78);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;white-space:nowrap}
 .btn-soldout{flex:1;background:#e9e7e3;color:#868a91;cursor:not-allowed}
+
+/* 로그인 */
+.login-box{text-align:center;padding:32px 24px}
+.login-lead{font-size:16px;margin:0 0 22px}
+.sns-btn{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;border-radius:10px;font-weight:700;font-size:15px;margin-top:10px;position:relative}
+.sns-ico{position:absolute;left:18px;font-weight:900;font-size:17px}
+.sns-btn.naver{background:#03C75A;color:#fff}
+.sns-btn.kakao{background:#FEE500;color:#191919}
+.sns-btn.google{background:#fff;color:#1f1f1f;border:1px solid #dadce0}
+.sns-btn.google .sns-ico{color:#4285F4}
+.sns-btn.off{opacity:.45}
+.login-merit{text-align:left;margin:22px auto 0;max-width:320px;padding-left:18px;list-style:disc;color:var(--ink2);font-size:14px;line-height:1.9}
+.me-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.me-badge{font-size:12px;padding:3px 8px;border-radius:20px;background:var(--bg2,#f4f1ec)}
