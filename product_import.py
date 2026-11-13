@@ -175,11 +175,11 @@ def ship_rule(ship, box_qty, pricing):
     """한 박스(택배 1건)에 넣는 개수: 도매처 '수량별 부과' 값이 있으면 그대로,
     없으면 배송비가 기준(기본 3,500원) 이하인 일반 택배는 3개까지 한 박스, 넘으면 1개씩 따로 (부피 큰 상품)"""
     q = pricing.get("qty_price", {}) if pricing else {}
+    if ship > q.get("max_ship_won", 3500):
+        return 1  # 부피 큰 상품은 묶음 정보가 있어도 1개씩
     if box_qty:
-        return max(1, int(box_qty))
-    if ship <= q.get("max_ship_won", 3500):
-        return q.get("default_box_qty", 3)
-    return 1
+        return max(1, int(box_qty))  # 도매처가 밝힌 묶음 수량
+    return q.get("default_box_qty", 1)  # 묶음 정보가 없으면 1개 = 택배 1건 (손해 방지)
 
 
 def qty_prices(goods, ship, box_qty, free_over, pricing):
