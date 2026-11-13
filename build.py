@@ -302,7 +302,8 @@ def product_body(p, related):
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}'>
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
-<div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a><a class="bulk-link" href="../bulk.html?id={e(p["id"])}">대량 구매 문의 (기업·단체)</a></div>
+<a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}><span class="bulk-ico">📦</span><span><b>대량 구매 · 기업/단체 견적</b><small>10개 이상, 사은품·판촉물·회사 비품 — 수량에 맞춰 더 좋은 가격으로 견적 드려요</small></span><span class="bulk-go">견적 요청 ›</span></a>
+<div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
 <section class="tab-sec" id="info"><div class="detail-body">{desc}</div>

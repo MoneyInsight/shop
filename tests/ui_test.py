@@ -118,7 +118,7 @@ async def main():
         # 가격 제안 기능은 뺐음 → 상품 페이지에 없어야 함, 대량 구매 문의 링크는 있어야 함
         await pg.goto(S + f"product/{plain['id']}.html"); await pg.wait_for_timeout(500)
         ok("가격 제안 없음", await pg.locator("#offer-open").count() == 0)
-        ok("대량 구매 문의 링크", await pg.locator(".bulk-link").count() == 1)
+        ok("대량 구매 문의 칸", await pg.locator("#bulk-box").count() == 1)
         # 모바일
         m = await ctx.new_page(); await m.set_viewport_size({"width": 390, "height": 844})
         await m.goto(S + "index.html"); await m.wait_for_timeout(600); await m.screenshot(path="/tmp/s_m_home.png")

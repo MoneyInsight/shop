@@ -396,6 +396,7 @@
       opts.map((o, i) => `<option value="${i}"${o.so ? " disabled" : ""}>${o.so ? "[품절] " : ""}${esc(o.v)}${o.add > 0 ? ` (+${won(o.add)})` : o.add < 0 ? ` (${won(o.add)})` : ""}</option>`).join("") + `</select>`);
     const buy = $("#buy");
     Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []) });
+    const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
     const qd = $("#qty-deal");
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; $(".offer-box").hidden = true;
