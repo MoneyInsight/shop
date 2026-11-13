@@ -11,6 +11,8 @@ const SHOP = {
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, o) => {
   if (String(url).endsWith("/products.json")) return new Response(fs.readFileSync(new URL("../site/products.json", import.meta.url)));
+  const pm = String(url).match(/\/p\/([^/]+)\.json$/);
+  if (pm) { const f = new URL("../site/p/" + decodeURIComponent(pm[1]) + ".json", import.meta.url); return fs.existsSync(f) ? new Response(fs.readFileSync(f)) : new Response("", { status: 404 }); }
   if (String(url).includes("tosspayments")) return new Response(JSON.stringify({ method: "카드" }));
   // 간편 로그인 가짜 응답
   if (/nid\.naver\.com\/oauth2\.0\/token|kauth\.kakao\.com\/oauth\/token/.test(url)) return new Response(JSON.stringify({ access_token: "AT" }));

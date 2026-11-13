@@ -148,7 +148,8 @@
   }
   async function load() {
     D = await call("/admin/list");
-    D.po = (await call("/admin/po").catch(() => ({ groups: [] }))).groups || [];
+    const po = await call("/admin/po").catch(() => ({ groups: [] }));
+    D.po = po.groups || []; D.sheets = po.sheets || {};
     D.kc = await fetch("kc_check.json").then((r) => r.json()).catch(() => []);
     $("#admin-login").style.display = "none"; $("#admin-body").style.display = "";
     paint();
@@ -172,7 +173,7 @@
   };
   function poSheet(src) {
     const g = (D.po || []).find((x) => x.source === src); if (!g) return;
-    const cols = ((window.SHOP_CFG || {}).order_sheets || {})[src] || SHEET_DEFAULT;
+    const cols = (D.sheets || {})[src] || SHEET_DEFAULT;
     const val = (c, l) => { const v = FIELD[c] ? FIELD[c](l) : ""; return NO_COMMA[src] ? String(v ?? "").replace(/,/g, " ") : v; };
     csvDown([cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}.csv`);
   }

@@ -38,7 +38,7 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         for r in srows:
             if r[4] in ("0", ""):
                 zero.add((r[0], r[2]))
-    fields = ["상품코드", "상품명", "카테고리코드", "공급가", "공급 배송비", "묶음배송수량", "무료배송기준금액", "대표 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "재고", "옵션명", "옵션"]
+    fields = ["상품코드", "상품명", "카테고리코드", "공급가", "공급 배송비", "묶음배송수량", "무료배송기준금액", "반품배송비", "교환배송비", "대표 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "재고", "옵션명", "옵션"]
     out_rows, skip = [], 0
     for r in rows:
         g = lambda k: r[c[k]] if k in c and c[k] < len(r) else ""
@@ -74,7 +74,7 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         if len(opts) == 1:
             opts = []
         out_rows.append({
-            "상품코드": "DM" + no, "상품명": name, "카테고리코드": g("카테고리ID"), "공급가": goods, "공급 배송비": ship, "묶음배송수량": box or "", "무료배송기준금액": free_over or "",
+            "상품코드": "DM" + no, "상품명": name, "카테고리코드": g("카테고리ID"), "공급가": goods, "공급 배송비": ship, "묶음배송수량": box or "", "무료배송기준금액": free_over or "", "반품배송비": g("반품배송비"), "교환배송비": g("교환배송비"),
             "대표 이미지 주소": img.get(no, ""), "브랜드": g("브랜드"), "제조사": g("제조사"), "원산지": g("원산지 직접입력") or "상세설명 참조",
             "상세 설명": g("상품 상세정보"), "재고": g("재고수량"), "옵션명": g("옵션명") if opts else "", "옵션": "|".join(opts),
         })

@@ -14,4 +14,8 @@ const pay = async (id, amount, token) => (await handle(new Request("https://x/co
 ok(await pay("M1", 12450, tk) === 400, "회원인데 할인 없이 → 거부");
 ok(await pay("M2", 12330, tk) === 200 && JSON.parse(mem.get("order:M2")).member_discount === 120, "회원 1% 할인 결제");
 ok(await pay("M3", 12450) === 200, "비회원 정가");
+const q = await (await handle(new Request("https://x/member/quote", { method: "POST", body: JSON.stringify({ token: tk, items: [{ id: "A", qty: 1 }] }) }), env, "/member/quote")).json();
+ok(q.discount === 120, "결제 화면 회원 할인 금액 = 결제 확인과 같음 " + q.discount);
+const q2 = await (await handle(new Request("https://x/member/quote", { method: "POST", body: JSON.stringify({ token: "b".repeat(48), items: [{ id: "A", qty: 1 }] }) }), env, "/member/quote")).json();
+ok(q2.discount === 0, "비회원은 0");
 console.log(`member: ${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

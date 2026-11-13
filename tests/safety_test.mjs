@@ -20,4 +20,13 @@ const bk = await r.json();
 ok(r.status === 200 && bk.order.length === 1 && Array.isArray(bk.user), "백업 파일");
 ok(!JSON.stringify(bk).includes("sess:"), "로그인 세션은 백업에 안 들어감");
 [st, d] = await post("/admin/list", {}, true); ok(!!d.lastBackup, "마지막 백업 시각");
+// 비밀번호 무작위 대입 막기
+let locked = false;
+for (let i = 0; i < 7; i++) { const r = await handle(new Request("https://x/admin/list", { method: "POST", headers: { Authorization: "Bearer wrong", "cf-connecting-ip": "1.2.3.4" }, body: "{}" }), env, "/admin/list"); if (r.status === 429) locked = true; }
+ok(locked, "비밀번호 5번 틀리면 15분 잠금");
+const okOther = await handle(new Request("https://x/admin/list", { method: "POST", headers: { Authorization: "Bearer pw", "cf-connecting-ip": "5.6.7.8" }, body: "{}" }), env, "/admin/list");
+ok(okOther.status === 200, "다른 곳의 정상 로그인은 그대로");
+let spam = 0;
+for (let i = 0; i < 25; i++) { const r = await handle(new Request("https://x/inquiry/add", { method: "POST", headers: { "cf-connecting-ip": "9.9.9.9" }, body: JSON.stringify({ name: "a", contact: "010", text: "문의합니다 내용" }) }), env, "/inquiry/add"); if (r.status === 429) spam++; }
+ok(spam === 5, "문의 도배 막기 (1시간 20건) " + spam);
 console.log(`safety: ${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

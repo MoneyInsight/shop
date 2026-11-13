@@ -165,36 +165,40 @@
   });
 
   let PRODUCTS = null;
+  // 목록·검색용 가벼운 색인 (idx.json): 상품 수가 많아도 한 번만 받음
   async function loadProducts() {
-    if (!PRODUCTS) PRODUCTS = await (await fetch(ROOT + "products.json", { cache: "no-cache" })).json();
+    if (!PRODUCTS) {
+      const d = await (await fetch(ROOT + "idx.json", { cache: "no-cache" })).json();
+      PRODUCTS = d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
+        return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], shipping_fee: 0 }; });
+    }
     return PRODUCTS;
+  }
+  // 장바구니·결제용 상품 상세 정보 (옵션·수량 할인): 필요한 상품만 p/상품번호.json
+  const PCACHE = {};
+  async function productFull(id) {
+    if (!PCACHE[id]) PCACHE[id] = fetch(ROOT + "p/" + encodeURIComponent(id) + ".json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    return PCACHE[id];
   }
   // 상품 DB 모드(config catalog_api=true): 상품을 서버에서 필요한 만큼만 받아옴 (100만 개용)
   const DBMODE = !!(CFG.catalog_api && API);
   async function apiGet(path) { try { const r = await fetch(API + path); return r.ok ? await r.json() : null; } catch (e) { return null; } }
   async function getProducts(ids) {
-    if (!DBMODE) return loadProducts();
+    if (!DBMODE) return (await Promise.all([...new Set(ids)].map(productFull))).filter(Boolean);
     return (await Promise.all([...new Set(ids)].map((id) => apiGet("/catalog/item?id=" + encodeURIComponent(id))))).filter(Boolean);
   }
   const productHref = (id) => DBMODE ? `${ROOT}product/item.html?id=${encodeURIComponent(id)}` : `${ROOT}product/${encodeURIComponent(id)}.html`;
 
   // 수량 할인: 같은 상품을 n개(옵션 달라도 합산) 사면 개당 가격 qt[n-1] (11개 이상은 마지막 값)
   const unitFor = (p, n) => (p.qt && p.qt.length ? p.qt[Math.min(Math.max(n, 1), p.qt.length) - 1] : Number(p.price));
-  // 로그인 회원 추가 즉시 할인 (서버 worker/member.js 와 같은 계산, 순마진 8% 아래로는 안 깎음)
-  function memberDisc(lines) {
-    const P = CFG.member_discount; if (!P || !P.rate) return 0;
-    const k = 1 - P.card_fee - 1 / 11;
-    let d = 0;
-    for (const l of lines) {
-      let c = (l.list1 * k - P.ops_cost_won) / (10 / 11 + P.net_margin);
-      if (c * P.net_margin < P.min_margin_won) c = (l.list1 * k - P.ops_cost_won - P.min_margin_won) * 11 / 10;
-      c = Math.max(0, c);
-      const floor = (c * 10 / 11 + c * P.min_net_margin) / k;
-      d += Math.max(0, Math.min(l.price * P.rate, l.price - floor)) * l.qty;
-    }
-    return Math.floor(d / 10) * 10;
+  // 로그인 회원 추가 즉시 할인: 금액은 서버가 계산 (결제 확인과 같은 계산)
+  let mq = { key: "", disc: 0 };
+  async function memberQuote(cart) {
+    const key = JSON.stringify(cart.map((x) => [x.id, x.qty, x.opt]));
+    if (mq.key !== key) { const r = await api("/member/quote", { token: token(), items: cart.map((x) => ({ id: x.id, qty: x.qty, opt: x.opt })) }); mq = { key, disc: r.ok ? r.d.discount || 0 : 0 }; }
+    return mq.disc;
   }
-  const memberPct = () => (CFG.member_discount?.rate ? Math.round(CFG.member_discount.rate * 100) : 0);
+  const memberPct = () => (CFG.member_rate ? Math.round(CFG.member_rate * 100) : 0);
   // 간편 로그인이 실제로 켜져 있을 때만 '로그인하면 할인' 안내 (세션마다 한 번 확인)
   async function loginOn() {
     let v = sessionStorage.getItem("login_on");
@@ -679,7 +683,7 @@
       sums = calc(cart, products, discount);
       const rf = regionFee($("#zip").value, ($("#addr1").value + " " + $("#addr2").value).trim());
       if (rf.fee) { sums.shipping += rf.fee; sums.total += rf.fee; sums.remote = rf; }
-      sums.member = token() && member() ? memberDisc(sums.lines) : 0;
+      sums.member = token() && member() ? await memberQuote(cart.filter((x) => sums.lines.some((l) => l.id === x.id))) : 0;
       if (sums.member) sums.total -= sums.member;
       $("#order-sum").innerHTML = `<div class="sum"><div><span>상품 금액</span><span>${won(sums.subtotal)}</span></div>
         ${sums.discount ? `<div class="minus"><span>쿠폰 할인</span><span>−${won(sums.discount)}</span></div>` : ""}

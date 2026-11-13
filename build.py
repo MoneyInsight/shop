@@ -132,7 +132,8 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "order_sheets", "remote_ship", "member_discount")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "remote_ship")}
+    public_cfg["member_rate"] = (CFG.get("member_discount") or {}).get("rate", 0)  # 비율만 공개 (마진 값은 서버에만)
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
     if CFG.get("catalog_api"):
@@ -297,7 +298,7 @@ def product_body(p, related):
     if p["options"]:
         opts = f'<label class="opt-label" for="opt">{e(p["option_name"])}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(
             f'<option value="{i}"{" disabled" if o.get("so") else ""}>{"[품절] " if o.get("so") else ""}{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
-    body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
+    body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / {f'<a href="../category/{p["category"]}.html">{e(p["category_name"])}</a>' if p["category"] else ""}</div>
 <div class="detail">
 <div class="gallery"><div class="main-img"><img id="main-img" src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>{thumbs}</div>
 <div class="d-info-box">{f'<div class="d-brand">{e(p["brand"])}</div>' if p["brand"] else ""}<h1 class="d-name">{e(p["name"])}</h1>
@@ -338,7 +339,8 @@ def product_body(p, related):
 <section class="tab-sec" id="guide"><h3>배송·교환·반품 안내</h3><table class="notice-table">
 <tr><th>배송</th><td>결제 확인 후 영업일 기준 1~3일 안에 출고되며, 출고 후 1~2일 안에 받아보실 수 있습니다. 전 상품 무료배송입니다. (제주 3,000원, 도서산간 5,000원 추가 배송비가 결제할 때 자동으로 더해집니다.)</td></tr>
 <tr><th>교환·반품 기간</th><td>단순 변심: 상품을 받으신 날부터 7일 이내<br>상품 불량·오배송: 받으신 날부터 3개월 이내 또는 그 사실을 안 날부터 30일 이내</td></tr>
-<tr><th>교환·반품 비용</th><td>단순 변심은 왕복 배송비를 고객님께서 부담하시며, 상품 불량·오배송은 판매자가 부담합니다.</td></tr>
+<tr><th>교환·반품 비용</th><td>{f"반품 배송비(편도) {won(p['return_fee'])}" if p.get("return_fee") else "반품 배송비: 상세페이지 참조"}{f" · 교환 배송비(왕복) {won(p['exchange_fee'])}" if p.get("exchange_fee") else ""}<br>단순 변심은 고객님 부담, 상품 불량·오배송은 판매자가 부담합니다.</td></tr>
+<tr><th>반품 방법</th><td>상품은 출고지에서 바로 발송됩니다. 직접 보내지 마시고 주문·배송 조회에서 신청하시면 택배 기사님이 방문해 회수합니다.</td></tr>
 <tr><th>교환·반품이 어려운 경우</th><td>고객님의 책임으로 상품이 훼손된 경우, 사용하거나 일부 소비하여 가치가 현저히 떨어진 경우, 포장을 개봉하여 재판매가 어려운 경우</td></tr>
 <tr><th>신청 방법</th><td><a href="../orders.html" style="text-decoration:underline">주문·배송 조회</a>에서 주문번호와 연락처를 입력하신 뒤 신청하실 수 있습니다.</td></tr></table></section>
 {f'<section class="section last"><div class="sec-head"><div><h2>함께 보면 좋은 상품</h2></div><a href="../category/{p["category"]}.html">{e(p["category_name"])} 더 보기</a></div><div class="grid">{"".join(card(x, "../") for x in related)}</div></section>' if related else '<div class="section last"></div>'}
@@ -376,11 +378,11 @@ FAQ = [
     ("배송비는 얼마인가요?", "모든 상품은 무료로 배송해 드립니다. 다만 제주는 3,000원, 울릉·섬 지역 등 도서산간은 5,000원의 추가 배송비가 결제할 때 자동으로 더해집니다."),
     ("배송은 얼마나 걸리나요?", "결제 확인 후 영업일 기준 1~3일 안에 출고되며, 출고 후 보통 1~2일 안에 받아보실 수 있습니다. 여러 상품을 함께 주문하시면 상품별로 따로 배송될 수 있습니다."),
     ("주문을 취소하고 싶어요.", "주문·배송 조회에서 직접 취소하실 수 있습니다. 상품 준비 전에는 즉시 취소·환불되며, 이미 출고된 경우에는 반품으로 진행됩니다."),
-    ("교환이나 반품은 어떻게 하나요?", "상품을 받으신 날부터 7일 이내에 주문·배송 조회에서 신청하실 수 있습니다. 단순 변심은 왕복 배송비를 부담하셔야 하며, 불량·오배송은 무료로 처리해 드립니다."),
+    ("교환이나 반품은 어떻게 하나요?", "상품을 받으신 날부터 7일 이내에 주문·배송 조회에서 신청해 주세요. 상품은 출고지에서 바로 보내드리기 때문에 직접 보내지 마시고, 신청하시면 택배 기사님이 방문해 회수합니다. 단순 변심은 상품 페이지에 적힌 반품 배송비를 부담하셔야 하며, 불량·오배송은 무료로 처리해 드립니다."),
     ("환불은 언제 되나요?", "취소는 즉시, 반품은 상품이 도착해 확인된 뒤 3영업일 안에 결제하신 수단으로 환불됩니다. 카드사 사정에 따라 3~7영업일이 더 걸릴 수 있습니다."),
     ("어떤 결제 수단을 쓸 수 있나요?", "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다."),
     ("현금영수증이나 세금계산서를 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 세금계산서가 필요하시면 1:1 문의로 사업자 정보를 남겨 주세요."),
-    ("여러 개 사면 할인되나요?", "같은 상품을 3개 이상 사실 때 상품 페이지의 ‘대량 구매 가격 제안’으로 개당 최대 3%까지 낮은 가격을 제안하실 수 있습니다. 판매자가 48시간 안에 답변하며, 수락되면 72시간 안에 제안 가격으로 주문하실 수 있습니다. 결과는 주문·배송 조회 아래 ‘가격 제안 내역’에서 확인하세요."),
+    ("여러 개 사면 할인되나요?", "네. 같은 상품을 2개 이상 담으시면 개당 가격이 자동으로 내려갑니다(옵션이 달라도 합산). 할인율은 상품 페이지의 ‘많이 살수록 개당 가격이 내려가요’ 표에서 확인하세요. 기업·단체 대량 구매는 ‘대량 구매 문의’로 견적을 요청하시면 됩니다."),
     ("쿠폰은 어디에 입력하나요?", "주문서의 결제 금액 영역에서 쿠폰 코드를 입력하고 적용 버튼을 누르시면 됩니다."),
     ("리뷰는 누구나 쓸 수 있나요?", "실제로 구매하신 분만 작성하실 수 있습니다. 상품이 발송된 뒤 상품 페이지에서 주문번호와 연락처를 입력해 작성해 주세요."),
 ]
@@ -512,7 +514,8 @@ def build_policies():
 <p style="margin-top:20px;color:#888">시행일: {datetime.date.today():%Y-%m-%d}</p></div>''')
     simple("refund.html", "교환·환불 안내", f'''<div class="card policy">
 <h3>신청 기간</h3><p>단순 변심: 상품 수령 후 7일 이내 / 상품 불량·오배송: 수령 후 3개월 이내 또는 사실을 안 날부터 30일 이내</p>
-<h3>배송비</h3><p>단순 변심은 왕복 배송비를 고객님이 부담하며, 불량·오배송은 회사가 부담합니다.</p>
+<h3>배송비</h3><p>단순 변심은 상품마다 정해진 반품 배송비(상품 페이지 ‘배송·교환·반품’에 표시)를 고객님이 부담하며, 불량·오배송은 회사가 부담합니다.</p>
+<h3>반품 방법</h3><p>상품은 각 출고지에서 바로 보내드립니다. 상품을 임의로 보내지 마시고, 주문·배송 조회에서 반품을 신청하시면 택배 기사님이 방문해 회수합니다. 회수 확인 후 영업일 3일 이내에 환불해 드립니다.</p>
 <h3>교환·반품이 어려운 경우</h3><ul style="padding-left:18px"><li>고객님의 책임으로 상품이 훼손된 경우</li><li>사용 또는 일부 소비로 상품 가치가 크게 떨어진 경우 (식품 개봉 등)</li><li>시간이 지나 재판매가 어려울 만큼 가치가 떨어진 경우</li></ul>
 <h3>환불</h3><p>반품 상품 확인 후 3영업일 안에 결제수단으로 환불합니다.</p>
 <h3>신청 방법</h3><p>고객센터 {e(BIZ["phone"])} 또는 {e(BIZ["email"])}로 주문번호와 함께 연락 주세요.</p></div>''')
@@ -534,7 +537,7 @@ def build_partner_pages():
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" >{cats}</select>
 <label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
 
-<div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 그대로 / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)<br>고객이 3개 이상 살 때 최대 3%까지 가격 제안을 할 수 있고, 수락 여부는 공급사가 정해요.</div>
+<div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 그대로 / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
 <label>대표 이미지 (정사각형 권장, 2MB 이하)</label><input name="image" type="file" accept="image/*" style="padding-top:10px">
@@ -578,7 +581,14 @@ def build_feeds(ps):
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
                               "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) for p in ps]
-    write("products.json", json.dumps(pub, ensure_ascii=False))
+    write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
+    # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
+    cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}
+    idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or ""] for p in pub]
+    write("idx.json", json.dumps({"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge"], "items": idx}, ensure_ascii=False, separators=(",", ":")))
+    (OUT / "p").mkdir(exist_ok=True)
+    for p in pub:
+        (OUT / "p" / f'{p["id"]}.json').write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
 def main():

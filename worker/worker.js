@@ -231,7 +231,14 @@ async function productMap(env, ids) {
     const rest = Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p]));  // 아직 DB로 안 옮긴 상품
     return { ...rest, ...m };
   }
-  return Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p]));
+  // 상품별 작은 파일(p/상품번호.json)로 확인, 없으면 전체 파일로
+  const base = String(env.SITE_URL || "").replace(/\/$/, ""), out = {};
+  const uniq = [...new Set(ids.map(String))];
+  await Promise.all(uniq.map(async (id) => {
+    try { const r = await fetch(`${base}/p/${encodeURIComponent(id)}.json`, { cf: { cacheTtl: 0 } }); if (r.ok) { const p = await r.json(); if (p && p.id) out[p.id] = p; } } catch (e) {}
+  }));
+  if (Object.keys(out).length === uniq.length) return out;
+  return { ...Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p])), ...out };
 }
 
 // 만료 처리 반영: 응답 대기 48시간, 수락 후 결제 72시간
@@ -805,6 +812,8 @@ const PRICING = (env) => ({ net_margin: +(env.NET_MARGIN || 0.12), min_margin_wo
 // ---------- 발주 (도매매·오너클랜 등에 주문 넣기) ----------
 // 결제완료 주문을 도매처별로 모아 주문서로 만들고, '발주 완료'를 누르면 상품준비중으로. 도매처 송장 파일을 올리면 송장 자동 입력
 const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜" };
+// 도매처 대량주문 양식 열 (관리자에게만 보냄)
+const ORDER_SHEETS = {"domeme": ["상품번호", "옵션", "수량", "수령자명", "휴대전화", "추가연락처", "우편번호", "배송지주소", "배송상세주소", "쇼핑몰명", "전달사항", "배송요청사항"], "ownerclan": ["오너클랜 상품코드", "수량", "배송방식", "받는사람 이름", "받는사람 전화번호", "받는사람 휴대폰", "우편번호", "받는사람 주소", "옵션1", "옵션2", "배송시 요청사항", "판매사 주문관리 메모", "원장주문코드", "개인통관부호", "구매자 생년월일", "마켓 정산가(배송비 포함)"]};
 const srcOf = (l) => l.source || (String(l.id).startsWith("DM") ? "domeme" : /^W/.test(l.id) ? "ownerclan" : "");
 async function adminPo(env) {
   const groups = {};
@@ -819,7 +828,7 @@ async function adminPo(env) {
         addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "" });
     });
   }
-  return { groups: Object.values(groups) };
+  return { groups: Object.values(groups), sheets: ORDER_SHEETS };
 }
 async function adminPoDone(req, env) {
   const { items } = await req.json();  // [{orderId, idx}]
@@ -1003,6 +1012,17 @@ async function rejectProduct(req, env) {
   return json({ ok: true });
 }
 
+// 같은 곳에서 너무 많이 보내면 막기 (스팸·비밀번호 무작위 대입 방지)
+const ipOf = (req) => req.headers.get("cf-connecting-ip") || req.headers.get("x-nf-client-connection-ip") || (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+async function overLimit(env, key, max, windowSec, bump = true) {
+  if (!env.SHOP) return false;
+  const k = `rl:${key}:${Math.floor(Date.now() / 1000 / windowSec)}`;
+  const n = parseInt((await env.SHOP.get(k)) || "0");
+  if (n >= max) return true;
+  if (bump) await env.SHOP.put(k, String(n + 1), { expirationTtl: windowSec * 2 + 60 });
+  return false;
+}
+
 /** 공통 처리기: Cloudflare·Netlify 둘 다 사용 */
 export async function handle(req, env, path) {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -1032,7 +1052,25 @@ export async function handle(req, env, path) {
   }
   if (req.method !== "POST") return fail("Not found", 404);
   try {
+    if (["/inquiry/add", "/qna/add", "/review/add", "/seller/apply", "/seller/product", "/report-price"].includes(path) && (await overLimit(env, "w:" + ipOf(req), 20, 3600)))
+      return fail("잠시 후 다시 시도해 주세요. (짧은 시간에 너무 많이 보냈어요)", 429);
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/member/quote") {  // 로그인 회원 추가 할인 금액 (결제 화면 표시용, 계산은 결제 확인과 같음)
+      const d = await req.json().catch(() => ({}));
+      if (!(await auth.userFromToken(env, d.token))) return json({ discount: 0 });
+      const map = await productMap(env, (d.items || []).map((x) => x.id));
+      const qn = {};
+      for (const it of d.items || []) qn[it.id] = (qn[it.id] || 0) + Math.max(1, Math.min(99, parseInt(it.qty) || 1));
+      const lines = [];
+      for (const it of d.items || []) {
+        const p = map[it.id]; if (!p || p.soldout) continue;
+        const qt = Array.isArray(p.qt) ? p.qt : typeof p.qt === "string" ? JSON.parse(p.qt || "[]") : [];
+        const add = it.opt != null && it.opt !== "" ? (p.options?.[Number(it.opt)]?.add || 0) : 0;
+        const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
+        lines.push({ unit: (qt.length ? Number(qt[Math.min(qn[it.id], qt.length) - 1]) : Number(p.price)) + add, list: (qt.length ? Number(qt[0]) : Number(p.price)) + add, qty });
+      }
+      return json({ discount: memberDiscount(lines, { ...MEMBER_DEFAULT, rate: +(env.MEMBER_DISCOUNT ?? MEMBER_DEFAULT.rate) }) });
+    }
     if (path === "/track/broken") {  // 사진이 안 뜨는 상품 신고 (손님 브라우저가 자동으로)
       const d = await req.json().catch(() => ({}));
       const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "").slice(0, 30);
@@ -1078,7 +1116,9 @@ export async function handle(req, env, path) {
       if (!want) return fail("서버에 관리자 비밀번호(ADMIN_PASSWORD)가 아직 적용되지 않았어요. Netlify에서 값을 확인하고 다시 배포해 주세요.", 401);
       let got = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/, "").trim();
       try { got = decodeURIComponent(got); } catch (e) { /* 그대로 비교 */ }
-      if (got.trim() !== want) return fail("비밀번호가 틀렸어요.", 401);
+      const ip = ipOf(req);
+      if (await overLimit(env, "adminfail:" + ip, 5, 900, false)) return fail("비밀번호를 여러 번 틀려서 15분 동안 막았어요. 잠시 후 다시 시도해 주세요.", 429);
+      if (got.trim() !== want) { await overLimit(env, "adminfail:" + ip, 5, 900); return fail("비밀번호가 틀렸어요.", 401); }
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
       if (path === "/admin/kakao-test") return await adminKakaoTest(env);
