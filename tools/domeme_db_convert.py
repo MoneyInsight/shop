@@ -17,6 +17,8 @@ PRICING = CFG["pricing"]
 MAX_GRADE = CFG.get("sourcing", {}).get("domeme_max_grade", 8)
 BUNDLE_BOX = 10
 OUT = ROOT / "data" / "도매매묶음상품.csv"
+VERIFIED_FILE = ROOT / "data" / "domeme_ship_verified.json"  # {상품번호: "고정배송비" | "비례:첫상자:이후N개" | 기타 문구}
+VERIFIED = json.load(open(VERIFIED_FILE, encoding="utf-8")) if VERIFIED_FILE.exists() else {}
 EXIST = ROOT / "data" / "도매매상품.csv"
 FIELDS = ["상품코드", "상품명", "카테고리코드", "공급가", "공급 배송비", "묶음배송수량", "무료배송기준금액", "반품배송비", "교환배송비",
           "대표 이미지 주소", "브랜드", "제조사", "상세 설명", "재고", "인증정보", "옵션명", "옵션", "공급사등급"]
@@ -79,9 +81,18 @@ def main(paths):
                 if pay and "선결제" not in pay:
                     no("착불"); continue
                 ship = num(x.get("기본배송비"))
-            box = num(x.get("수량별부과-수량")) if "수량" in st else 0
-            if ship and not box:
-                box = BUNDLE_BOX  # 도매매 묶음배송 공급사: 여러 개 사도 배송비 1회
+            # 묶음(여러 개 = 택배비 1회)은 도매매 상품정보에서 상품마다 직접 확인된 경우에만 적용
+            # 엑셀의 '배송비 유형'은 믿지 않음 ('유료'인데 실제로는 수량별차등인 상품이 있었음)
+            rule = VERIFIED.get(code[2:], "")
+            if not ship:
+                box = 0
+            elif rule == "고정배송비":
+                box = BUNDLE_BOX  # 주문당 1회 고정
+            elif rule.startswith("비례:"):
+                first, every = (int(v) for v in rule.split(":")[1:3])
+                box = max(1, min(first, every))  # 'X개까지 / 이후 N개마다' → 작은 쪽을 한 상자로 (손해 방지)
+            else:
+                box = 1  # 미확인·수량별차등 등: 1개 = 택배 1건
             free_over = num(x.get("조건부무료-상품판매가합계")) if "조건" in st else 0
             base = price_from_cost(cost + ship, PRICING)
             vals, adds, stocks = split(x.get("옵션값")), split(x.get("옵션가")), split(x.get("옵션 재고수량"))

@@ -53,7 +53,7 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
             if pay and "선결제" not in pay:
                 skip += 1; continue
             ship = int(float(g("기본배송비") or 0))
-        box = int(float(g("수량별부과-수량") or 0)) if "수량" in ship_type and (g("수량별부과-수량") or "").strip() else 0
+        box = 1 if "수량" in ship_type else 0  # 수량별비례: 첫 상자 수량을 알 수 없어 1개 = 택배 1건 (손해 방지)
         free_over = int(float(g("조건부무료-상품판매가합계") or 0)) if "조건" in ship_type and (g("조건부무료-상품판매가합계") or "").strip() else 0
         goods = cost
         cost += ship
