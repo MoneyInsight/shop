@@ -72,6 +72,7 @@ def clean_html(h):
     h = re.sub(r"(?is)<(script|iframe|style)[^>]*>.*?</\1>", "", h)
     h = re.sub(r"(?i)\son\w+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", "", h)
     h = re.sub(r"(?i)javascript:", "", h)
+    h = re.sub(r"(?i)<img(?![^>]*\balt=)", '<img alt="" loading="lazy"', h)  # 사진 설명·늦게 불러오기
     return h.replace('src="http://', 'src="https://')
 
 

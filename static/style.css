@@ -496,3 +496,12 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .hero-btns{display:flex;gap:8px;flex-wrap:wrap}
 .hero .btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 @media (max-width:520px){.hero-perks li{flex:1;min-width:0;padding:9px 10px}.hero-perks b{font-size:14px}}
+
+.price-filter{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}
+.price-filter button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.price-filter button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.price-filter[hidden]{display:none}
+.eta{color:#2f7a4a;font-weight:600}
+.find-order{margin-top:16px;font-size:14px}
+.find-order summary{cursor:pointer;color:var(--ink2);text-decoration:underline}
+.link-btn{background:none;border:0;color:#999;text-decoration:underline;cursor:pointer;font-size:13px}

@@ -201,6 +201,7 @@ def write(path, text):
     f.write_text(text, encoding="utf-8")
 
 
+PRICE_BAR = '''<div class="price-filter" role="group" aria-label="가격대"><button data-pf="" class="on">전체 가격</button><button data-pf="0-10000">~1만원</button><button data-pf="10000-30000">1~3만원</button><button data-pf="30000-50000">3~5만원</button><button data-pf="50000-">5만원~</button></div>'''
 SORT_BAR = '''<div class="sort" role="group" aria-label="정렬"><button data-sort="rec" class="on">추천순</button><button data-sort="low">낮은 가격순</button>
 <button data-sort="high">높은 가격순</button><button data-sort="sale">할인율순</button><button data-sort="name">이름순</button></div>'''
 
@@ -209,7 +210,7 @@ def listing(title, mode, items, root, cat="", count=None):
     """목록 틀: 첫 화면은 미리 그려 두고(검색엔진용), 정렬·페이지는 app.js가 처리"""
     n = len(items) if count is None else count
     return f'''<div class="wrap" id="listing" data-mode="{mode}" data-cat="{cat}">
-<div class="list-head"><h1 id="list-title">{e(title)}<span class="cnt" id="list-count">{n:,}개</span></h1>{SORT_BAR}</div>
+<div class="list-head"><h1 id="list-title">{e(title)}<span class="cnt" id="list-count">{n:,}개</span></h1>{SORT_BAR}</div>{PRICE_BAR if mode != "wish" else ""}
 <div class="grid" id="list-grid">{"".join(card(p, root) for p in items[:40])}</div><div class="pager" id="pager"></div></div>'''
 
 
@@ -305,7 +306,7 @@ def product_body(p, related):
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
-<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고</dd></dl>
+<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
@@ -423,7 +424,9 @@ def build_shop_pages():
     simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted">주문번호와 주문하실 때 입력한 연락처로 조회하실 수 있습니다. 취소·반품·교환도 여기에서 신청합니다.</p>
 <label for="o-id">주문번호</label><input id="o-id" placeholder="예) T261112-AB12CD">
 <label for="o-phone">연락처</label><input id="o-phone" inputmode="tel" placeholder="010-0000-0000">
-<button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button></div>
+<button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button>
+<details class="find-order"><summary>주문번호를 잊으셨나요?</summary><p class="muted">주문할 때 입력한 받는 분 이름과 연락처로 최근 6개월 주문을 찾아 드려요.</p>
+<div class="row"><input id="f-name" placeholder="받는 분 이름"><input id="f-phone" inputmode="tel" placeholder="010-0000-0000"></div><button class="btn btn-line" id="f-btn" style="margin-top:10px">주문 찾기</button><div id="f-result"></div></details></div>
 <div class="card" id="my-orders" style="display:none"></div></div>
 <div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
 ''')

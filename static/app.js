@@ -137,7 +137,13 @@
       <dl class="kv"><dt>이메일</dt><dd>${esc(u.email || "-")}</dd><dt>연락처</dt><dd>${esc(u.phone || "-")}</dd>
       <dt>배송지</dt><dd>${u.addr ? `${esc(u.addr.name || "")} · [${esc(u.addr.zip || "")}] ${esc(u.addr.addr1 || "")} ${esc(u.addr.addr2 || "")}` : "첫 주문 때 ‘배송지 저장’을 선택하면 자동으로 채워져요"}</dd>
       <dt>가입일</dt><dd>${date(u.joinedAt)}</dd></dl>
-      <div class="act-row" style="margin-top:18px"><a class="btn btn-dark sm" href="orders.html">내 주문 ${u.orderCount ? u.orderCount + "건" : ""}</a><a class="btn btn-line sm" href="wish.html">찜한 상품</a><button class="btn btn-line sm" id="logout">로그아웃</button></div>`;
+      <div class="act-row" style="margin-top:18px"><a class="btn btn-dark sm" href="orders.html">내 주문 ${u.orderCount ? u.orderCount + "건" : ""}</a><a class="btn btn-line sm" href="wish.html">찜한 상품</a><button class="btn btn-line sm" id="logout">로그아웃</button></div>
+      <p style="margin-top:22px;font-size:13px"><button class="link-btn" id="withdraw">회원 탈퇴</button></p>`;
+    $("#withdraw").onclick = async () => {
+      if (!confirm("탈퇴하면 회원 정보(찜·배송지·회원 할인)가 바로 삭제돼요. 주문 기록은 법에 따라 5년 보관돼요. 탈퇴할까요?")) return;
+      const r = await api("/me/delete", { token: token() }); alert(r.d.message || "처리하지 못했어요.");
+      if (r.ok) { store.set("tk", ""); store.set("user", null); location.reload(); }
+    };
     $("#logout").onclick = async () => { await api("/auth/logout", { token: token() }); store.set("tk", ""); store.set("user", null); location.reload(); };
   }
 
@@ -328,7 +334,7 @@
     const q = new URLSearchParams(location.search);
     const mode = box.dataset.mode, grid = $("#list-grid"), pager = $("#pager");
     let sort = q.get("sort") || "rec", page = Math.max(1, parseInt(q.get("page")) || 1);
-    if (DBMODE && mode !== "wish") return initListingDB(box, q, mode);
+    if (DBMODE && mode !== "wish") { const pfb = $(".price-filter"); if (pfb) pfb.hidden = true; return initListingDB(box, q, mode); }
     const all = mode === "wish" ? await getProducts(getWish()) : await loadProducts();
     let list = all;
     if (mode === "cat") list = all.filter((p) => p.category === box.dataset.cat);
@@ -349,8 +355,10 @@
       markWished();
       pager.innerHTML = grid.querySelectorAll(".p-card").length < sorted.length ? `<div class="loading-more">상품을 더 불러오고 있어요…</div>` : (sorted.length > PER_PAGE ? `<p class="end-note">모든 상품을 다 봤어요 (${sorted.length.toLocaleString()}개)</p>` : "");
     };
+    let pf = "";
     const render = () => {
       sorted = [...list];
+      if (pf) { const [lo, hi] = pf.split("-").map((x) => (x ? +x : null)); sorted = sorted.filter((p) => (lo == null || p.price >= lo) && (hi == null || p.price < hi)); }
       if (sort === "low") sorted.sort((a, b) => a.price - b.price);
       if (sort === "high") sorted.sort((a, b) => b.price - a.price);
       if (sort === "sale") sorted.sort((a, b) => (1 - b.price / b.normal_price) - (1 - a.price / a.normal_price));
@@ -370,6 +378,7 @@
       box.dataset.bound = 1;
       $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; page = 1; render(); }));
       watchBottom(pager, () => more());
+      $$(".price-filter button").forEach((b) => b.addEventListener("click", () => { pf = b.dataset.pf; $$(".price-filter button").forEach((x) => x.classList.toggle("on", x === b)); page = 1; render(); }));
     }
     render();
   }
@@ -463,6 +472,10 @@
     const el = $("#buy");
     if (!el) return;
     document.body.classList.add("has-buybar");
+    // 도착 예정일: 영업일 기준 출고 1~3일 + 배송 1일 (주말 제외)
+    const eta = $("#eta");
+    if (eta) { const add = (n) => { const d = new Date(); let k = 0; while (k < n) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) k++; } return d; };
+      const f = (d) => `${d.getMonth() + 1}/${d.getDate()}(${"일월화수목금토"[d.getDay()]})`; eta.textContent = ` · 도착 예정 ${f(add(2))}~${f(add(4))}`; }
     if (memberPct() && $(".d-price")) {
       if (token() && member()) $(".d-price").insertAdjacentHTML("afterend", `<p class="member-badge on">회원 ${memberPct()}% 추가 즉시 할인 · 결제할 때 적용</p>`);
       else loginOn().then((on) => on && $(".d-price").insertAdjacentHTML("afterend", `<a class="member-badge" href="${ROOT}login.html">로그인하면 <b>${memberPct()}% 추가</b> 즉시 할인 ›</a>`));
@@ -819,6 +832,7 @@
       res.innerHTML = `<div class="card"><h2>주문 ${esc(o.orderId)} <span class="state${special ? "" : " done"}">${esc(o.status)}</span></h2>
         ${special ? "" : `<div class="track">${FLOW.map((s, i) => `<div class="${i <= step ? "on" : ""}">${s}</div>`).join("")}</div>`}
         ${trackHTML(o)}
+        ${o.receipt ? `<p style="margin:10px 0 0;font-size:13px"><a href="${esc(o.receipt)}" target="_blank" rel="noopener" style="text-decoration:underline">카드 영수증 보기</a></p>` : ""}
         ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${esc(o.claim.reason)}</div>` : ""}
         <div style="margin-top:20px">${o.lines.map((l) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a><div class="muted">${l.qty}개</div>
           ${shipped || o.status === "구매확정" ? `<a class="mini-btn" style="display:inline-block;margin-top:6px" href="${ROOT}product/${encodeURIComponent(l.id)}.html?write=1#review">리뷰 쓰기</a>` : ""}</div><strong>${won(l.price * l.qty)}</strong></div>`).join("")}</div>
@@ -858,6 +872,13 @@
       render(d.order, phone);
     };
     $("#o-btn").onclick = () => lookup($("#o-id").value.trim(), $("#o-phone").value.trim());
+    if ($("#f-btn")) $("#f-btn").onclick = async () => {
+      const box = $("#f-result"); box.innerHTML = `<p class="muted">찾고 있어요…</p>`;
+      const { ok, d } = await api("/order/find", { name: $("#f-name").value.trim(), phone: $("#f-phone").value.trim() });
+      if (!ok) { box.innerHTML = `<p class="muted">${esc(d.message)}</p>`; return; }
+      box.innerHTML = d.orders.map((o, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(o.lines[0].name)}${o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""}</div><div class="muted">${esc(o.orderId)} · ${date(o.paidAt)} · <b>${esc(o.status)}</b></div></div><button class="mini-btn" data-fi="${i}">보기</button></div>`).join("");
+      box.onclick = (e) => { const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone); res.scrollIntoView({ behavior: "smooth" }); } };
+    };
     if (token()) (async () => {  // 회원: 내 주문 전체
       const r = await api("/me/orders", { token: token() });
       if (!r.ok || !r.d.orders.length) return;

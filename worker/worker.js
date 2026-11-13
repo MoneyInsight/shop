@@ -141,7 +141,7 @@ async function confirm(req, env) {
   if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
 
   const now = new Date().toISOString();
-  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey,
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, receipt: pay.receipt?.url || "",
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
@@ -616,7 +616,7 @@ const publicOrder = (o) => ({
   orderId: o.orderId, status: o.status, paidAt: o.paidAt, amount: o.amount, subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping || 0, method: o.method,
   lines: o.lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price })),
   receiver: { name: o.customer?.name, zip: o.customer?.zip, addr: o.customer?.addr, memo: o.customer?.memo },
-  courier: o.courier || "", tracking: o.tracking || "", track: o.track || null, history: o.history || [], claim: o.claim || null,
+  receipt: o.receipt || "", courier: o.courier || "", tracking: o.tracking || "", track: o.track || null, history: o.history || [], claim: o.claim || null,
 });
 
 async function findOrder(env, orderId, phone) {
@@ -626,6 +626,17 @@ async function findOrder(env, orderId, phone) {
 }
 
 // ---------- 주문 조회 · 취소 · 반품/교환 ----------
+// 주문번호를 잊은 비회원: 받는 분 이름 + 연락처로 최근 6개월 주문 찾기
+async function orderFind(req, env) {
+  const { name, phone } = await req.json();
+  if (!clip(name, 20) || digits(phone).length < 10) return fail("받는 분 이름과 연락처를 정확히 입력해 주세요.");
+  const since = new Date(Date.now() - 183 * 86400e3).toISOString();
+  const list = (await kvList(env, "order:")).filter((o) => o.paidAt >= since && digits(o.customer?.phone) === digits(phone) && String(o.customer?.name || "").trim() === String(name).trim())
+    .sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 20);
+  if (!list.length) return fail("일치하는 주문이 없어요. 주문할 때 입력한 받는 분 이름과 연락처를 확인해 주세요.", 404);
+  return json({ orders: list.map((o) => ({ ...publicOrder(o), phone: o.customer?.phone || "" })) });
+}
+
 async function orderLookup(req, env) {
   const { orderId, phone } = await req.json();
   const o = await findOrder(env, orderId, phone);
@@ -1078,8 +1089,16 @@ export async function handle(req, env, path) {
       return json({ ok: true });
     }
     if (path === "/track/visit") { await stats.visit(env, await req.json().catch(() => ({}))); return json({ ok: true }); }
-    if (path === "/me" || path === "/me/save" || path === "/me/orders" || path === "/auth/logout") {
+    if (path === "/me" || path === "/me/save" || path === "/me/orders" || path === "/auth/logout" || path === "/me/delete") {
       const d = await req.json().catch(() => ({}));
+      if (path === "/me/delete") {  // 회원 탈퇴: 회원 정보 삭제 (주문 기록은 전자상거래법상 5년 보관, 회원 연결만 끊음)
+        const u = await auth.userFromToken(env, d.token);
+        if (!u) return fail("다시 로그인해 주세요.", 401);
+        for (const id of u.orders || []) { const o = await env.SHOP.get("order:" + id, "json"); if (o && o.uid) { delete o.uid; await env.SHOP.put("order:" + id, JSON.stringify(o)); } }
+        await env.SHOP.delete("user:" + u.uid);
+        await auth.logout(env, d);
+        return json({ ok: true, message: "탈퇴가 완료됐어요. 회원 정보는 바로 삭제했고, 주문 기록은 법에 따라 5년 보관 후 삭제돼요." });
+      }
       if (path === "/auth/logout") return json(await auth.logout(env, d));
       if (path === "/me/orders") {
         const u = await auth.userFromToken(env, d.token);
@@ -1095,6 +1114,7 @@ export async function handle(req, env, path) {
     if (path === "/seller/product") return await sellerProduct(req, env);
     if (path === "/report-price") return await reportPrice(req, env);
     if (path === "/order/lookup") return await orderLookup(req, env);
+    if (path === "/order/find") { if (await overLimit(env, "find:" + ipOf(req), 10, 3600)) return fail("잠시 후 다시 시도해 주세요.", 429); return await orderFind(req, env); }
     if (path === "/order/cancel") return await orderCancel(req, env);
     if (path === "/order/claim") return await orderClaim(req, env);
     if (path === "/order/confirm-receipt") return await orderConfirmReceipt(req, env);
