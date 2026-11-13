@@ -25,7 +25,7 @@ const ok = (c, m) => { c ? pass++ : (fail++, console.log("✗", m)); };
 const DB = d1("dist/catalog.sqlite");
 
 const all = await catalog.list(DB, { size: 10 });
-ok(all.total > 1000, "전체 상품 수 " + all.total);
+ok(all.total >= 50, "전체 상품 수 " + all.total);
 ok(all.items.length === 10 && all.items.every((p) => p.cost === undefined), "목록 10개, 원가 없음");
 
 const s = await catalog.list(DB, { q: "선반" });

@@ -232,6 +232,48 @@
     location.href = ROOT + "search.html?q=" + encodeURIComponent(f.querySelector("input").value.trim());
   }));
 
+  // ── 검색 자동완성: 글자를 치면 맞는 상품을 바로 보여줌 ──
+  $$("form.search").forEach((f) => {
+    const inp = f.querySelector("input");
+    inp.setAttribute("autocomplete", "off");
+    const box = document.createElement("div");
+    box.className = "suggest"; box.hidden = true; f.appendChild(box);
+    let timer = null, seq = 0, idx = -1;
+    const hl = (name, words) => { let s = esc(name); words.forEach((w) => { if (w) s = s.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), (m) => `<b>${m}</b>`); }); return s; };
+    const show = async () => {
+      const q = inp.value.trim(), my = ++seq;
+      if (q.length < 1) { box.hidden = true; return; }
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      let list;
+      if (DBMODE) list = ((await apiGet("/catalog/list?" + new URLSearchParams({ q, size: 8 }))) || {}).items || [];
+      else {
+        const all = await loadProducts();
+        list = all.filter((p) => !p.soldout && words.every((w) => (p.name + " " + (p.brand || "") + " " + (p.category_name || "")).toLowerCase().includes(w)))
+          .sort((a, b) => a.name.toLowerCase().indexOf(words[0]) - b.name.toLowerCase().indexOf(words[0])).slice(0, 8);
+      }
+      if (my !== seq) return;
+      idx = -1;
+      box.innerHTML = list.length ? list.map((p) => `<a class="sg-item" href="${productHref(p.id)}"><img src="${esc(img(p.image))}" alt="" loading="lazy"><span class="sg-name">${hl(p.name, words)}</span><span class="sg-price">${won(p.qt?.length ? p.qt[0] : p.price)}</span></a>`).join("") +
+        `<a class="sg-all" href="${ROOT}search.html?q=${encodeURIComponent(q)}">‘${esc(q)}’ 전체 검색 결과 보기 ›</a>` : `<div class="sg-none">맞는 상품이 없어요. 다른 단어로 찾아보세요.</div>`;
+      box.hidden = false;
+    };
+    inp.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(show, DBMODE ? 200 : 60); });
+    inp.addEventListener("focus", () => inp.value.trim() && show());
+    inp.addEventListener("keydown", (e) => {
+      const items = [...box.querySelectorAll("a")];
+      if (box.hidden || !items.length) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); idx = (idx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; items.forEach((a, i) => a.classList.toggle("on", i === idx)); }
+      else if (e.key === "Enter" && idx >= 0) { e.preventDefault(); location.href = items[idx].href; }
+      else if (e.key === "Escape") box.hidden = true;
+    });
+    document.addEventListener("click", (e) => { if (!f.contains(e.target)) box.hidden = true; });
+  });
+
+  // 바닥 근처에 오면 계속 불러오기
+  function watchBottom(el, fn) {
+    if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && fn()), { rootMargin: "800px 0px" }).observe(el);
+    else window.addEventListener("scroll", () => { if (el.getBoundingClientRect().top < innerHeight + 800) fn(); });
+  }
   // ── 목록 (카테고리·검색·찜): 정렬 + 페이지 ──
   async function initListing() {
     const box = $("#listing");
@@ -251,35 +293,36 @@
       list = all.filter((p) => words.every((w) => (p.name + " " + p.category_name + " " + (p.brand || "") + " " + (p.summary || "")).toLowerCase().includes(w)));
       $("#list-title").firstChild.textContent = term ? `‘${term}’ 검색 결과` : "전체 상품";
     }
+    // 무한 스크롤: 처음 40개, 바닥 근처에 오면 40개씩 더 붙임
+    let sorted = [];
+    const more = () => {
+      const have = grid.querySelectorAll(".p-card").length;
+      if (have >= sorted.length) { pager.innerHTML = sorted.length > PER_PAGE ? `<p class="end-note">모든 상품을 다 봤어요 (${sorted.length.toLocaleString()}개)</p>` : ""; return; }
+      grid.insertAdjacentHTML("beforeend", sorted.slice(have, have + PER_PAGE).map(cardHTML).join(""));
+      markWished();
+      pager.innerHTML = grid.querySelectorAll(".p-card").length < sorted.length ? `<div class="loading-more">상품을 더 불러오고 있어요…</div>` : (sorted.length > PER_PAGE ? `<p class="end-note">모든 상품을 다 봤어요 (${sorted.length.toLocaleString()}개)</p>` : "");
+    };
     const render = () => {
-      const sorted = [...list];
+      sorted = [...list];
       if (sort === "low") sorted.sort((a, b) => a.price - b.price);
       if (sort === "high") sorted.sort((a, b) => b.price - a.price);
       if (sort === "sale") sorted.sort((a, b) => (1 - b.price / b.normal_price) - (1 - a.price / a.normal_price));
       if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-      const pages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
-      page = Math.min(page, pages);
       $("#list-count").textContent = sorted.length.toLocaleString() + "개";
-      grid.innerHTML = sorted.length ? sorted.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(cardHTML).join("")
-        : `<div class="empty">${mode === "wish" ? "찜한 상품이 없어요." : mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      grid.innerHTML = sorted.length ? "" : `<div class="empty">${mode === "wish" ? "찜한 상품이 없어요." : mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
       $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === sort));
-      let html = "";
-      if (pages > 1) {
-        const from = Math.max(1, Math.min(page - 4, pages - 8)), to = Math.min(pages, from + 8);
-        if (page > 1) html += `<button data-p="${page - 1}" aria-label="이전">‹</button>`;
-        for (let i = from; i <= to; i++) html += `<button data-p="${i}" class="${i === page ? "on" : ""}">${i}</button>`;
-        if (page < pages) html += `<button data-p="${page + 1}" aria-label="다음">›</button>`;
-      }
-      pager.innerHTML = html;
+      // 예전 주소(?page=3)로 들어오면 그 페이지까지 한 번에 보여줌
+      for (let i = 0; i < page; i++) more();
+      page = 1;
       const u = new URLSearchParams(location.search);
       sort === "rec" ? u.delete("sort") : u.set("sort", sort);
-      page === 1 ? u.delete("page") : u.set("page", page);
+      u.delete("page");
       history.replaceState(null, "", location.pathname + (u.toString() ? "?" + u : ""));
     };
     if (!box.dataset.bound) {
       box.dataset.bound = 1;
       $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; page = 1; render(); }));
-      pager.addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; page = +b.dataset.p; render(); box.scrollIntoView({ behavior: "smooth" }); });
+      watchBottom(pager, () => more());
     }
     render();
   }
@@ -290,32 +333,33 @@
     let sort = q.get("sort") || "rec", page = Math.max(1, parseInt(q.get("page")) || 1);
     const term = mode === "search" ? (q.get("q") || "").trim() : "";
     if (mode === "search") { const si = $(".search input"); if (si) si.value = term; $("#list-title").firstChild.textContent = term ? `‘${term}’ 검색 결과` : "전체 상품"; }
-    const render = async () => {
+    let total = 0, loading = false;
+    const load = async (reset) => {
+      if (loading) return; loading = true;
+      if (reset) { page = 1; grid.innerHTML = ""; }
       const qs = new URLSearchParams({ sort, page, size: PER_PAGE });
       if (term) qs.set("q", term);
       if (mode === "cat") qs.set("cat", box.dataset.cat);
       const d = await apiGet("/catalog/list?" + qs);
-      if (!d) { grid.innerHTML = `<div class="empty">상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`; return; }
-      const pages = Math.max(1, Math.ceil(d.total / PER_PAGE));
+      loading = false;
+      if (!d) { if (reset) grid.innerHTML = `<div class="empty">상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`; return; }
+      total = d.total;
       $("#list-count").textContent = d.total.toLocaleString() + "개";
-      grid.innerHTML = d.items.length ? d.items.map(cardHTML).join("") : `<div class="empty">${mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      if (reset && !d.items.length) grid.innerHTML = `<div class="empty">${mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      grid.insertAdjacentHTML("beforeend", d.items.map(cardHTML).join(""));
       $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === sort));
-      let html = "";
-      if (pages > 1) {
-        const from = Math.max(1, Math.min(page - 4, pages - 8)), to = Math.min(pages, from + 8);
-        if (page > 1) html += `<button data-p="${page - 1}" aria-label="이전">‹</button>`;
-        for (let i = from; i <= to; i++) html += `<button data-p="${i}" class="${i === page ? "on" : ""}">${i}</button>`;
-        if (page < pages) html += `<button data-p="${page + 1}" aria-label="다음">›</button>`;
-      }
-      pager.innerHTML = html;
+      const have = grid.querySelectorAll(".p-card").length;
+      pager.innerHTML = have < total ? `<div class="loading-more">상품을 더 불러오고 있어요…</div>` : (total > PER_PAGE ? `<p class="end-note">모든 상품을 다 봤어요 (${total.toLocaleString()}개)</p>` : "");
       markWished();
+      page++;
       const u = new URLSearchParams(location.search);
       sort === "rec" ? u.delete("sort") : u.set("sort", sort);
-      page === 1 ? u.delete("page") : u.set("page", page);
+      u.delete("page");
       history.replaceState(null, "", location.pathname + (u.toString() ? "?" + u : ""));
     };
-    $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; page = 1; render(); }));
-    pager.addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; page = +b.dataset.p; render(); box.scrollIntoView({ behavior: "smooth" }); });
+    const render = () => load(true);
+    $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; render(); }));
+    watchBottom(pager, () => { if (grid.querySelectorAll(".p-card").length < total) load(false); });
     render();
   }
 
@@ -677,7 +721,7 @@
     }
     let ok = false, msg = "";
     if (API) {
-      const r = await api("/confirm", { paymentKey, orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined });
+      const r = await api("/confirm", { paymentKey, orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined, src: visitSrc });
       ok = r.ok; msg = ok ? "" : r.d.message || "결제 승인에 실패했어요.";
     } else { ok = true; msg = "테스트 모드: 결제 승인 서버가 연결되지 않아 실제 결제는 이루어지지 않았어요."; }
     if (ok) {
@@ -810,6 +854,35 @@
   }
 
   // ── 고객센터 1:1 문의 ──
+  // ── 대량 구매 문의 ──
+  async function initBulk() {
+    if (!$("#bulk")) return;
+    const id = new URLSearchParams(location.search).get("id");
+    if (id) {
+      const p = (await getProducts([id])).find((x) => x.id === id);
+      if (p) {
+        $("#bk-product").value = p.name;
+        const bi = $("#bulk-item"); bi.hidden = false;
+        bi.innerHTML = `<img src="${esc(img(p.image))}" alt=""><div><b>${esc(p.name)}</b><div class="muted">상품번호 ${esc(p.id)} · 1개 ${won(p.price)}${p.qt?.length ? ` · 10개 이상 개당 ${won(p.qt[p.qt.length - 1])}` : ""}</div></div>`;
+      }
+    }
+    const a = store.get("addr", null) || member();
+    if (a) { $("#bk-contact").value = a.phone || ""; $("#bk-email").value = a.email || ""; }
+    $("#bk-btn").onclick = async () => {
+      const v = (k) => $("#bk-" + k).value.trim();
+      if (!v("product") || !(parseInt(digits(v("qty"))) > 0)) { alert("상품과 필요 수량을 입력해 주세요."); return; }
+      if (!v("name") || digits(v("contact")).length < 9) { alert("회사·단체명(담당자)과 연락처를 입력해 주세요."); return; }
+      if (!$("#bk-agree").checked) { alert("개인정보 수집·이용에 동의해 주세요."); return; }
+      const text = [`[대량 구매 견적 요청]`, `상품: ${v("product")}${id ? ` (상품번호 ${id})` : ""}`, `수량: ${v("qty")}개`, v("date") && `희망 날짜: ${v("date")}`, v("price") && `희망 단가/예산: ${v("price")}`,
+        v("email") && `이메일: ${v("email")}`, $("#bk-tax").checked && "세금계산서 필요", $("#bk-print").checked && "맞춤 작업(인쇄·포장) 필요", v("text") && `요청 사항: ${v("text")}`].filter(Boolean).join("\n");
+      const b = $("#bk-btn"); b.disabled = true;
+      const { ok, d } = await api("/inquiry/add", { name: v("name"), contact: v("contact"), type: "대량구매", orderId: id || "", text });
+      b.disabled = false;
+      alert(ok ? "견적 요청이 접수되었어요. 확인 후 연락드릴게요." : d.message);
+      if (ok) ["qty", "price", "text"].forEach((k) => ($("#bk-" + k).value = ""));
+    };
+  }
+
   function initCs() {
     const b = $("#inq-btn");
     if (!b) return;
@@ -834,6 +907,22 @@
     else alert("사파리 아래쪽 ‘공유’ 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하면 앱처럼 설치돼요.");
   });
 
+  // ── 방문 기록 (사이트 분석용, 개인정보 없이 무작위 방문자 번호만) ──
+  const visitSrc = (() => {
+    let v = null;
+    try { v = JSON.parse(sessionStorage.getItem("src0") || "null"); } catch (e) {}
+    if (!v) {
+      const ref = document.referrer && !document.referrer.startsWith(location.origin) ? document.referrer.slice(0, 200) : "";
+      v = { ref, utm: new URLSearchParams(location.search).get("utm_source") || "" };
+      try { sessionStorage.setItem("src0", JSON.stringify(v)); } catch (e) {}
+    }
+    return v;
+  })();
+  if (API && !/admin\.html$/.test(location.pathname)) {
+    let vid = store.get("vid", "");
+    if (!vid) { vid = Math.random().toString(36).slice(2, 12); store.set("vid", vid); }
+    try { fetch(API + "/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid, path: location.pathname.replace(/^.*\/shop/, ""), ...visitSrc }), keepalive: true }).catch(() => {}); } catch (e) {}
+  }
   updateCounts(); markWished(); paintLogin(); handleLoginHash().then(initLogin);
-  initListing(); initRecent(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs();
+  initListing(); initRecent(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
 })();

@@ -11,7 +11,8 @@ def ok(name, cond, info=""):
 
 async def main():
     products = json.load(open("site/products.json"))
-    opt = next(p for p in products if p["options"] and not p.get("qt") and not p.get("soldout")); plain = next(p for p in products if not p["options"] and not p.get("qt") and not p.get("soldout"))  # 수량 할인 없는 상품(가격 제안 테스트용)
+    opt = next(p for p in products if p["options"] and not p.get("soldout")); plain = next(p for p in products if not p["options"] and not p.get("soldout"))
+    unit2 = lambda p: p["qt"][1] if p.get("qt") else p["price"]  # 2개 살 때 개당 가격(수량 할인)
     async with async_playwright() as pw:
         b = await pw.chromium.launch(executable_path="/usr/bin/google-chrome")
         ctx = await b.new_context(viewport={"width": 1280, "height": 900})
@@ -38,14 +39,18 @@ async def main():
         await pg.goto(S + "index.html"); await pg.wait_for_timeout(600)
         ok("메인 카드", await pg.locator(".p-card").count() >= 20)
         await pg.screenshot(path="/tmp/s_home.png")
-        # 카테고리: 정렬·페이지
-        await pg.goto(S + "category/living.html"); await pg.wait_for_selector("#pager button")
-        ok("목록 40개", await pg.locator("#list-grid .p-card").count() == 40)
+        # 전체 목록: 정렬·무한 스크롤
+        await pg.goto(S + "search.html"); await pg.wait_for_timeout(600)
+        ok("목록 처음 40개", await pg.locator("#list-grid .p-card").count() == 40, await pg.locator("#list-grid .p-card").count())
         await pg.click('.sort button[data-sort="low"]'); await pg.wait_for_timeout(200)
         prices = [int(t.replace(",", "").replace("원", "")) for t in await pg.locator("#list-grid .p-price > span:not(.rate)").all_inner_texts()]
         ok("낮은 가격순", prices == sorted(prices), prices[:5])
-        await pg.click('#pager button[data-p="2"]'); await pg.wait_for_timeout(300)
-        ok("2페이지 주소", "page=2" in pg.url and "sort=low" in pg.url, pg.url)
+        await pg.mouse.wheel(0, 30000); await pg.wait_for_timeout(600); await pg.mouse.wheel(0, 30000); await pg.wait_for_timeout(600)
+        ok("스크롤하면 더 불러옴", await pg.locator("#list-grid .p-card").count() > 40 and "sort=low" in pg.url, await pg.locator("#list-grid .p-card").count())
+        # 자동완성
+        await pg.fill(".search input", "선반"); await pg.wait_for_timeout(400)
+        ok("검색 자동완성", await pg.locator(".suggest .sg-item").count() >= 1)
+        await pg.keyboard.press("Escape")
         await pg.screenshot(path="/tmp/s_list.png")
         # 찜
         await pg.locator("#list-grid .wish-btn").first.click(); await pg.wait_for_timeout(150)
@@ -62,7 +67,7 @@ async def main():
         await pg.select_option("#opt", "0"); await pg.click("#plus"); await pg.click("#add-cart"); await pg.wait_for_timeout(600)
         ok("장바구니 이동", "cart.html" in pg.url, pg.url)
         await pg.wait_for_selector("#cart-box .c-row")
-        ok("장바구니 합계", (await pg.locator("#cart-sum .total b").inner_text()) == f"{(opt['price'] + opt['options'][0]['add']) * 2:,}원")
+        ok("장바구니 합계", (await pg.locator("#cart-sum .total b").inner_text()) == f"{(unit2(opt) + opt['options'][0]['add']) * 2:,}원")
         await pg.screenshot(path="/tmp/s_cart.png")
         await pg.goto(S + f"product/{opt['id']}.html"); await pg.wait_for_timeout(800)
         await pg.screenshot(path="/tmp/s_detail.png", full_page=True)
@@ -112,6 +117,7 @@ async def main():
         ok("쿠폰 생성", "OPEN10" in await pg.locator("#adm-view").inner_text())
         # 대량 구매 가격 제안: 고객 제안 → 관리자 수락 → 주문조회에서 제안가로 결제 화면
         await pg.goto(S + f"product/{plain['id']}.html"); await pg.wait_for_timeout(500)
+        await pg.evaluate("document.querySelector('.offer-box').hidden = false")  # 수량 할인 상품은 제안 버튼이 숨겨져 있어 테스트용으로 보이게
         await pg.click("#offer-open"); await pg.wait_for_timeout(200)
         ok("제안 열면 3개로", await pg.input_value("#qty") == "3")
         await pg.fill("#offer-name", "제안고객"); await pg.fill("#offer-phone", "010-2222-3333")

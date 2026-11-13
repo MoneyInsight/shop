@@ -19,6 +19,7 @@
 import * as catalog from "./catalog.js";
 import * as auth from "./auth.js";
 import * as tracking from "./track.js";
+import * as stats from "./stats.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -76,7 +77,7 @@ function suggestPrice(env, supply) {
 
 // ---------- 결제 승인 ----------
 async function confirm(req, env) {
-  const { paymentKey, orderId, amount, items, customer, coupon, token } = await req.json();
+  const { paymentKey, orderId, amount, items, customer, coupon, token, src } = await req.json();
   if (!paymentKey || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
 
@@ -108,7 +109,7 @@ async function confirm(req, env) {
     }
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || 0, ship_mode: p.sm || "",
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
@@ -132,6 +133,7 @@ async function confirm(req, env) {
   const now = new Date().toISOString();
   const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, lines, customer, method: pay.method, paymentKey,
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
+  if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
   await env.SHOP.put("order:" + orderId, JSON.stringify(order));
   for (const uo of usedOffers) { uo.status = "주문완료"; uo.orderId = orderId; await env.SHOP.put("offer:" + uo.id, JSON.stringify(uo)); }
@@ -776,6 +778,9 @@ async function adminOrderUpdate(req, env) {
   return json({ ok: true, status: o.status, track: o.track || null });
 }
 
+// 가격 공식 값 (원가 추정용, 서버 설정값으로 바꿀 수 있음)
+const PRICING = (env) => ({ net_margin: +(env.NET_MARGIN || 0.12), min_margin_won: +(env.MIN_MARGIN_WON || 1500), card_fee: +(env.CARD_FEE || 0.034), ops_cost_won: +(env.OPS_COST_WON || 300) });
+
 // ---------- 발주 (도매매·오너클랜 등에 주문 넣기) ----------
 // 결제완료 주문을 도매처별로 모아 주문서로 만들고, '발주 완료'를 누르면 상품준비중으로. 도매처 송장 파일을 올리면 송장 자동 입력
 const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜" };
@@ -981,6 +986,7 @@ export async function handle(req, env, path) {
   if (req.method !== "POST") return fail("Not found", 404);
   try {
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/track/visit") { await stats.visit(env, await req.json().catch(() => ({}))); return json({ ok: true }); }
     if (path === "/me" || path === "/me/save" || path === "/me/orders" || path === "/auth/logout") {
       const d = await req.json().catch(() => ({}));
       if (path === "/auth/logout") return json(await auth.logout(env, d));
@@ -1033,6 +1039,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
       if (path === "/admin/track-sweep") return json(await trackSweep(env));
       if (path === "/admin/po") return json(await adminPo(env));
+      if (path === "/admin/analytics") { const d = await req.json(); const td = stats.dayKey(); return json(await stats.analytics(env, kvList, { from: d.from || td, to: d.to || td }, PRICING(env))); }
       if (path === "/admin/po-done") return await adminPoDone(req, env);
       if (path === "/admin/tracking-import") return await adminTrackingImport(req, env);
       if (path === "/admin/answer") return await adminAnswer(req, env);

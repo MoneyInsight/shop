@@ -420,3 +420,29 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 
 .po-group{margin-top:18px}
 .po-group h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+
+/* 검색 자동완성 */
+.search{position:relative}
+.suggest{position:absolute;left:-1px;right:-1px;top:100%;background:#fff;border:1px solid var(--ink);border-top:0;z-index:60;max-height:70vh;overflow:auto;box-shadow:0 10px 24px rgba(0,0,0,.08)}
+.sg-item{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px 12px;font-size:14px}
+.sg-item img{width:44px;height:44px;object-fit:cover;border-radius:6px;background:#f4f4f4}
+.sg-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sg-name b{color:var(--accent)}
+.sg-price{font-weight:700;font-size:13px}
+.sg-item:hover,.sg-item.on,.sg-all.on{background:#faf6ef}
+.sg-all{display:block;padding:10px 12px;font-size:13px;color:var(--ink2);border-top:1px solid var(--line)}
+.sg-none{padding:14px 12px;font-size:13px;color:#999}
+
+.loading-more,.end-note{text-align:center;color:#999;font-size:13px;padding:24px 0}
+
+.bulk-item{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;margin:12px 0}
+.bulk-item img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+.d-share .bulk-link{color:var(--accent);font-weight:600}
+
+/* 관리자 분석 */
+.stat small{display:block;font-size:12px;color:#999;margin-top:2px;font-weight:400}
+.bar{display:inline-block;height:8px;background:var(--accent);border-radius:4px;margin-right:6px;vertical-align:middle;opacity:.8}
+.bar.v{background:#8fb3d9}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two-col .card{margin-top:16px}
+@media (max-width:760px){.two-col{grid-template-columns:1fr}}

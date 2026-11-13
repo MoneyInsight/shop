@@ -35,7 +35,7 @@ def source_of(pid):
 def products():
     cfg = json.load(open(ROOT / "config.json", encoding="utf-8"))
     cats = cfg["categories"]
-    rows, warns, _ = product_import.load(ROOT / "data", cats, cfg.get("customer_discount", 0), cfg.get("pricing"))
+    rows, warns, _ = product_import.load(ROOT / "data", cats, cfg.get("customer_discount", 0), cfg.get("pricing"), cfg.get("require_detail", True))
     stock = json.loads((ROOT / "data/stock.json").read_text(encoding="utf-8")).get("items", {}) if (ROOT / "data/stock.json").exists() else {}
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     out = []

@@ -214,7 +214,7 @@ def qty_prices(goods, ship, box_qty, free_over, pricing):
     return out if len(out) > 1 and out[1] < out[0] else []
 
 
-def load(data_dir, cats, discount=0, pricing=None):
+def load(data_dir, cats, discount=0, pricing=None, require_detail=True):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
@@ -228,7 +228,7 @@ def load(data_dir, cats, discount=0, pricing=None):
             warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (땡잡았땡 상품등록 양식의 열 이름이 있어야 해요)")
             continue
         get = lambda r, k: (r[col[k]].strip() if k in col and col[k] < len(r) and r[col[k]] else "")
-        skipped = 0
+        skipped = no_detail = 0
         for r in rows[h + 1:]:
             name = get(r, "name")
             price = _num(get(r, "price"))
@@ -261,6 +261,8 @@ def load(data_dir, cats, discount=0, pricing=None):
             cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else "") or cat_from_code(get(r, "category_id"), cats) or guess_category(name, cats)
             img = get(r, "image")
             detail = get(r, "detail")
+            if require_detail and not detail.strip():
+                no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
                 "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
@@ -274,6 +276,8 @@ def load(data_dir, cats, discount=0, pricing=None):
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
+        if no_detail:
+            warns.append(f"{path.name}: 상세페이지가 없는 {no_detail}개는 올리지 않음")
     keep = []
     for p in products:
         low = _num(p.get("naver_low"))

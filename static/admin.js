@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -59,6 +59,7 @@
         <button class="chip" data-act="export">발주용 엑셀(CSV) 받기</button><button class="chip" data-act="track-sweep">배송 단계 새로고침</button></div>
         <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
     }
+    if (tab === "stats") return statsView();
     if (tab === "po") {
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
@@ -184,6 +185,50 @@
     return out;
   }
 
+  // ── 사이트 분석 ──
+  const kday = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
+  const PERIODS = { 오늘: () => [kday(), kday()], 어제: () => { const y = kday(new Date(Date.now() - 86400e3)); return [y, y]; }, "최근 7일": () => [kday(new Date(Date.now() - 6 * 86400e3)), kday()],
+    "최근 30일": () => [kday(new Date(Date.now() - 29 * 86400e3)), kday()], "이번 달": () => [kday().slice(0, 8) + "01", kday()], 올해: () => [kday().slice(0, 5) + "01-01", kday()] };
+  let period = "오늘", A = null, statTimer = null;
+  async function loadStats() {
+    const [from, to] = PERIODS[period]();
+    A = await call("/admin/analytics", { from, to });
+    if (tab === "stats") paint();
+  }
+  const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+  function statsView() {
+    clearTimeout(statTimer);
+    statTimer = setTimeout(() => tab === "stats" && loadStats(), 60000);  // 1분마다 새로고침 (실시간)
+    if (!A) { loadStats(); return `<p class="empty">불러오는 중…</p>`; }
+    const T = A.totals, max = Math.max(1, ...A.days.map((d) => d.sales)), maxV = Math.max(1, ...A.days.map((d) => d.uv));
+    const kpi = (n, v, sub = "") => `<div class="stat"><span>${n}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
+    const table = (head, rows) => rows.length ? `<table class="adm-table"><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table>` : `<p class="empty">자료가 아직 없어요.</p>`;
+    return `<div class="chips" style="margin-bottom:12px">${Object.keys(PERIODS).map((k) => `<button class="chip${k === period ? " on" : ""}" data-act="period" data-p="${k}">${k}</button>`).join("")}
+      <span class="muted" style="margin-left:8px">${A.from} ~ ${A.to} · 1분마다 자동 새로고침</span></div>
+      <div class="stat-grid">
+        ${kpi("방문자", T.uv.toLocaleString() + "명", `페이지뷰 ${T.pv.toLocaleString()}`)}${kpi("주문", T.orders + "건", `구매전환 ${T.conv}%`)}
+        ${kpi("매출", won(T.sales), `객단가 ${won(T.aov)}`)}${kpi("순이익" + (T.costEstimated ? " (추정)" : ""), won(T.profit), `매출의 ${pct(T.profit, T.sales)}%`)}
+        ${kpi("신규 가입", T.signups + "명", `전체 회원 ${T.members}명`)}${kpi("리뷰", T.reviews + "개", `전체 ${T.reviewsAll}개 · 평균 ★${T.reviewAvg}`)}
+        ${kpi("취소·반품·교환", `${T.canceled}·${T.returned}·${T.exchanged}건`, T.refunds ? `환불 ${won(T.refunds)}` : "")}${kpi("발주", `${T.poLines}건 완료`, `대기 ${T.poWait}건`)}</div>
+      <div class="card"><h2>손익 <small>${A.from} ~ ${A.to}</small></h2>${table(["항목", "금액", "비율"], [
+        ["매출 (결제금액, 환불 차감)", T.sales], ["상품 원가 (도매가+배송비)" + (T.costEstimated ? " *추정" : ""), -T.cost], ["카드 수수료", -T.cardFee], ["부가세 (매출세액−매입세액)", -Math.round((T.sales - T.cost) / 11)], ["운영비 (주문당)", -T.ops], ["<b>순이익</b>", T.profit]]
+        .map(([n, v]) => `<tr><td>${n}</td><td style="text-align:right"><b>${won(v)}</b></td><td style="text-align:right">${pct(Math.abs(v), T.sales)}%</td></tr>`))}
+        ${T.costEstimated ? `<p class="muted" style="margin-top:8px">*원가가 기록되지 않은 주문은 판매가에서 가격 공식(순마진 12%)을 거꾸로 계산한 추정치예요.</p>` : ""}</div>
+      <div class="card"><h2>날짜별</h2>${table(["날짜", "방문자", "주문", "매출", "순이익", "가입", "리뷰"], A.days.slice().reverse().map((d) => `<tr><td>${d.day.slice(5)}</td>
+        <td><span class="bar v" style="width:${Math.round((d.uv / maxV) * 60)}px"></span>${d.uv}</td><td>${d.orders}</td>
+        <td><span class="bar" style="width:${Math.round((d.sales / max) * 90)}px"></span>${won(d.sales)}</td><td>${won(d.profit)}</td><td>${d.signups}</td><td>${d.reviews}</td></tr>`))}</div>
+      <div class="two-col"><div class="card"><h2>많이 팔린 상품</h2>${table(["상품", "수량", "매출"], A.products.slice(0, 15).map((p) => `<tr><td style="white-space:normal">${esc(p.name)}<br><span class="muted">${esc(p.id)}</span></td><td>${p.qty}</td><td>${won(p.sales)}</td></tr>`))}</div>
+      <div class="card"><h2>유입경로</h2>${table(["경로", "방문자", "주문", "매출", "전환"], A.sources.map((s) => `<tr><td>${esc(s.name)}</td><td>${s.visits}</td><td>${s.orders}</td><td>${won(s.sales)}</td><td>${s.visits ? pct(s.orders, s.visits) + "%" : "-"}</td></tr>`))}</div></div>
+      <div class="two-col"><div class="card"><h2>리뷰 많은 상품</h2>${table(["상품", "리뷰", "평점"], A.reviewTop.map((x) => `<tr><td style="white-space:normal">${esc(x.name)}</td><td>${x.count}</td><td>★${x.avg}</td></tr>`))}</div>
+      <div class="card"><h2>많이 본 페이지</h2>${table(["페이지", "조회"], A.pages.map((x) => `<tr><td>${esc(x.path)}</td><td>${x.pv}</td></tr>`))}</div></div>
+      <div class="card"><h2>세금 예상 <small>${A.tax.year}년 · 참고용</small></h2>
+        ${table(["부가세", "매출", "매출세액", "매입세액", "낼 세금"], A.tax.vat.map((v) => `<tr><td>${v.period}</td><td>${won(v.sales)}</td><td>${won(v.salesVat)}</td><td>−${won(v.buyVat)}</td><td><b>${won(v.pay)}</b></td></tr>`))}
+        ${table(["종합소득세 (지방소득세 포함)", "소득(이익)", "세금"], [
+          `<tr><td>지금까지 기준</td><td>${won(A.tax.income.profit)}</td><td><b>${won(A.tax.income.tax)}</b></td></tr>`,
+          `<tr><td>지금 추세로 1년 환산</td><td>${won(A.tax.income.yearEstimate)}</td><td><b>${won(A.tax.income.taxYear)}</b></td></tr>`])}
+        <p class="muted" style="margin-top:8px">부가세: 도매처에서 세금계산서·현금영수증을 받은 매입만 공제돼요. 종합소득세: ${A.tax.income.due}. 다른 소득, 인적공제·경비(임대료·광고비 등)는 빠진 대략적인 값이라 실제 신고는 세무사·홈택스로 확인하세요.</p></div>`;
+  }
+
   function exportCsv() {
     const rows = [["주문번호", "주문일", "공급사", "상품코드", "상품명", "수량", "받는분", "연락처", "우편번호", "주소", "배송메모", "결제금액"]];
     D.orders.filter((o) => ["결제완료", "상품준비중"].includes(o.status)).forEach((o) => o.lines.forEach((l) =>
@@ -202,6 +247,7 @@
     const act = b.dataset.act, id = b.dataset.id, key = b.dataset.key, row = b.closest("tr");
     try {
       if (act === "export") return exportCsv();
+      if (act === "period") { period = b.dataset.p; A = null; return paint(); }
       if (act === "po-sheet") return poSheet(b.dataset.src);
       if (act === "po-nos") { const g = (D.po || []).find((x) => x.source === "domeme"); await navigator.clipboard.writeText([...new Set(g.lines.map((l) => l.product_no))].join(",")); alert("상품번호를 복사했어요. 도매매 ‘일괄주문서작성’의 상품번호 칸에 붙여넣으세요. (1회 30개까지)"); return; }
       if (act === "po-done") {

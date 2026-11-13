@@ -35,7 +35,7 @@ def placeholder_svg(p):
 def load_products():
     import product_import
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
-    ss_rows, warns, excluded = product_import.load(ROOT / "data", CATS, CFG.get("customer_discount", 0), CFG.get("pricing"))
+    ss_rows, warns, excluded = product_import.load(Path(os.environ.get("DATA_DIR") or ROOT / "data"), CATS, CFG.get("customer_discount", 0), CFG.get("pricing"), CFG.get("require_detail", True))
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
     for w in warns:
         print("⚠️", w)
@@ -153,7 +153,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
 <div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
-<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
 <div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
@@ -307,7 +307,7 @@ def product_body(p, related):
 <textarea class="field" id="offer-memo" placeholder="판매자에게 남길 말 (선택)" style="height:64px"></textarea>
 <button class="btn btn-dark" id="offer-send" type="button">가격 제안 보내기</button>
 <p class="muted" style="margin-top:8px">판매자가 48시간 안에 답변하고, 수락되면 72시간 안에 제안 가격으로 주문할 수 있어요. 결과는 <a href="../orders.html#offers" style="text-decoration:underline">주문조회 › 가격 제안</a>에서 확인하세요.</p></div></div>
-<div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
+<div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a><a class="bulk-link" href="../bulk.html?id={e(p["id"])}">대량 구매 문의 (기업·단체)</a></div>
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
 <section class="tab-sec" id="info"><div class="detail-body">{desc}</div>
@@ -434,7 +434,8 @@ def build_shop_pages():
     simple("cs.html", "고객센터", f'''<div class="policy" style="margin-top:0"><div class="cs-grid">
 <div>{I_PHONE}<b>{e(BIZ["phone"])}</b>{e(BIZ["cs_hours"])}</div>
 <a href="orders.html">{I_BOX}<b>주문·배송 조회</b>취소·반품·교환 신청</a>
-<a href="#inquiry">{I_CHAT}<b>1:1 문의</b>남겨주시면 답변드립니다</a></div>
+<a href="#inquiry">{I_CHAT}<b>1:1 문의</b>남겨주시면 답변드립니다</a>
+<a href="bulk.html">{I_BOX}<b>대량 구매 문의</b>기업·단체·사은품 견적</a></div>
 <div class="card"><h2>자주 묻는 질문</h2><div class="faq">{faq}</div></div>
 <div class="card form" id="inquiry"><h2>1:1 문의</h2>
 <div class="row"><input id="inq-name" placeholder="이름" aria-label="이름"><input id="inq-contact" placeholder="연락처 또는 이메일" aria-label="연락처"></div>
@@ -443,6 +444,20 @@ def build_shop_pages():
 <label for="inq-text">문의 내용</label><textarea id="inq-text" style="height:140px"></textarea>
 <label class="check"><input type="checkbox" id="inq-agree"><span>문의 답변을 위한 개인정보(이름·연락처) 수집·이용에 동의합니다.</span></label>
 <button class="btn btn-dark" id="inq-btn" style="margin-top:8px">문의 보내기</button></div></div>''')
+    simple("bulk.html", "대량 구매 문의", '''<div class="narrow"><div class="card form" id="bulk">
+<p class="muted">회사·단체 구매, 행사 사은품, 판촉물처럼 많은 수량이 필요하시면 남겨 주세요. 수량과 일정에 맞춰 견적을 보내 드립니다.<br>
+<b>10개 이하</b>는 상품 페이지에서 바로 주문하시면 수량 할인이 자동으로 적용돼요.</p>
+<div id="bulk-item" class="bulk-item" hidden></div>
+<label for="bk-product">상품명 또는 상품 주소</label><input id="bk-product" placeholder="예) 메탈 선반 4단 화이트">
+<div class="row"><div><label for="bk-qty">필요 수량</label><input id="bk-qty" inputmode="numeric" placeholder="예) 200"></div><div><label for="bk-date">받고 싶은 날짜 (선택)</label><input id="bk-date" type="date"></div></div>
+<label for="bk-price">희망 단가 또는 예산 (선택)</label><input id="bk-price" placeholder="예) 개당 15,000원 / 총 300만 원">
+<div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 땡잡았땡상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
+<label for="bk-email">이메일 (견적서 받을 곳, 선택)</label><input id="bk-email" type="email">
+<label class="check"><input type="checkbox" id="bk-tax"><span>세금계산서 발행이 필요해요</span></label>
+<label class="check"><input type="checkbox" id="bk-print"><span>로고 인쇄·개별 포장 등 맞춤 작업이 필요해요</span></label>
+<label for="bk-text">요청 사항</label><textarea id="bk-text" style="height:110px" placeholder="옵션(색상·사이즈)별 수량, 배송지가 여러 곳인지 등"></textarea>
+<label class="check"><input type="checkbox" id="bk-agree"><span>견적 안내를 위한 개인정보(이름·연락처·이메일) 수집·이용에 동의합니다.</span></label>
+<button class="btn btn-dark" id="bk-btn" style="margin-top:8px">견적 요청 보내기</button></div></div>''')
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
@@ -552,7 +567,7 @@ def build_feeds(ps):
         lines.append("\t".join(clean(x) for x in row))
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
-    urls = ["", "search.html", "cs.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
+    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
     today = datetime.date.today().isoformat()
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
