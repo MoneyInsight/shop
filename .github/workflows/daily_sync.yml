@@ -1,4 +1,4 @@
-name: 매일 상품 점검 (도매꾹 API)
+name: 새 상품 찾기 (도매꾹 API, 매일)
 on:
   schedule:
     - cron: "17 18 * * *"   # 한국 시간 새벽 3시 17분
@@ -28,7 +28,7 @@ jobs:
           rm -f data/_domeme_stock_result.json
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
-          LIMIT: ${{ github.event.inputs.limit || '4000' }}
+          LIMIT: ${{ github.event.inputs.limit || '0' }}
       - name: 새 상품 찾기 (도매매)
         run: python3 tools/domeggook_discover.py
         env:
@@ -42,7 +42,7 @@ jobs:
       - name: 저장
         run: |
           git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data && git commit -m "매일 상품 점검 (도매꾹 API)" && git push || echo "변경 없음"
+          git add data && git commit -m "새 상품 찾기 (도매꾹 API)" && git pull --rebase && git push || echo "변경 없음"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
