@@ -35,6 +35,8 @@ ALIASES = {
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
     "cost": ["공급가", "공급가격", "도매가", "매입가", "원가", "판매가(공급가)", "오너클랜판매가", "도매매가"],
     "cost_ship": ["공급 배송비", "공급배송비", "배송비(공급)", "택배비", "배송비"],
+    "box_qty": ["묶음배송수량", "묶음배송 수량", "수량별부과-수량"],
+    "free_over": ["무료배송기준금액", "조건부무료-상품판매가합계"],
     "opt_name": ["옵션명"],
     "opt_values": ["옵션값"],
     "opt_prices": ["옵션가"],
@@ -166,6 +168,39 @@ def price_from_cost(cost, pricing):
     return math.ceil((cost * 10 / 11 + ops + net) / (1 - card - 1 / 11) / 10) * 10
 
 
+QT_MAX = 10  # 수량별 개당 가격을 1~10개까지 계산 (11개 이상은 10개 가격)
+
+
+def ship_rule(ship, box_qty, pricing):
+    """한 박스(택배 1건)에 넣는 개수: 도매처 '수량별 부과' 값이 있으면 그대로,
+    없으면 배송비가 기준(기본 3,500원) 이하인 일반 택배는 3개까지 한 박스, 넘으면 1개씩 따로 (부피 큰 상품)"""
+    q = pricing.get("qty_price", {}) if pricing else {}
+    if box_qty:
+        return max(1, int(box_qty))
+    if ship <= q.get("max_ship_won", 3500):
+        return q.get("default_box_qty", 3)
+    return 1
+
+
+def qty_prices(goods, ship, box_qty, free_over, pricing):
+    """n개 살 때 개당 가격 [1개, 2개, … 10개].
+    n개 원가 = 상품원가×n + 배송비×(택배 건수) (조건부 무료배송 기준을 넘으면 배송비 0)
+    → 같은 공식(순마진 12%, 카드수수료·부가세·운영비 반영)으로 n개 전체 가격을 계산해 n으로 나눔 (10원 단위 올림)
+    → 많이 살수록 배송비·운영비·최소마진이 나눠져서 개당 가격이 내려감"""
+    if not goods or not pricing:
+        return []
+    k = ship_rule(ship, box_qty, pricing)
+    out = []
+    for n in range(1, QT_MAX + 1):
+        boxes = -(-n // k)
+        sh = 0 if (free_over and goods * n >= free_over) else ship * boxes
+        out.append(math.ceil(price_from_cost(goods * n + sh, pricing) / n / 10) * 10)
+    # 택배가 한 건 더 늘어나는 수량(예: 4개)에서 개당 가격이 다시 오르지 않게, 뒤쪽 수량의 가장 높은 값으로 맞춤 (손해 없이 '많이 살수록 싸지게')
+    for i in range(len(out) - 2, -1, -1):
+        out[i] = max(out[i], out[i + 1])
+    return out if len(out) > 1 and out[1] < out[0] else []
+
+
 def load(data_dir, cats, discount=0, pricing=None):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
@@ -185,9 +220,14 @@ def load(data_dir, cats, discount=0, pricing=None):
             name = get(r, "name")
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
+            qt = []
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
-                cost = cost + _num(get(r, "cost_ship"))
+                goods, cship = cost, _num(get(r, "cost_ship"))
+                cost = goods + cship
                 price = price_from_cost(cost, pricing)
+                qt = qty_prices(goods, cship, _num(get(r, "box_qty")), _num(get(r, "free_over")), pricing)
+                if qt:
+                    qt[0] = price
             if name.startswith("필수"):
                 continue  # 양식 안내 줄
             if not name or not price:
@@ -208,7 +248,7 @@ def load(data_dir, cats, discount=0, pricing=None):
             img = get(r, "image")
             detail = get(r, "detail")
             products.append({
-                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),

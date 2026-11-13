@@ -18,6 +18,7 @@
  */
 import * as catalog from "./catalog.js";
 import * as auth from "./auth.js";
+import * as tracking from "./track.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -83,12 +84,15 @@ async function confirm(req, env) {
   const map = await productMap(env, items.map((x) => x.id));
   let subtotal = 0, shipping = 0;
   const lines = [], usedOffers = [];
+  const qn = {};  // 수량 할인: 같은 상품 수량 합계 (가격 제안 줄 제외)
+  for (const it of items) if (!it.offer) qn[it.id] = (qn[it.id] || 0) + Math.max(1, Math.min(99, parseInt(it.qty) || 1));
   for (const it of items) {
     const p = map[it.id];
     const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
     if (!p) return fail("판매하지 않는 상품이 포함되어 있어요.");
     if (p.soldout) return fail(`일시품절된 상품이 있어요: ${p.name}`);
-    let unit = p.price, optName = "";
+    const qt = Array.isArray(p.qt) ? p.qt : typeof p.qt === "string" ? JSON.parse(p.qt || "[]") : [];
+    let unit = qt.length ? Number(qt[Math.min(qn[it.id] || qty, qt.length) - 1]) : Number(p.price), optName = "";
     if (it.opt != null && it.opt !== "") {
       const o = (p.options || [])[Number(it.opt)];
       if (!o) return fail("선택한 옵션을 찾을 수 없어요. 다시 주문해 주세요.");
@@ -104,7 +108,7 @@ async function confirm(req, env) {
     }
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price,
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || 0,
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
@@ -582,7 +586,7 @@ const publicOrder = (o) => ({
   orderId: o.orderId, status: o.status, paidAt: o.paidAt, amount: o.amount, subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping || 0, method: o.method,
   lines: o.lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price })),
   receiver: { name: o.customer?.name, zip: o.customer?.zip, addr: o.customer?.addr, memo: o.customer?.memo },
-  courier: o.courier || "", tracking: o.tracking || "", history: o.history || [], claim: o.claim || null,
+  courier: o.courier || "", tracking: o.tracking || "", track: o.track || null, history: o.history || [], claim: o.claim || null,
 });
 
 async function findOrder(env, orderId, phone) {
@@ -596,7 +600,35 @@ async function orderLookup(req, env) {
   const { orderId, phone } = await req.json();
   const o = await findOrder(env, orderId, phone);
   if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
+  await refreshTracking(env, o);
   return json({ order: publicOrder(o) });
+}
+
+// 송장 단계 확인 → 주문에 저장, 배송완료면 상태 자동 변경 + 리뷰 요청
+async function refreshTracking(env, o) {
+  if (!o.tracking || !["배송중", "배송완료"].includes(o.status)) return false;
+  const t = await tracking.track(env, o.courier, o.tracking);
+  if (!t) return false;
+  o.track = { stage: t.stage, events: t.events, at: new Date(t.at).toISOString() };
+  if (t.stage === "배송완료" && o.status === "배송중") { setStatus(o, "배송완료"); await reviewAsk(env, o); }
+  await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  return true;
+}
+async function reviewAsk(env, o) {
+  if (o.reviewAsked || !o.lines?.length) return;
+  o.reviewAsked = true;
+  const l = o.lines[0];
+  await alertCustomer(env, "REVIEW_ASK", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 상품명: l.name.slice(0, 40) + (o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""), 링크: siteLink(env, `product/${encodeURIComponent(l.id)}.html?write=1&order=${encodeURIComponent(o.orderId)}#review`) });
+}
+// 배송중 주문 전체 확인 (관리자 버튼 / 정기 실행)
+export async function trackSweep(env) {
+  let n = 0, done = 0;
+  for (const { name } of (await env.SHOP.list({ prefix: "order:" })).keys) {
+    const o = await env.SHOP.get(name, "json");
+    if (o?.status !== "배송중" || !o.tracking) continue;
+    if (await refreshTracking(env, o)) { n++; if (o.status === "배송완료") done++; }
+  }
+  return { checked: n, delivered: done };
 }
 
 async function orderCancel(req, env) {
@@ -725,23 +757,70 @@ async function adminOrderUpdate(req, env) {
   if (!o) return fail("주문을 찾을 수 없어요.");
   if (courier != null) o.courier = clip(courier, 20);
   if (tracking != null) o.tracking = clip(tracking, 40);
+  let st2 = status;
+  if (o.tracking && ["결제완료", "상품준비중"].includes(o.status) && (!status || status === o.status)) st2 = "배송중";  // 송장 넣으면 자동으로 배송중
   if (memo != null) o.adminMemo = clip(memo, 500);
-  if (status && status !== o.status) {
+  if (st2 && st2 !== o.status) {
+    const status = st2;
     if (!ORDER_STATUS.includes(status)) return fail("알 수 없는 상태예요.");
     setStatus(o, status);
     if (status === "배송중" && o.tracking && !o.shipNotified) {
       o.shipNotified = true;
       await alertCustomer(env, "SHIPPED", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 택배사: o.courier || "-", 송장번호: o.tracking, 링크: siteLink(env, "orders.html?id=" + o.orderId) });
     }
-    if (status === "배송완료" && !o.reviewAsked && o.lines?.length) {  // 리뷰 요청 (웹푸시·메일 무료, 알림톡은 템플릿 있을 때)
-      o.reviewAsked = true;
-      const l = o.lines[0];
-      await alertCustomer(env, "REVIEW_ASK", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 상품명: l.name.slice(0, 40) + (o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""), 링크: siteLink(env, `product/${encodeURIComponent(l.id)}.html?write=1&order=${encodeURIComponent(o.orderId)}#review`) });
-    }
+    if (status === "배송완료") await reviewAsk(env, o);  // 리뷰 요청 (웹푸시·메일 무료, 알림톡은 템플릿 있을 때)
     if (o.claim && /완료$/.test(status)) o.claim.status = "완료";
   }
   await env.SHOP.put("order:" + orderId, JSON.stringify(o));
-  return json({ ok: true });
+  if (o.status === "배송중") await refreshTracking(env, o);
+  return json({ ok: true, status: o.status, track: o.track || null });
+}
+
+// ---------- 발주 (도매매·오너클랜 등에 주문 넣기) ----------
+// 결제완료 주문을 도매처별로 모아 주문서로 만들고, '발주 완료'를 누르면 상품준비중으로. 도매처 송장 파일을 올리면 송장 자동 입력
+const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜" };
+const srcOf = (l) => l.source || (String(l.id).startsWith("DM") ? "domeme" : /^W/.test(l.id) ? "ownerclan" : "");
+async function adminPo(env) {
+  const groups = {};
+  for (const o of await kvList(env, "order:")) {
+    if (o.status !== "결제완료") continue;
+    o.lines.forEach((l, i) => {
+      if (l.po) return;
+      const src = srcOf(l) || "direct";
+      (groups[src] = groups[src] || { source: src, name: SOURCE_NAME[src] || (src === "direct" ? "직영·공급사" : src), lines: [] }).lines.push({
+        orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty,
+        cost: l.cost || 0, receiver: o.customer?.name || "", phone: o.customer?.phone || "", zip: o.customer?.zip || "", addr: o.customer?.addr || "", memo: o.customer?.memo || "" });
+    });
+  }
+  return { groups: Object.values(groups) };
+}
+async function adminPoDone(req, env) {
+  const { items } = await req.json();  // [{orderId, idx}]
+  const by = {};
+  for (const it of items || []) (by[it.orderId] = by[it.orderId] || []).push(+it.idx);
+  let n = 0;
+  for (const [id, idxs] of Object.entries(by)) {
+    const o = await env.SHOP.get("order:" + id, "json");
+    if (!o) continue;
+    idxs.forEach((i) => { if (o.lines[i] && !o.lines[i].po) { o.lines[i].po = new Date().toISOString(); n++; } });
+    if (o.status === "결제완료" && o.lines.every((l) => l.po)) setStatus(o, "상품준비중", { by: "발주" });
+    await env.SHOP.put("order:" + id, JSON.stringify(o));
+  }
+  return json({ ok: true, message: `${n}건 발주 완료로 표시했어요.` });
+}
+// 도매처에서 받은 송장 목록(행마다 우리 주문번호·택배사·송장번호) → 주문에 입력, 배송중 + 출고 알림
+async function adminTrackingImport(req, env) {
+  const { rows } = await req.json();
+  const res = { ok: 0, skip: [] };
+  for (const r of (rows || []).slice(0, 500)) {
+    const o = r.orderId && (await env.SHOP.get("order:" + r.orderId, "json"));
+    if (!o || !r.tracking) { res.skip.push(r.orderId || "?"); continue; }
+    if (o.tracking && o.tracking.replace(/\D/g, "") === String(r.tracking).replace(/\D/g, "")) continue;
+    const fake = new Request("https://x", { method: "POST", body: JSON.stringify({ orderId: o.orderId, courier: r.courier || o.courier || "", tracking: r.tracking }) });
+    const out = await (await adminOrderUpdate(fake, env)).json();
+    out.ok ? res.ok++ : res.skip.push(o.orderId);
+  }
+  return json({ ...res, message: `송장 ${res.ok}건 입력${res.skip.length ? `, 못 찾은 주문 ${res.skip.length}건` : ""}` });
 }
 
 async function adminOrderCancel(req, env) {
@@ -877,7 +956,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-13c", login: auth.loginStatus(env), adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
@@ -951,6 +1030,10 @@ export async function handle(req, env, path) {
       if (path === "/admin/close-report") return await closeReport(req, env);
       if (path === "/admin/order-update") return await adminOrderUpdate(req, env);
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
+      if (path === "/admin/track-sweep") return json(await trackSweep(env));
+      if (path === "/admin/po") return json(await adminPo(env));
+      if (path === "/admin/po-done") return await adminPoDone(req, env);
+      if (path === "/admin/tracking-import") return await adminTrackingImport(req, env);
       if (path === "/admin/answer") return await adminAnswer(req, env);
       if (path === "/admin/delete") return await adminDelete(req, env);
       if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
@@ -962,4 +1045,4 @@ export async function handle(req, env, path) {
   }
 }
 
-export default { fetch: (req, env) => handle(req, env) };
+export default { fetch: (req, env) => handle(req, env), scheduled: (ev, env, ctx) => ctx.waitUntil(trackSweep(env)) };  // 정기 실행: 배송 단계 확인

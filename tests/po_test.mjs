@@ -1,0 +1,25 @@
+// 발주: 도매처별 묶기 → 발주 완료 → 송장 가져오기
+import { handle } from "../worker/worker.js";
+const mem = new Map();
+const SHOP = { get: async (k, t) => (mem.has(k) ? (t === "json" ? JSON.parse(mem.get(k)) : mem.get(k)) : null), put: async (k, v) => void mem.set(k, v), delete: async (k) => void mem.delete(k), list: async ({ prefix }) => ({ keys: [...mem.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) };
+globalThis.fetch = async () => new Response("{}", { status: 404 });
+const env = { SHOP, SITE_URL: "https://s.test", ADMIN_PASSWORD: "pw" };
+let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log("✗", m)); };
+const post = async (p, b) => { const r = await handle(new Request("https://x" + p, { method: "POST", headers: { Authorization: "Bearer pw" }, body: JSON.stringify(b) }), env, p); return [r.status, await r.json()]; };
+const order = (id, lines) => mem.set("order:" + id, JSON.stringify({ orderId: id, status: "결제완료", paidAt: "2026-11-13T01:00:00Z", lines, customer: { name: "홍", phone: "010-1-2", zip: "1", addr: "수원", memo: "문앞" }, history: [] }));
+order("T261113-AAAAAA", [{ id: "DM111", source_no: "111", name: "선반 [화이트]", option: "화이트", qty: 2 }, { id: "W222", name: "컵", qty: 1 }]);
+order("T261113-BBBBBB", [{ id: "DM333", name: "의자", qty: 1 }]);
+let [st, d] = await post("/admin/po", {});
+const dm = d.groups.find((g) => g.source === "domeme"), oc = d.groups.find((g) => g.source === "ownerclan");
+ok(dm?.lines.length === 2 && oc?.lines.length === 1, "도매처별로 묶임 " + JSON.stringify(d.groups.map((g) => [g.source, g.lines.length])));
+ok(dm.lines[0].product_no === "111" && dm.lines[1].product_no === "333", "도매처 상품번호(DM 떼고)");
+[st, d] = await post("/admin/po-done", { items: dm.lines.map((l) => ({ orderId: l.orderId, idx: l.idx })) });
+ok(JSON.parse(mem.get("order:T261113-BBBBBB")).status === "상품준비중", "전부 발주된 주문 → 상품준비중");
+ok(JSON.parse(mem.get("order:T261113-AAAAAA")).status === "결제완료", "일부만 발주된 주문은 그대로");
+[st, d] = await post("/admin/po", {});
+ok(d.groups.length === 1 && d.groups[0].source === "ownerclan", "발주한 건은 목록에서 빠짐");
+[st, d] = await post("/admin/tracking-import", { rows: [{ orderId: "T261113-BBBBBB", courier: "CJ대한통운", tracking: "123456789012" }, { orderId: "T000000-XXXXXX", tracking: "1" }] });
+const b = JSON.parse(mem.get("order:T261113-BBBBBB"));
+ok(b.tracking === "123456789012" && b.status === "배송중" && d.ok === 1 && d.skip.length === 1, "송장 가져오기 → 배송중 " + d.message);
+console.log(`po: ${pass} pass, ${fail} fail`);
+process.exit(fail ? 1 : 0);

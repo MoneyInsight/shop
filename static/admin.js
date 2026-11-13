@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -30,7 +30,7 @@
       <td><select data-f="status">${D.statuses.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("")}</select>
         ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${esc(o.claim.reason)}</span>` : ""}</td>
       <td><select data-f="courier"><option value="">택배사</option>${COURIERS.map((c) => `<option${c === o.courier ? " selected" : ""}>${c}</option>`).join("")}</select><br>
-        <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px"></td>
+        <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px">${o.track?.stage ? `<br><b style="color:var(--accent)">📦 ${esc(o.track.stage)}</b>` : ""}</td>
       <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}">환불</button></td></tr>`;
   }
   const orderTable = (list) => list.length ? `<table class="adm-table"><tr><th>주문</th><th>상품</th><th>받는 분</th><th>결제</th><th>상태</th><th>송장</th><th></th></tr>${list.map(orderRow).join("")}</table>` : `<p class="empty">해당하는 주문이 없어요.</p>`;
@@ -56,8 +56,24 @@
       const list = D.orders.filter((o) => orderFilter === "전체" || o.status === orderFilter);
       return `<div class="card"><h2>주문 관리 <small>${list.length}건</small></h2>
         <div class="chips" style="margin-bottom:14px">${filters.map((f) => `<button class="chip${f === orderFilter ? " on" : ""}" data-filter="${f}">${f}</button>`).join("")}
-        <button class="chip" data-act="export">발주용 엑셀(CSV) 받기</button></div>
-        <p class="muted" style="margin-bottom:12px">상태를 ‘배송중’으로 바꾸고 송장번호를 저장하면 고객이 주문 조회에서 배송을 추적할 수 있어요.</p>${orderTable(list)}</div>`;
+        <button class="chip" data-act="export">발주용 엑셀(CSV) 받기</button><button class="chip" data-act="track-sweep">배송 단계 새로고침</button></div>
+        <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
+    }
+    if (tab === "po") {
+      const G = D.po || [];
+      const total = G.reduce((a, g) => a + g.lines.length, 0);
+      return `<div class="card"><h2>발주 대기 <small>${total}건</small></h2>
+        <p class="muted" style="margin-bottom:12px">① 도매처별 <b>주문서 받기</b> → ② 도매처 사이트 ‘엑셀 대량주문’에 올리고 예치금으로 결제 → ③ <b>발주 완료</b> 누르기 (주문이 ‘상품준비중’으로 바뀌어요)<br>
+        주문서의 배송메모 끝에 우리 주문번호가 들어가 있어서, 나중에 도매처 송장 파일을 아래에 올리면 송장이 자동으로 들어가요.</p>
+        ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
+          <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button><button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
+          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
+          <td><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}</td><td>${l.qty}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
+          : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
+        <div class="card"><h2>송장 한 번에 넣기</h2>
+        <p class="muted" style="margin-bottom:10px">도매처에서 받은 송장 엑셀을 열어 <b>전체 복사(Ctrl+A → Ctrl+C)</b> 후 아래에 붙여넣거나, CSV로 저장해 올려 주세요. 각 줄에서 우리 주문번호(T로 시작)·택배사·송장번호를 자동으로 찾아요.</p>
+        <textarea id="trk-paste" style="width:100%;height:120px" placeholder="여기에 붙여넣기"></textarea>
+        <div style="margin-top:8px"><input type="file" id="trk-file" accept=".csv,.txt"> <button data-act="trk-import">송장 넣기</button></div><div id="trk-result" class="muted" style="margin-top:8px"></div></div>`;
     }
     if (tab === "claims") return `<div class="card"><h2>취소·반품·교환 요청</h2><p class="muted" style="margin-bottom:12px">환불 버튼을 누르면 결제가 실제로 취소돼요. 교환은 처리 후 상태를 ‘교환완료’로 바꿔 주세요.</p>${orderTable(D.orders.filter((o) => /요청$/.test(o.status)))}</div>
       <div class="card"><h2>처리 완료</h2>${orderTable(D.orders.filter((o) => ["취소완료", "반품완료", "교환완료"].includes(o.status)).slice(0, 30))}</div>`;
@@ -120,8 +136,43 @@
   }
   async function load() {
     D = await call("/admin/list");
+    D.po = (await call("/admin/po").catch(() => ({ groups: [] }))).groups || [];
     $("#admin-login").style.display = "none"; $("#admin-body").style.display = "";
     paint();
+  }
+
+  // 도매처 주문서: 열 이름은 config.json 의 order_sheets 로 바꿀 수 있음 (도매처 대량주문 양식에 맞추기)
+  const SHEET_DEFAULT = ["상품번호", "옵션", "수량", "수령자명", "수령자 연락처", "우편번호", "주소", "배송메시지", "주문번호"];
+  const FIELD = { 상품번호: (l) => l.product_no, 상품코드: (l) => l.product_no, 옵션: (l) => l.option, 옵션명: (l) => l.option, 수량: (l) => l.qty, 상품명: (l) => l.name.replace(/ \[.*\]$/, ""),
+    수령자명: (l) => l.receiver, 수령자: (l) => l.receiver, 받는분: (l) => l.receiver, "수령자 연락처": (l) => l.phone, 연락처: (l) => l.phone, 휴대폰: (l) => l.phone,
+    우편번호: (l) => l.zip, 주소: (l) => l.addr, 배송메시지: (l) => `${l.memo ? l.memo + " " : ""}(${l.orderId})`, 배송메모: (l) => `${l.memo ? l.memo + " " : ""}(${l.orderId})`, 주문번호: (l) => l.orderId, 주문자관리번호: (l) => l.orderId };
+  const csvDown = (rows, name) => {
+    const csv = "\ufeff" + rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = name; a.click();
+  };
+  function poSheet(src) {
+    const g = (D.po || []).find((x) => x.source === src); if (!g) return;
+    const cols = ((window.SHOP_CFG || {}).order_sheets || {})[src] || SHEET_DEFAULT;
+    csvDown([cols, ...g.lines.map((l) => cols.map((c) => (FIELD[c] ? FIELD[c](l) : "")))], `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+  // 붙여넣은 표/CSV에서 주문번호·택배사·송장번호 찾기
+  const COURIER_NAMES = ["CJ대한통운", "대한통운", "한진", "롯데", "우체국", "로젠", "경동", "대신", "일양", "합동", "천일", "건영"];
+  const courierFix = (t) => { const c = COURIER_NAMES.find((n) => t.includes(n)); return !c ? "" : c === "대한통운" || c === "CJ대한통운" ? "CJ대한통운" : ["한진", "롯데", "로젠"].includes(c) ? c + "택배" : c === "우체국" ? "우체국택배" : c + "택배"; };
+  function parseTracking(text) {
+    const lines = text.split(/\r?\n/).filter((x) => x.trim());
+    const split = (s) => (s.includes("\t") ? s.split("\t") : s.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((x) => x.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')));
+    const head = split(lines[0] || "");
+    const ti = head.findIndex((h) => /송장|운송장/.test(h)), ci = head.findIndex((h) => /택배사|배송사|택배/.test(h) && !/비|송장/.test(h));
+    const out = [];
+    for (const ln of lines) {
+      const cells = split(ln), all = cells.join(" ");
+      const m = all.match(/T\d{6}-[A-Z0-9]{6}/); if (!m) continue;
+      let tr = ti >= 0 ? cells[ti] : (cells.find((c) => /^\d[\d-]{8,15}$/.test(c.trim())) || "");
+      tr = String(tr || "").replace(/[^\d]/g, "");
+      if (tr.length < 9) continue;
+      out.push({ orderId: m[0], tracking: tr, courier: courierFix(ci >= 0 ? cells[ci] : all) });
+    }
+    return out;
   }
 
   function exportCsv() {
@@ -142,6 +193,20 @@
     const act = b.dataset.act, id = b.dataset.id, key = b.dataset.key, row = b.closest("tr");
     try {
       if (act === "export") return exportCsv();
+      if (act === "po-sheet") return poSheet(b.dataset.src);
+      if (act === "po-done") {
+        const g = (D.po || []).find((x) => x.source === b.dataset.src);
+        if (!g || !confirm(`${g.name} ${g.lines.length}건을 발주 완료로 표시할까요? (도매처 결제까지 끝낸 뒤 눌러 주세요)`)) return;
+        alert((await call("/admin/po-done", { items: g.lines.map((l) => ({ orderId: l.orderId, idx: l.idx })) })).message); return load();
+      }
+      if (act === "trk-import") {
+        let text = $("#trk-paste").value;
+        const f = $("#trk-file").files[0]; if (f) text += "\n" + (await f.text());
+        const rows = parseTracking(text);
+        if (!rows.length) { $("#trk-result").textContent = "주문번호(T로 시작)와 송장번호가 있는 줄을 찾지 못했어요."; return; }
+        const r = await call("/admin/tracking-import", { rows });
+        $("#trk-result").textContent = r.message; return load();
+      }
       if (act === "kakao-connect") {
         location.href = "https://kauth.kakao.com/oauth/authorize?" + new URLSearchParams({ client_id: D.kakaoMe.clientId, redirect_uri: kakaoRedirect(), response_type: "code", scope: "talk_message" });
         return;
@@ -157,6 +222,7 @@
         const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8 }));
         alert((await call("/admin/push-subscribe", { sub: sub.toJSON() })).message); return;
       }
+      if (act === "track-sweep") { const r = await call("/admin/track-sweep", {}); alert(`배송중 ${r.checked ?? 0}건 확인, 배송완료 ${r.delivered ?? 0}건`); }
       if (act === "order-save") await call("/admin/order-update", { orderId: id, status: $('[data-f="status"]', row).value, courier: $('[data-f="courier"]', row).value, tracking: $('[data-f="tracking"]', row).value });
       if (act === "order-refund") {
         const amt = prompt("환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", "");

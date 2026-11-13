@@ -78,6 +78,7 @@ def load_products():
         if st.get("cost") and p.get("cost") and int(st["cost"]) != int(p["cost"]) and CFG.get("pricing"):
             new = _pi.price_from_cost(int(st["cost"]), CFG["pricing"])
             p["price"] = new; p["normal_price"] = new
+            p["qt"] = []  # 도매가가 바뀌면 수량 할인은 다음 상품 가져오기 때 다시 계산
         if st.get("opts_soldout") and p["options"]:
             gone = set(st["opts_soldout"])  # 순서(번호)는 유지하고 표시만 (장바구니의 옵션 번호가 어긋나지 않게)
             for o in p["options"]:
@@ -126,7 +127,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer", "catalog_api")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer", "catalog_api", "order_sheets")}
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
     if CFG.get("catalog_api"):
@@ -249,6 +250,22 @@ def build_categories(ps):
               desc=f'{CFG["shop_name"]} {c["name"]} 상품 {len(items)}개. 전 상품 무료배송.', canonical=f'{BASE}/category/{c["slug"]}.html'))
 
 
+def deal_shown(p):
+    """3개 살 때 3% 이상 싸질 때만 안내 표시 (가격 계산은 항상 적용)"""
+    qt = p.get("qt") or []
+    return bool(len(qt) >= 3 and not p.get("soldout") and qt[2] <= qt[0] * 0.97)
+
+
+def qty_table(p):
+    """많이 살수록 싸지는 수량 할인 안내 (1·2·3·5개)"""
+    qt = p.get("qt") or []
+    if not deal_shown(p):
+        return '<div class="qty-deal" id="qty-deal" hidden></div>'
+    cells = "".join(f'<button type="button" data-q="{n}"><b>{n}개</b><span>개당 {won(qt[n - 1])}</span>{f"<em>{round((1 - qt[n - 1] / qt[0]) * 100)}%↓</em>" if n > 1 and qt[n - 1] < qt[0] else "<em>&nbsp;</em>"}</button>'
+                    for n in (1, 2, 3, 5) if n <= len(qt))
+    return f'<div class="qty-deal" id="qty-deal"><p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">한 번에 보내서 아낀 배송·포장비를 돌려드려요</span></p><div class="qty-cells">{cells}</div></div>'
+
+
 def product_body(p, related):
     """상품 상세 본문 (정적 상품 페이지와 DB용 템플릿 item.html이 함께 씀)"""
     r = rate(p)
@@ -275,13 +292,13 @@ def product_body(p, related):
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else won(p["shipping_fee"])}</dd>
-<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고</dd><dt>원산지</dt><dd>{e(p["origin"] or "상세설명 참조")}</dd></dl>
+<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고</dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
-<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
+<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}'>
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
-<div class="offer-box"{' hidden' if p.get("soldout") else ''}><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
+{qty_table(p)}<div class="offer-box"{' hidden' if (p.get("soldout") or deal_shown(p)) else ''}><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
 <div class="offer-form" id="offer-form" hidden><div class="offer-calc" id="offer-calc"></div>
 <div class="offer-rates" id="offer-rates"></div>
 <label class="opt-label" for="offer-price">개당 제안 가격</label><input class="field" id="offer-price" inputmode="numeric">
@@ -296,7 +313,7 @@ def product_body(p, related):
 <section class="tab-sec" id="info"><div class="detail-body">{desc}</div>
 <h3 style="margin-top:56px">상품정보 제공고시</h3><table class="notice-table">
 <tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "상세설명 참조")}</td></tr>
-<tr><th>제조자 / 수입자</th><td>{e(p["maker"] or "상세설명 참조")}</td></tr><tr><th>원산지</th><td>{e(p["origin"] or "상세설명 참조")}</td></tr>
+<tr><th>제조자 / 수입자</th><td>{e(p["maker"] or "상세설명 참조")}</td></tr><tr><th>제조국</th><td>상세페이지 참조</td></tr>
 <tr><th>품질보증 기준</th><td>관련 법 및 소비자분쟁해결기준에 따름</td></tr>
 <tr><th>A/S 책임자와 전화번호</th><td>{e(BIZ["company"])} {e(BIZ["phone"])}</td></tr></table></section>
 <section class="tab-sec" id="review"><h3>리뷰 <button class="btn btn-line sm" id="rv-open">리뷰 쓰기</button></h3>
@@ -542,7 +559,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))
 
 

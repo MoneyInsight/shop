@@ -1,7 +1,8 @@
 """도매매 스마트스토어용 DB 엑셀(판매가 요율 0 = 도매가) → 땡잡았땡 상품 CSV
 사용: python3 tools/domeme_convert.py <SMARTSTORE_x.xlsx> [옵션품절 xlsx] [이미지목록 txt]
  - 판매가 열 = 도매가 → '공급가'로 넣어 쇼핑몰이 (도매가+배송비)+12% 가격을 계산
- - 유료·착불 배송비는 선결제가 되면 기본배송비를 원가에 더함 (착불만 되는 상품·수량별 배송비 상품은 제외)
+ - 유료·착불 배송비는 선결제가 되면 '공급 배송비'로 따로 넣음 (착불만 되는 상품은 제외)
+ - 수량별 배송비(N개마다 1건)는 '묶음배송수량', 조건부 무료배송 기준은 '무료배송기준금액'으로 → 수량 할인 계산에 사용
  - 대표 이미지는 도매매 CDN 주소(이미지목록 txt: '상품번호 날짜 키')로 연결
  - 재고 0 옵션은 빼고, 옵션이 1개뿐이면 옵션 없이 등록
 """
@@ -37,7 +38,7 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         for r in srows:
             if r[4] in ("0", ""):
                 zero.add((r[0], r[2]))
-    fields = ["상품코드", "상품명", "카테고리코드", "공급가", "대표 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "재고", "옵션명", "옵션"]
+    fields = ["상품코드", "상품명", "카테고리코드", "공급가", "공급 배송비", "묶음배송수량", "무료배송기준금액", "대표 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "재고", "옵션명", "옵션"]
     out_rows, skip = [], 0
     for r in rows:
         g = lambda k: r[c[k]] if k in c and c[k] < len(r) else ""
@@ -49,9 +50,12 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         ship = 0
         if ship_type not in ("무료", ""):
             # 착불만 되면 고객이 택배기사에게 돈을 내야 하므로 제외, 선결제가 되면 우리가 내고 원가에 포함
-            if "수량" in ship_type or (pay and "선결제" not in pay):
+            if pay and "선결제" not in pay:
                 skip += 1; continue
             ship = int(float(g("기본배송비") or 0))
+        box = int(float(g("수량별부과-수량") or 0)) if "수량" in ship_type and (g("수량별부과-수량") or "").strip() else 0
+        free_over = int(float(g("조건부무료-상품판매가합계") or 0)) if "조건" in ship_type and (g("조건부무료-상품판매가합계") or "").strip() else 0
+        goods = cost
         cost += ship
         vals = g("옵션값").split("\n") if g("옵션값") else []
         adds = g("옵션가").split("\n") if g("옵션가") else []
@@ -70,7 +74,7 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         if len(opts) == 1:
             opts = []
         out_rows.append({
-            "상품코드": "DM" + no, "상품명": name, "카테고리코드": g("카테고리ID"), "공급가": cost,
+            "상품코드": "DM" + no, "상품명": name, "카테고리코드": g("카테고리ID"), "공급가": goods, "공급 배송비": ship, "묶음배송수량": box or "", "무료배송기준금액": free_over or "",
             "대표 이미지 주소": img.get(no, ""), "브랜드": g("브랜드"), "제조사": g("제조사"), "원산지": g("원산지 직접입력") or "상세설명 참조",
             "상세 설명": g("상품 상세정보"), "재고": g("재고수량"), "옵션명": g("옵션명") if opts else "", "옵션": "|".join(opts),
         })

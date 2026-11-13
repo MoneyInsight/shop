@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS products (
   images TEXT NOT NULL DEFAULT '[]',      -- JSON 배열
   detail_html TEXT NOT NULL DEFAULT '',
   options TEXT NOT NULL DEFAULT '[]',     -- JSON [{v, add, so}]
+  qt TEXT NOT NULL DEFAULT '[]',          -- 수량 할인 개당 가격 [1개,2개,…10개]
   option_name TEXT NOT NULL DEFAULT '',
   brand TEXT NOT NULL DEFAULT '',
   origin TEXT NOT NULL DEFAULT '',
@@ -45,12 +46,12 @@ export function terms(text) {
   return [...out];
 }
 
-const CARD_COLS = "id, name, category, price, normal_price, image, brand, soldout, options, option_name";
+const CARD_COLS = "id, name, category, price, normal_price, image, brand, soldout, options, option_name, qt";
 const SORTS = { rec: "soldout, rank, id", low: "soldout, price", high: "soldout, price DESC", new: "soldout, updated DESC", name: "soldout, name" };
 
 function card(r) {
   return { id: r.id, name: r.name, category: r.category, price: r.price, normal_price: r.normal_price || r.price, shipping_fee: 0,
-    image: r.image, brand: r.brand, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), option_name: r.option_name };
+    image: r.image, brand: r.brand, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), option_name: r.option_name, qt: JSON.parse(r.qt || "[]") };
 }
 
 // 목록·검색 (페이지 단위)
@@ -87,8 +88,8 @@ export async function item(db, id) {
 export async function itemsForOrder(db, ids) {
   const out = {};
   for (const id of [...new Set(ids.map(String))]) {
-    const r = await db.prepare("SELECT id, name, price, options, soldout, source, source_no, supplier, cost FROM products WHERE id = ?").bind(id).first();
-    if (r) out[r.id] = { ...r, soldout: !!r.soldout, options: JSON.parse(r.options || "[]") };
+    const r = await db.prepare("SELECT id, name, price, options, qt, soldout, source, source_no, supplier, cost FROM products WHERE id = ?").bind(id).first();
+    if (r) out[r.id] = { ...r, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), qt: JSON.parse(r.qt || "[]") };
   }
   return out;
 }
@@ -100,13 +101,13 @@ export async function counts(db) {
 
 // 상품 넣기/갱신 (도매처 동기화가 사용). 검색 색인도 함께 갱신
 export async function upsert(db, p) {
-  await db.prepare(`INSERT INTO products (id, source, source_no, supplier, name, category, price, normal_price, cost, image, images, detail_html, options, option_name, brand, origin, soldout, rank, updated)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  await db.prepare(`INSERT INTO products (id, source, source_no, supplier, name, category, price, normal_price, cost, image, images, detail_html, options, qt, option_name, brand, origin, soldout, rank, updated)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET source=excluded.source, source_no=excluded.source_no, supplier=excluded.supplier, name=excluded.name, category=excluded.category,
       price=excluded.price, normal_price=excluded.normal_price, cost=excluded.cost, image=excluded.image, images=excluded.images, detail_html=excluded.detail_html,
-      options=excluded.options, option_name=excluded.option_name, brand=excluded.brand, origin=excluded.origin, soldout=excluded.soldout, rank=excluded.rank, updated=excluded.updated`)
+      options=excluded.options, qt=excluded.qt, option_name=excluded.option_name, brand=excluded.brand, origin=excluded.origin, soldout=excluded.soldout, rank=excluded.rank, updated=excluded.updated`)
     .bind(p.id, p.source || "", p.source_no || "", p.supplier || "", p.name, p.category || "", p.price, p.normal_price || p.price, p.cost || 0,
-      p.image || "", JSON.stringify(p.images || []), p.detail_html || "", JSON.stringify(p.options || []), p.option_name || "",
+      p.image || "", JSON.stringify(p.images || []), p.detail_html || "", JSON.stringify(p.options || []), JSON.stringify(p.qt || []), p.option_name || "",
       p.brand || "", p.origin || "", p.soldout ? 1 : 0, p.rank || 0, p.updated || new Date().toISOString()).run();
   await db.prepare("DELETE FROM products_fts WHERE id = ?").bind(p.id).run();
   await db.prepare("INSERT INTO products_fts (id, terms) VALUES (?, ?)").bind(p.id, terms(`${p.name} ${p.brand || ""}`).join(" ")).run();
@@ -115,7 +116,7 @@ export async function upsert(db, p) {
 export async function setStock(db, id, { soldout, price, cost } = {}) {
   const sets = [], args = [];
   if (soldout != null) { sets.push("soldout = ?"); args.push(soldout ? 1 : 0); }
-  if (price) { sets.push("price = ?", "normal_price = ?"); args.push(price, price); }
+  if (price) { sets.push("price = ?", "normal_price = ?", "qt = ?"); args.push(price, price, "[]"); }
   if (cost) { sets.push("cost = ?"); args.push(cost); }
   if (!sets.length) return;
   sets.push("updated = ?"); args.push(new Date().toISOString());

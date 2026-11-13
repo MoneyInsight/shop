@@ -62,9 +62,19 @@
     "대신택배": "https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=",
   };
   const trackUrl = (courier, no) => { const n = digits(no); const b = TRACK[courier]; return b && n ? b + n : "https://search.naver.com/search.naver?query=" + encodeURIComponent((courier || "택배") + " 배송조회 " + n); };
-  const trackHTML = (o) => o.tracking ? `<div class="track-box"><div><span class="muted">${esc(o.courier || "택배")}</span> <b>${esc(o.tracking)}</b></div>
-      <div class="track-btns"><a class="btn btn-dark sm" target="_blank" rel="noopener" href="${esc(trackUrl(o.courier, o.tracking))}">실시간 배송 조회</a>
-      <button class="btn btn-line sm" type="button" data-copy="${esc(digits(o.tracking))}">송장번호 복사</button></div></div>` : "";
+  const STAGES = ["접수", "집하", "이동중", "배송출발", "배송완료"];
+  const STAGE_TIP = { 접수: "택배사에 송장이 등록됐어요", 집하: "택배기사님이 상품을 가져갔어요", 이동중: "물류센터를 거쳐 이동하고 있어요", 배송출발: "오늘 도착 예정! 기사님이 배송을 시작했어요", 배송완료: "배송이 완료됐어요" };
+  const trackHTML = (o) => {
+    if (!o.tracking) return "";
+    const t = o.track, si = t && t.stage ? STAGES.indexOf(t.stage) : -1;
+    const time = (s) => { const d = new Date(s); return isNaN(d) ? "" : `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+    return `<div class="track-box"><div class="track-head"><div><span class="muted">${esc(o.courier || "택배")}</span> <b>${esc(o.tracking)}</b></div>
+      <div class="track-btns"><a class="btn btn-dark sm" target="_blank" rel="noopener" href="${esc(trackUrl(o.courier, o.tracking))}">택배사에서 보기</a>
+      <button class="btn btn-line sm" type="button" data-copy="${esc(digits(o.tracking))}">송장번호 복사</button></div></div>
+      ${si >= 0 ? `<div class="stage-bar">${STAGES.map((s, i) => `<div class="${i < si ? "on" : i === si ? "on now" : ""}"><i></i>${s}</div>`).join("")}</div>
+      <p class="stage-tip"><b>${esc(t.stage)}</b> · ${STAGE_TIP[t.stage] || ""}</p>
+      ${(t.events || []).length ? `<details class="stage-log"><summary>상세 이동 기록 ${t.events.length}건</summary><ul>${t.events.map((e) => `<li><span>${time(e.time)}</span>${esc(e.where ? e.where + " · " : "")}${esc(e.text)}</li>`).join("")}</ul></details>` : ""}` : ""}</div>`;
+  };
   document.addEventListener("click", async (e) => { const b = e.target.closest("[data-copy]"); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "복사했어요"; } catch (x) {} });
 
   // ── 회원 (네이버·카카오·구글 간편 로그인) ──
@@ -168,14 +178,18 @@
   }
   const productHref = (id) => DBMODE ? `${ROOT}product/item.html?id=${encodeURIComponent(id)}` : `${ROOT}product/${encodeURIComponent(id)}.html`;
 
+  // 수량 할인: 같은 상품을 n개(옵션 달라도 합산) 사면 개당 가격 qt[n-1] (11개 이상은 마지막 값)
+  const unitFor = (p, n) => (p.qt && p.qt.length ? p.qt[Math.min(Math.max(n, 1), p.qt.length) - 1] : Number(p.price));
   // 금액: 상품금액(옵션 추가금 포함) + 배송비(상품별 1회) − 쿠폰
   function calc(cart, products, discount) {
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
     const isSold = (x) => map[x.id] && (map[x.id].soldout || (x.opt != null && map[x.id].options?.[x.opt]?.so));
     const soldout = cart.filter(isSold).map((x) => map[x.id].name);
+    const qn = {};
+    cart.filter((x) => map[x.id] && !isSold(x) && !x.offer).forEach((x) => (qn[x.id] = (qn[x.id] || 0) + x.qty));
     const lines = cart.filter((x) => map[x.id] && !isSold(x)).map((x) => {
       const p = map[x.id], o = x.opt != null && p.options ? p.options[x.opt] : null;
-      const list = p.price + (o ? o.add : 0);
+      const list = unitFor(p, qn[x.id] || x.qty) + (o ? o.add : 0);
       return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, offer: x.offer || "", optName: o ? o.v : "", ci: cart.indexOf(x) };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
@@ -321,16 +335,21 @@
     if (p.brand) $(".d-name").insertAdjacentHTML("beforebegin", `<div class="d-brand">${esc(p.brand)}</div>`);
     $(".d-name").textContent = p.name;
     $(".d-price").innerHTML = `<span class="now">${won(p.price)}</span>`;
-    const meta = $(".d-meta dd:last-child"); if (meta) meta.textContent = p.origin || "상세설명 참조";
     const opts = p.options || [];
     if (opts.length) $(".qty-row").insertAdjacentHTML("beforebegin", `<label class="opt-label" for="opt">${esc(p.option_name || "옵션")}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>` +
       opts.map((o, i) => `<option value="${i}"${o.so ? " disabled" : ""}>${o.so ? "[품절] " : ""}${esc(o.v)}${o.add > 0 ? ` (+${won(o.add)})` : o.add < 0 ? ` (${won(o.add)})` : ""}</option>`).join("") + `</select>`);
     const buy = $("#buy");
-    Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)) });
+    Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []) });
+    const qd = $("#qty-deal");
+    if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
+      qd.hidden = false; $(".offer-box").hidden = true;
+      qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">한 번에 보내서 아낀 배송·포장비를 돌려드려요</span></p><div class="qty-cells">` +
+        [1, 2, 3, 5].filter((n) => n <= p.qt.length).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;
+    }
     if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }
     $(".detail-body").innerHTML = p.detail_html ? `<div class="detail-html">${p.detail_html}</div>` : `<img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">${esc(p.name)}</p>`;
     const nt = $$(".notice-table td");
-    if (nt.length > 3) { nt[0].textContent = p.name; nt[1].textContent = p.brand || "상세설명 참조"; nt[3].textContent = p.origin || "상세설명 참조"; }
+    if (nt.length > 3) { nt[0].textContent = p.name; nt[1].textContent = p.brand || "상세설명 참조"; }
     return true;
   }
 
@@ -352,16 +371,19 @@
     const el = $("#buy");
     if (!el) return;
     document.body.classList.add("has-buybar");
-    const id = el.dataset.id, name = el.dataset.name, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]");
+    const id = el.dataset.id, name = el.dataset.name, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]"), qt = JSON.parse(el.dataset.qt || "[]");
+    const unitAt = (n) => (qt.length ? qt[Math.min(n, qt.length) - 1] : base);
     store.set("recent", [id, ...store.get("recent", []).filter((x) => x !== id)].slice(0, 20));
     const inp = $("#qty"), sel = $("#opt");
     const optIdx = () => (sel && sel.value !== "" ? Number(sel.value) : null);
     const sync = () => {
       const v = Math.max(1, Math.min(99, parseInt(inp.value) || 1));
       inp.value = v;
-      const o = optIdx();
-      $("#d-total").textContent = won((base + (o != null ? adds[o] : 0)) * v);
+      const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
+      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v);
+      $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && v === 4)));
     };
+    $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
     $("#minus").onclick = () => { inp.value = +inp.value - 1; sync(); };
     $("#plus").onclick = () => { inp.value = +inp.value + 1; sync(); };
     inp.oninput = sync;

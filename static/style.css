@@ -389,3 +389,34 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .track-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;font-size:14px}
 .track-btns{display:flex;gap:8px}
 .track-btns .btn{width:auto;padding:0 14px}
+
+.track-box{display:block}
+.track-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.stage-bar{display:grid;grid-template-columns:repeat(5,1fr);margin:18px 0 6px;font-size:12px;color:#aaa;text-align:center}
+.stage-bar div{position:relative;padding-top:16px}
+.stage-bar i{position:absolute;top:4px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#ddd;z-index:1}
+.stage-bar div:not(:first-child)::before{content:"";position:absolute;top:8px;right:50%;width:100%;height:2px;background:#e6e6e6}
+.stage-bar div.on{color:var(--ink);font-weight:600}
+.stage-bar div.on i{background:var(--accent)}
+.stage-bar div.on::before{background:var(--accent)!important}
+.stage-bar div.now i{box-shadow:0 0 0 4px rgba(150,110,60,.2)}
+.stage-tip{margin:8px 0 0;font-size:14px}
+.stage-log{margin-top:10px;font-size:13px}
+.stage-log summary{cursor:pointer;color:var(--ink2)}
+.stage-log ul{margin:8px 0 0;padding:0;list-style:none}
+.stage-log li{padding:6px 0;border-top:1px solid var(--line)}
+.stage-log li span{display:inline-block;width:86px;color:#999}
+
+/* 수량 할인 */
+.qty-deal{margin-top:14px;padding:14px;border:1px solid #f0d9b5;background:#fffaf2;border-radius:12px}
+.qty-deal p{margin:0 0 10px;font-size:14px}
+.qty-deal p .muted{display:block;font-size:12px;margin-top:2px}
+.qty-cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qty-cells button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;cursor:pointer}
+.qty-cells button b{font-size:14px}
+.qty-cells button em{font-style:normal;color:var(--sale);font-weight:700}
+.qty-cells button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.d-total .per{display:block;font-size:12px;font-weight:400;color:var(--sale);text-align:right}
+
+.po-group{margin-top:18px}
+.po-group h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}

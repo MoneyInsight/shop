@@ -26,3 +26,7 @@ FREE_SHIPPING_OVER = "0"
 # npx wrangler secret put TOSS_SECRET_KEY   (테스트: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6)
 # npx wrangler secret put ADMIN_PASSWORD
 # npx wrangler secret put GITHUB_TOKEN      (이 저장소 Contents 읽기/쓰기 권한 토큰)
+
+# 2시간마다 배송중 주문의 택배 단계 확인 (배송완료면 자동 변경 + 리뷰 요청)
+[triggers]
+crons = ["0 */2 * * *"]

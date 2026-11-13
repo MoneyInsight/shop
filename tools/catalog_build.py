@@ -52,17 +52,17 @@ def products():
         out.append({"id": r["id"], "source": source_of(r["id"]), "source_no": re.sub(r"^DM", "", r["id"]), "supplier": r.get("supplier", ""),
                     "name": r["name"], "category": r["category"], "price": price, "normal_price": price if cost else int(r.get("normal_price") or price),
                     "cost": cost, "image": r.get("image", ""), "images": r.get("images") or [], "detail_html": r.get("detail_html", ""),
-                    "options": opts, "option_name": r.get("option_name", ""), "brand": r.get("brand", ""), "origin": r.get("origin", ""),
+                    "options": opts, "qt": [] if (st.get("cost") and cost != int(r.get("cost") or 0)) else (r.get("qt") or []), "option_name": r.get("option_name", ""), "brand": r.get("brand", ""), "origin": r.get("origin", ""),
                     "soldout": 1 if (st.get("soldout") or (opts and all(o["so"] for o in opts))) else 0, "rank": i, "updated": now})
     return out
 
 
 COLS = ["id", "source", "source_no", "supplier", "name", "category", "price", "normal_price", "cost", "image", "images", "detail_html",
-        "options", "option_name", "brand", "origin", "soldout", "rank", "updated"]
+        "options", "qt", "option_name", "brand", "origin", "soldout", "rank", "updated"]
 
 
 def vals(p):
-    return [json.dumps(p[c], ensure_ascii=False) if c in ("images", "options") else p[c] for c in COLS]
+    return [json.dumps(p[c], ensure_ascii=False) if c in ("images", "options", "qt") else p[c] for c in COLS]
 
 
 def sql_lit(v):
