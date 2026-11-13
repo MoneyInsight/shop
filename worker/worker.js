@@ -166,7 +166,6 @@ async function sellerProduct(req, env) {
   if (!d.name || !market) return fail("상품명과 오픈마켓 판매가는 꼭 입력해 주세요.");
   const price = priceFromMarket(env, market), supply = settleFromPrice(env, price);
   const naverLow = parseInt(d.naver_low);
-  if (naverLow && price >= naverLow) return fail(`판매가 ${price.toLocaleString()}원이 네이버 최저가 ${naverLow.toLocaleString()}원보다 비싸서 등록할 수 없어요. 오픈마켓 판매가를 낮춰 주세요.`);
   if (!d.image) return fail("대표 이미지를 올려 주세요.");
   if (!/^data:image\/|^https?:\/\//.test(d.image)) return fail("대표 이미지는 파일 또는 https:// 주소여야 해요.");
   const id = "req_" + Date.now();
@@ -920,7 +919,6 @@ async function approveProduct(req, env) {
   if (!p) return fail("요청을 찾을 수 없어요.");
   const salePrice = parseInt(price) || p.suggested_price;
   if (salePrice <= p.supply_price) return fail("판매가가 공급사 정산금보다 낮아요.");
-  if (p.naver_low && salePrice >= p.naver_low) return fail("판매가가 네이버 최저가보다 비싸요. 더 낮게 설정해 주세요.");
   p.supply_price = settleFromPrice(env, salePrice); // 판매가를 바꿨으면 정산금도 다시 계산
 
   const nextId = String(parseInt((await env.SHOP.get("next_id")) || "2001"));

@@ -150,10 +150,6 @@
   "show_supplier": false,
   "adult_verified": false,
   "customer_discount": 0,
-  "offer": {
-    "min_qty": 3,
-    "max_rate": 0.03
-  },
   "sourcing": {
     "_설명": "도매처에서 상품을 고를 때 쓰는 기준",
     "domeme_min_seller_grade": 4,
@@ -203,5 +199,6 @@
     ],
     "_설명": "오너클랜 = 공식 대량주문 양식(2023-08-30판) 열 그대로. 도매매 = 일괄주문서작성 화면 입력 항목 순서. 열 이름을 바꾸면 주문서가 바뀜"
   },
-  "require_detail": true
+  "require_detail": true,
+  "check_naver_low": false
 }

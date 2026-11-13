@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["offers", "가격 제안"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -44,10 +44,9 @@
       <div class="card" style="margin-top:16px"><h2>처리할 일</h2><ul class="why">
         <li>출고 대기 주문 <b>${s.toShip}</b>건 — 발주하고 송장번호를 입력해 주세요.</li>
         <li>취소·반품·교환 요청 <b>${s.claims}</b>건</li>
-        <li>답변 대기 가격 제안 <b>${s.offers || 0}</b>건 (직영 상품은 여기서, 공급사 상품은 공급사가 응답)</li>
         <li>답변 대기 문의 <b>${D.qnas.filter((q) => !q.answer).length + D.inquiries.filter((q) => !q.answer).length}</b>건</li>
         <li>공급사 입점 신청 <b>${D.apps.filter((a) => !a.code).length}</b>건 · 상품 승인 대기 <b>${D.pending.length}</b>건</li></ul></div>
-      <div class="card"><h2>이 기기로 주문 알림 <small>무료 · 웹 푸시</small></h2><p class="muted">휴대폰에서 관리자 페이지를 열고 켜 두면 주문·가격 제안·문의가 올 때 알림이 떠요. (아이폰은 홈 화면에 앱 설치 후)</p>
+      <div class="card"><h2>이 기기로 주문 알림 <small>무료 · 웹 푸시</small></h2><p class="muted">휴대폰에서 관리자 페이지를 열고 켜 두면 주문·문의가 올 때 알림이 떠요. (아이폰은 홈 화면에 앱 설치 후)</p>
         <div class="act-row"><button class="mini-btn" data-act="push-on">이 기기 알림 켜기</button><button class="mini-btn ghost" data-act="push-test">테스트 알림</button></div></div>
       <div class="card"><h2>카카오톡 알림 <small>무료 · 나와의 채팅</small></h2>${kakaoCard()}</div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;

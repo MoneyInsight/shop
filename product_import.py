@@ -214,7 +214,7 @@ def qty_prices(goods, ship, box_qty, free_over, pricing):
     return out if len(out) > 1 and out[1] < out[0] else []
 
 
-def load(data_dir, cats, discount=0, pricing=None, require_detail=True):
+def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_low=False):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
@@ -280,7 +280,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True):
             warns.append(f"{path.name}: 상세페이지가 없는 {no_detail}개는 올리지 않음")
     keep = []
     for p in products:
-        low = _num(p.get("naver_low"))
+        low = _num(p.get("naver_low")) if check_low else 0  # 최저가 비교는 기본으로 끔
         if low and int(p["price"]) >= low:
             excluded.append({"name": p["name"], "price": int(p["price"]), "naver_low": low, "file": "자동확인" if not p.get("_low_from_file") else p.get("_file", "")})
         else:

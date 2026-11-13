@@ -82,8 +82,7 @@
     $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (오픈마켓가 그대로)<br>
       공급사 정산금 <b>${won(settle)}</b> = 판매가 − 카드수수료 ${won(card)} − 플랫폼 3% ${won(fee)}<br>
       같은 상품을 오픈마켓(수수료 12%)에서 팔 때 정산금 약 <b>${won(Math.floor(c * 0.88))}</b>` +
-      (() => { const low = parseInt(($("#naver-low-in").value || "").replace(/\D/g, "")) || 0;
-        return !low ? "" : price < low ? `<br>✅ 네이버 최저가 ${won(low)}보다 ${won(low - price)} 싸요 — 등록 가능` : `<br>❌ 네이버 최저가 ${won(low)}보다 비싸요 — 등록 불가`; })();
+      "";
   });
 
   // ---------- 엑셀 일괄 등록 (땡잡았땡 양식) ----------

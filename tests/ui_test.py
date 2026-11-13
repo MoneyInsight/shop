@@ -115,24 +115,10 @@ async def main():
         await pg.click('[data-tab="qna"]'); ok("관리자 문의 목록", await pg.locator("#adm-view tr").count() >= 4)
         await pg.click('[data-tab="coupons"]'); await pg.fill("#c-code", "open10"); await pg.fill("#c-value", "1000"); await pg.fill("#c-min", "5000"); await pg.click('[data-act="coupon-save"]'); await pg.wait_for_timeout(700)
         ok("쿠폰 생성", "OPEN10" in await pg.locator("#adm-view").inner_text())
-        # 대량 구매 가격 제안: 고객 제안 → 관리자 수락 → 주문조회에서 제안가로 결제 화면
+        # 가격 제안 기능은 뺐음 → 상품 페이지에 없어야 함, 대량 구매 문의 링크는 있어야 함
         await pg.goto(S + f"product/{plain['id']}.html"); await pg.wait_for_timeout(500)
-        await pg.evaluate("document.querySelector('.offer-box').hidden = false")  # 수량 할인 상품은 제안 버튼이 숨겨져 있어 테스트용으로 보이게
-        await pg.click("#offer-open"); await pg.wait_for_timeout(200)
-        ok("제안 열면 3개로", await pg.input_value("#qty") == "3")
-        await pg.fill("#offer-name", "제안고객"); await pg.fill("#offer-phone", "010-2222-3333")
-        n0 = len(dialogs); await pg.click("#offer-send"); await pg.wait_for_timeout(800)
-        ok("가격 제안 접수", any("제안번호" in d for d in dialogs[n0:]), dialogs[n0:])
-        await pg.screenshot(path="/tmp/s_offer.png", full_page=False)
-        await pg.goto(S + "admin.html"); await pg.wait_for_selector("#adm-view .stat"); await pg.click('[data-tab="offers"]')
-        await pg.locator('[data-act="offer-yes"]').first.click(); await pg.wait_for_timeout(800)
-        ok("관리자 제안 수락", "수락" in await pg.locator("#adm-view").inner_text())
-        await pg.goto(S + "orders.html"); await pg.wait_for_selector("[data-buy]", timeout=5000)
-        await pg.screenshot(path="/tmp/s_offers.png", full_page=True)
-        await pg.click("[data-buy]"); await pg.wait_for_timeout(900)
-        exp = -(-plain["price"] * 0.97 // 10) * 10 * 3
-        ok("제안가 결제 금액", f"{int(exp):,}원" in await pg.locator("#order-sum").inner_text(), (exp, await pg.locator("#order-sum").inner_text()))
-        ok("제안 연락처 자동 입력", "".join(c for c in await pg.input_value("#phone") if c.isdigit()) == "01022223333", await pg.input_value("#phone"))
+        ok("가격 제안 없음", await pg.locator("#offer-open").count() == 0)
+        ok("대량 구매 문의 링크", await pg.locator(".bulk-link").count() == 1)
         # 모바일
         m = await ctx.new_page(); await m.set_viewport_size({"width": 390, "height": 844})
         await m.goto(S + "index.html"); await m.wait_for_timeout(600); await m.screenshot(path="/tmp/s_m_home.png")

@@ -127,7 +127,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer", "catalog_api", "order_sheets")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "order_sheets")}
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
     if CFG.get("catalog_api"):
@@ -298,15 +298,7 @@ def product_body(p, related):
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}'>
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
-{qty_table(p)}<div class="offer-box"{' hidden' if (p.get("soldout") or deal_shown(p)) else ''}><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
-<div class="offer-form" id="offer-form" hidden><div class="offer-calc" id="offer-calc"></div>
-<div class="offer-rates" id="offer-rates"></div>
-<label class="opt-label" for="offer-price">개당 제안 가격</label><input class="field" id="offer-price" inputmode="numeric">
-<div class="row2"><input class="field" id="offer-name" placeholder="이름"><input class="field" id="offer-phone" inputmode="tel" placeholder="연락처 010-0000-0000"></div>
-<input class="field" id="offer-email" type="email" placeholder="이메일 (선택 · 답변을 메일로도 받기)">
-<textarea class="field" id="offer-memo" placeholder="판매자에게 남길 말 (선택)" style="height:64px"></textarea>
-<button class="btn btn-dark" id="offer-send" type="button">가격 제안 보내기</button>
-<p class="muted" style="margin-top:8px">판매자가 48시간 안에 답변하고, 수락되면 72시간 안에 제안 가격으로 주문할 수 있어요. 결과는 <a href="../orders.html#offers" style="text-decoration:underline">주문조회 › 가격 제안</a>에서 확인하세요.</p></div></div>
+{qty_table(p)}
 <div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a><a class="bulk-link" href="../bulk.html?id={e(p["id"])}">대량 구매 문의 (기업·단체)</a></div>
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
@@ -418,10 +410,7 @@ def build_shop_pages():
 <button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button></div>
 <div class="card" id="my-orders" style="display:none"></div></div>
 <div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
-<div class="narrow" id="offers" style="margin-top:28px;max-width:760px"><div class="card form"><h2>가격 제안 내역</h2>
-<p class="muted">대량 구매 가격 제안의 답변을 확인하고, 수락된 제안은 바로 주문할 수 있어요.</p>
-<div id="offer-mine"></div>
-<label for="of-id" style="margin-top:14px">제안번호로 찾기</label><div class="row"><input id="of-id" placeholder="예) OFAB12CDE"><input id="of-phone" inputmode="tel" placeholder="연락처"><button type="button" id="of-btn">확인</button></div></div></div>''')
+''')
     simple("login.html", "로그인", f'''<div class="narrow"><div class="card login-box" id="login-box">
 <p class="login-lead">회원가입 없이 쓰던 계정으로 <b>3초 만에</b> 시작하세요</p>
 <a class="sns-btn naver" data-provider="naver" href="#"><span class="sns-ico">N</span>네이버로 시작하기</a>
@@ -526,7 +515,7 @@ def build_partner_pages():
 <label>입점코드</label><input name="code" placeholder="승인 시 받은 코드">
 <label>상품명</label><input name="name"><label>카테고리</label><select name="category" >{cats}</select>
 <label>오픈마켓 판매가 (원, 무료배송 기준 — 쿠팡·11번가 등에서 지금 파는 가격)</label><input name="market_price" inputmode="numeric" id="market-in">
-<label>네이버 최저가 (선택 · 적으면 이보다 비쌀 때 등록 안 돼요)</label><input name="naver_low" inputmode="numeric" id="naver-low-in">
+
 <div id="price-preview" class="note" style="margin:10px 0 0;line-height:1.8">오픈마켓 판매가를 입력하면 판매가·정산금이 자동 계산돼요.<br>판매가 = 오픈마켓가 그대로 / 정산금 = 판매가 − 카드수수료 − 플랫폼 3% (전 상품 무료배송)<br>고객이 3개 이상 살 때 최대 3%까지 가격 제안을 할 수 있고, 수락 여부는 공급사가 정해요.</div>
 <label>권장 소비자가 (선택)</label><input name="normal_price" inputmode="numeric">
 <label>브랜드 / 제조사 / 원산지</label><div class="row"><input name="brand" placeholder="브랜드"><input name="maker" placeholder="제조사"><input name="origin" placeholder="원산지"></div>
@@ -536,17 +525,13 @@ def build_partner_pages():
 <button class="btn btn-dark" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
 <div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록</h2>
 <p style="color:#555;font-size:15px">땡잡았땡 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
-가격은 <b>오픈마켓 판매가(무료배송 기준)</b>이 그대로 판매가가 되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요. 네이버 최저가보다 비싼 상품은 등록되지 않아요.</p>
+가격은 <b>오픈마켓 판매가(무료배송 기준)</b>이 그대로 판매가가 되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요.</p>
 <a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>땡잡았땡 상품등록 양식 내려받기 (.xlsx)</a>
 <label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
 <div id="bulk-result" style="margin-top:14px;font-size:14px"></div></div>
-<div class="card form" id="offer-seller"><h2>4. 가격 제안 확인·응답</h2>
-<p style="color:#555;font-size:15px">고객이 3개 이상 구매하면서 최대 3% 낮은 가격을 제안할 수 있어요. 48시간 안에 수락하거나 거절해 주세요. 수락하면 고객이 72시간 안에 그 가격으로 주문할 수 있어요.</p>
-<label>입점코드</label><div class="row"><input id="offer-code" placeholder="승인 시 받은 코드"><button type="button" id="offer-load">제안 불러오기</button></div>
-<div id="offer-list" style="margin-top:14px;font-size:14px"></div></div>
-</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>주문 즉시 발주 안내</li><li>대량 구매 가격 제안은 공급사가 직접 수락</li></ul></div></div></div>''',
+</div><div><div class="card"><h2>공급사 혜택</h2><ul class="why" style="padding:0"><li>수수료는 카드수수료 + 3%뿐 (오픈마켓 10~13%)</li><li>입점비·월 이용료 없음</li><li>주문 즉시 발주 안내</li><li>많이 살수록 자동 수량 할인으로 객단가 상승</li></ul></div></div></div>''',
            scripts='<script>window.SHOP_CATS=' + json.dumps({"cats": CATS, "keywords": __import__("product_import").KEYWORDS}, ensure_ascii=False) + '</script><script src="partner.js"></script>')
     simple("admin.html", "관리자", '''<div class="narrow"><div class="card form" id="admin-login"><label for="admin-pw">관리자 비밀번호</label><input id="admin-pw" type="password" autocomplete="current-password">
 <button class="btn btn-dark" style="margin-top:14px" id="admin-enter">들어가기</button></div></div>
