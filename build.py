@@ -209,6 +209,8 @@ def listing(title, mode, items, root, cat="", count=None):
 
 # ---------------- 페이지 ----------------
 def build_home(ps):
+    # 수량 할인 최대 비율 (상품 중 가장 많이 내려가는 값, 내림)
+    max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     by_cat = {c["slug"]: [p for p in ps if p["category"] == c["slug"]] for c in SHOW_CATS}
@@ -220,6 +222,7 @@ def build_home(ps):
     body = f'''<section class="hero"><div class="wrap"><div><small>THE HONEST PRICE</small>
 <h1>좋은 물건을,<br>군더더기 없는 가격으로.</h1>
 <p>유통 단계의 수수료를 덜어내고 꼭 필요한 만큼만 남겼습니다. 모든 상품은 무료로 배송해 드립니다.</p>
+{f'<p class="hero-deal"><b>많이 살수록 더 싸게!</b> 같은 상품 2개부터 자동 할인, <b>최대 {max_deal}%</b>까지 내려가요.</p>' if max_deal >= 2 else ''}
 <a class="btn" href="search.html">전체 상품 보기</a></div>
 <div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
 <div class="benefits"><div class="wrap">
