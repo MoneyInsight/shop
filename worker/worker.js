@@ -378,6 +378,18 @@ export const TEMPLATES = {
 판매가로는 언제든 바로 주문하실 수 있습니다.
 
 상품 보기: #{링크}` },
+  SOLDOUT_CANCEL: { to: "고객", when: "도매처 품절로 주문을 취소했을 때", text:
+`[땡잡았땡] #{고객명}님, 죄송합니다.
+
+주문하신 상품이 공급처에서 갑자기 품절되어 주문을 취소하고 결제 금액 전액을 환불해 드렸습니다.
+
+주문번호: #{주문번호}
+상품: #{상품명}
+환불금액: #{결제금액}원
+
+카드사에 따라 환불까지 3~7영업일이 걸릴 수 있습니다. 불편을 드려 정말 죄송합니다.
+
+비슷한 상품 보기: #{링크}` },
   ORDER_DONE: { to: "고객", when: "결제가 완료됐을 때", text:
 `[땡잡았땡] #{고객명}님, 주문이 완료되었습니다.
 
@@ -838,6 +850,31 @@ async function adminTrackingImport(req, env) {
   return json({ ...res, message: `송장 ${res.ok}건 입력${res.skip.length ? `, 못 찾은 주문 ${res.skip.length}건` : ""}` });
 }
 
+// 도매처 품절 → 전액 환불 + 손님에게 사과 안내 (웹푸시·메일, 알림톡은 템플릿 있을 때)
+async function adminSoldoutCancel(req, env) {
+  const { orderId } = await req.json();
+  const o = await env.SHOP.get("order:" + orderId, "json");
+  if (!o) return fail("주문을 찾을 수 없어요.");
+  if (!["결제완료", "상품준비중"].includes(o.status)) return fail("출고 전 주문만 품절 취소할 수 있어요.");
+  const left = o.amount - (o.refunded || 0);
+  const c = await tossCancel(env, o.paymentKey, "상품 품절로 인한 주문 취소");
+  if (!c.ok) return fail(c.message);
+  o.refunded = (o.refunded || 0) + left;
+  setStatus(o, "취소완료", { reason: "도매처 품절" });
+  await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  const l = o.lines[0];
+  await alertCustomer(env, "SOLDOUT_CANCEL", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 상품명: l.name.slice(0, 40) + (o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""), 결제금액: won0(left), 링크: siteLink(env, "search.html?q=" + encodeURIComponent(l.name.split(" ").slice(0, 2).join(" "))) });
+  return json({ ok: true, message: `${won0(left)}원 환불하고 손님께 안내를 보냈어요. 도매처 상품도 품절 처리해 주세요.` });
+}
+
+// 백업: 주문·회원·리뷰·문의·쿠폰 전체를 파일로 (관리자가 내려받아 보관)
+async function adminExport(env) {
+  const data = { exportedAt: new Date().toISOString() };
+  for (const k of ["order", "user", "review", "inquiry", "qna", "coupon", "app", "seller"]) data[k] = await kvList(env, k + ":");
+  await env.SHOP.put("backup:last", data.exportedAt);
+  return new Response(JSON.stringify(data), { headers: { ...cors, "Content-Type": "application/json; charset=utf-8" } });
+}
+
 async function adminOrderCancel(req, env) {
   const { orderId, reason, amount } = await req.json();
   const o = await env.SHOP.get("order:" + orderId, "json");
@@ -910,7 +947,9 @@ async function adminList(env) {
   stats.offers = offers.filter((o) => o.status === "대기").length;
   const km = await env.SHOP.get("kakao:me", "json");
   const kakaoMe = { clientId: env.KAKAO_REST_KEY || "", connected: !!(km && km.refresh), connectedAt: km?.connectedAt || "" };
-  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, offers, kakaoMe, statuses: ORDER_STATUS });
+  const broken = (await env.SHOP.get("broken", "json")) || {};
+  const lastBackup = await env.SHOP.get("backup:last");
+  return json({ apps, pending, orders, reports, stats, qnas, inquiries, reviews, coupons, offers, kakaoMe, statuses: ORDER_STATUS, broken, lastBackup });
 }
 
 async function approveSeller(req, env) {
@@ -994,6 +1033,12 @@ export async function handle(req, env, path) {
   if (req.method !== "POST") return fail("Not found", 404);
   try {
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/track/broken") {  // 사진이 안 뜨는 상품 신고 (손님 브라우저가 자동으로)
+      const d = await req.json().catch(() => ({}));
+      const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "").slice(0, 30);
+      if (id) { const b = (await env.SHOP.get("broken", "json")) || {}; if (!b[id]) { b[id] = new Date().toISOString(); await env.SHOP.put("broken", JSON.stringify(b)); } }
+      return json({ ok: true });
+    }
     if (path === "/track/visit") { await stats.visit(env, await req.json().catch(() => ({}))); return json({ ok: true }); }
     if (path === "/me" || path === "/me/save" || path === "/me/orders" || path === "/auth/logout") {
       const d = await req.json().catch(() => ({}));
@@ -1045,6 +1090,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/close-report") return await closeReport(req, env);
       if (path === "/admin/order-update") return await adminOrderUpdate(req, env);
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
+      if (path === "/admin/soldout-cancel") return await adminSoldoutCancel(req, env);
+      if (path === "/admin/export") return await adminExport(env);
       if (path === "/admin/track-sweep") return json(await trackSweep(env));
       if (path === "/admin/po") return json(await adminPo(env));
       if (path === "/admin/analytics") { const d = await req.json(); const td = stats.dayKey(); return json(await stats.analytics(env, kvList, { from: d.from || td, to: d.to || td }, PRICING(env))); }

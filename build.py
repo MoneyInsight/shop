@@ -5,6 +5,7 @@
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
 import os, re, csv, json, html, shutil, datetime, hashlib
+import notice
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -39,6 +40,8 @@ def load_products():
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
     ss_rows, warns, excluded = product_import.load(Path(os.environ.get("DATA_DIR") or ROOT / "data"), CATS, CFG.get("customer_discount", 0), CFG.get("pricing"), CFG.get("require_detail", True))
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
+    # KC 인증이 필요한 품목인데 인증번호가 없는 상품 (관리자 대시보드에서 확인)
+    write("kc_check.json", json.dumps([{"id": p["id"], "name": p["name"], "kind": notice.kind_of(p)} for p in ss_rows if notice.needs_kc(p) and not p.get("kc")], ensure_ascii=False))
     for w in warns:
         print("⚠️", w)
     seen = {r["id"] for r in rows}
@@ -318,10 +321,7 @@ def product_body(p, related):
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
 <section class="tab-sec" id="info"><div class="detail-body">{desc}</div>
 <h3 style="margin-top:56px">상품정보 제공고시</h3><table class="notice-table">
-<tr><th>상품명</th><td>{e(p["name"])}</td></tr><tr><th>브랜드</th><td>{e(p["brand"] or "상세설명 참조")}</td></tr>
-<tr><th>제조자 / 수입자</th><td>{e(p["maker"] or "상세설명 참조")}</td></tr><tr><th>제조국</th><td>상세페이지 참조</td></tr>
-<tr><th>품질보증 기준</th><td>관련 법 및 소비자분쟁해결기준에 따름</td></tr>
-<tr><th>A/S 책임자와 전화번호</th><td>{e(BIZ["company"])} {e(BIZ["phone"])}</td></tr></table></section>
+{"".join(f"<tr><th>{e(k)}</th><td>{e(v)}</td></tr>" for k, v in notice.rows(p, BIZ))}</table></section>
 <section class="tab-sec" id="review"><h3>리뷰 <button class="btn btn-line sm" id="rv-open">리뷰 쓰기</button></h3>
 <div class="mini-form" id="rv-form"><p class="muted">상품을 구매하신 분만 작성하실 수 있습니다. 주문번호와 주문 시 입력한 연락처를 입력해 주세요.</p>
 <div class="star-pick" aria-label="별점">{"".join(f'<button data-v="{i}" aria-label="{i}점">★</button>' for i in range(1, 6))}</div>

@@ -38,6 +38,7 @@ ALIASES = {
     "box_qty": ["묶음배송수량", "묶음배송 수량", "수량별부과-수량"],
     "free_over": ["무료배송기준금액", "조건부무료-상품판매가합계"],
     "opt_name": ["옵션명"],
+    "kc": ["KC인증", "KC 인증", "인증번호", "KC인증번호", "인증정보"],
     "opt_values": ["옵션값"],
     "opt_prices": ["옵션가"],
     "options": ["옵션"],
@@ -264,7 +265,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             if require_detail and not detail.strip():
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
-                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),

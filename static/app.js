@@ -260,7 +260,13 @@
   // ── 사진을 못 불러오면 대체 그림 ──
   document.addEventListener("error", (e) => {
     const t = e.target;
-    if (t.tagName === "IMG" && !t.dataset.fb) { t.dataset.fb = 1; t.src = ROOT + "noimg.svg"; }
+    if (t.tagName === "IMG" && !t.dataset.fb) {
+      t.dataset.fb = 1; t.src = ROOT + "noimg.svg";
+      // 대표 사진이 안 뜨는 상품은 관리자에게 자동 신고 (같은 상품은 한 번만)
+      const id = t.closest(".p-card")?.querySelector("[data-wish]")?.dataset.wish || (t.id === "main-img" && $("#buy")?.dataset.id);
+      const sent = store.get("broken_sent", []);
+      if (id && API && !sent.includes(id)) { store.set("broken_sent", [...sent, id].slice(-200)); fetch(API + "/track/broken", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {}); }
+    }
   }, true);
 
   // ── 검색창 ──
@@ -430,8 +436,8 @@
     }
     if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }
     $(".detail-body").innerHTML = p.detail_html ? `<div class="detail-html">${p.detail_html}</div>` : `<img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">${esc(p.name)}</p>`;
-    const nt = $$(".notice-table td");
-    if (nt.length > 3) { nt[0].textContent = p.name; nt[1].textContent = p.brand || "상세설명 참조"; }
+    $$(".notice-table tr").forEach((tr) => { const k = tr.querySelector("th")?.textContent, td = tr.querySelector("td");
+      if (k === "상품명") td.textContent = p.name; if (k === "브랜드") td.textContent = p.brand || "상세페이지 참조"; });
     return true;
   }
 

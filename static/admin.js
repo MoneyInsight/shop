@@ -31,7 +31,7 @@
         ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${esc(o.claim.reason)}</span>` : ""}</td>
       <td><select data-f="courier"><option value="">택배사</option>${COURIERS.map((c) => `<option${c === o.courier ? " selected" : ""}>${c}</option>`).join("")}</select><br>
         <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px">${o.track?.stage ? `<br><b style="color:var(--accent)">📦 ${esc(o.track.stage)}</b>` : ""}</td>
-      <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}">환불</button></td></tr>`;
+      <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}">환불</button>${["결제완료", "상품준비중"].includes(o.status) ? `<br><button class="ghost" data-act="soldout-cancel" data-id="${esc(o.orderId)}">품절 취소</button>` : ""}</td></tr>`;
   }
   const orderTable = (list) => list.length ? `<table class="adm-table"><tr><th>주문</th><th>상품</th><th>받는 분</th><th>결제</th><th>상태</th><th>송장</th><th></th></tr>${list.map(orderRow).join("")}</table>` : `<p class="empty">해당하는 주문이 없어요.</p>`;
 
@@ -49,6 +49,10 @@
       <div class="card"><h2>이 기기로 주문 알림 <small>무료 · 웹 푸시</small></h2><p class="muted">휴대폰에서 관리자 페이지를 열고 켜 두면 주문·문의가 올 때 알림이 떠요. (아이폰은 홈 화면에 앱 설치 후)</p>
         <div class="act-row"><button class="mini-btn" data-act="push-on">이 기기 알림 켜기</button><button class="mini-btn ghost" data-act="push-test">테스트 알림</button></div></div>
       <div class="card"><h2>카카오톡 알림 <small>무료 · 나와의 채팅</small></h2>${kakaoCard()}</div>
+      <div class="card"><h2>점검</h2><ul class="why">
+        <li>KC 인증번호 확인 필요 상품 <b>${(D.kc || []).length}</b>개 ${(D.kc || []).slice(0, 5).map((x) => `<br><span class="muted">· ${esc(x.name)} (${esc(x.kind)})</span>`).join("")}<br><span class="muted">어린이·전기용품은 KC 인증이 없으면 판매하면 안 돼요. 도매처 상세페이지에서 인증번호를 확인하세요.</span></li>
+        <li>사진이 안 뜨는 상품 <b>${Object.keys(D.broken || {}).length}</b>개 ${Object.keys(D.broken || {}).slice(0, 8).map((id) => `<a class="muted" href="product/${esc(id)}.html" target="_blank">${esc(id)}</a>`).join(" ")}</li>
+        <li>마지막 백업 <b>${D.lastBackup ? dt(D.lastBackup) : "없음"}</b> <button class="mini-btn" data-act="backup">지금 백업 받기</button><br><span class="muted">주문·회원·리뷰·문의 전체를 파일로 받아요. 일주일에 한 번 받아 두세요. (개인정보가 들어 있으니 PC에만 보관)</span></li></ul></div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;
     if (tab === "orders") {
       const filters = ["전체", "결제완료", "상품준비중", "배송중", "배송완료", "구매확정"];
@@ -145,6 +149,7 @@
   async function load() {
     D = await call("/admin/list");
     D.po = (await call("/admin/po").catch(() => ({ groups: [] }))).groups || [];
+    D.kc = await fetch("kc_check.json").then((r) => r.json()).catch(() => []);
     $("#admin-login").style.display = "none"; $("#admin-body").style.display = "";
     paint();
   }
@@ -253,6 +258,16 @@
     const act = b.dataset.act, id = b.dataset.id, key = b.dataset.key, row = b.closest("tr");
     try {
       if (act === "export") return exportCsv();
+      if (act === "soldout-cancel") {
+        if (!confirm("도매처 품절로 이 주문을 취소하고 전액 환불할까요? 손님께 사과 안내가 자동으로 가요.")) return;
+        alert((await call("/admin/soldout-cancel", { orderId: id })).message); return load();
+      }
+      if (act === "backup") {
+        const r = await fetch(API + "/admin/export", { method: "POST", headers: { Authorization: "Bearer " + encodeURIComponent(PW.trim()) } });
+        if (!r.ok) { alert("백업을 받지 못했어요."); return; }
+        const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `땡잡았땡_백업_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+        return load();
+      }
       if (act === "period") { period = b.dataset.p; A = null; return paint(); }
       if (act === "po-sheet") return poSheet(b.dataset.src);
       if (act === "po-nos") { const g = (D.po || []).find((x) => x.source === "domeme"); await navigator.clipboard.writeText([...new Set(g.lines.map((l) => l.product_no))].join(",")); alert("상품번호를 복사했어요. 도매매 ‘일괄주문서작성’의 상품번호 칸에 붙여넣으세요. (1회 30개까지)"); return; }
