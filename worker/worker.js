@@ -21,6 +21,7 @@ import * as auth from "./auth.js";
 import * as tracking from "./track.js";
 import * as stats from "./stats.js";
 import { regionFee } from "./region.js";
+import { memberDiscount, DEFAULT as MEMBER_DEFAULT } from "./member.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -108,9 +109,10 @@ async function confirm(req, env) {
       if (why) return fail(why);
       unit = of.price; offerId = of.id; usedOffers.push(of);
     }
+    const listUnit = (qt.length ? Number(qt[0]) : Number(p.price)) + (optName ? p.options[Number(it.opt)].add : 0);
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
@@ -123,6 +125,11 @@ async function confirm(req, env) {
     if (!c.ok) return fail(c.message);
     discount = c.discount; couponCode = c.code;
   }
+  let memberDisc = 0;  // 로그인 회원 추가 즉시 할인
+  if (token && (await auth.userFromToken(env, token))) {
+    memberDisc = memberDiscount(lines.map((l) => ({ unit: l.price, list: l.list_unit, qty: l.qty })), { ...MEMBER_DEFAULT, rate: +(env.MEMBER_DISCOUNT ?? MEMBER_DEFAULT.rate) });
+    discount += memberDisc;
+  }
   if (subtotal - discount + shipping !== Number(amount)) return fail("결제 금액이 상품 금액과 달라요. 다시 주문해 주세요.");
 
   const r = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
@@ -134,7 +141,7 @@ async function confirm(req, env) {
   if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
 
   const now = new Date().toISOString();
-  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, lines, customer, method: pay.method, paymentKey,
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey,
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결

@@ -50,8 +50,8 @@ let [st, d] = await post("/me/save", { token, addr: { name: "홍길동", phone: 
 ok(st === 200 && d.user.addr.addr1 === "수원시" && d.user.wish.length === 2, "배송지·찜 저장");
 
 // 로그인 상태로 결제 → 내 주문에 연결
-[st] = await post("/confirm", { paymentKey: "pk", orderId: "ORD-AUTH-1", amount: 10000, items: [{ id: "P1", qty: 1 }], customer: { name: "홍길동", phone: "010-1234-5678" }, token });
-ok(st === 200, "로그인 결제 성공");
+[st] = await post("/confirm", { paymentKey: "pk", orderId: "ORD-AUTH-1", amount: 9900, items: [{ id: "P1", qty: 1 }], customer: { name: "홍길동", phone: "010-1234-5678" }, token });
+ok(st === 200, "로그인 결제 성공 (회원 1% 할인 9,900원)");
 [st, d] = await post("/me/orders", { token });
 ok(st === 200 && d.orders.length === 1 && d.orders[0].orderId === "ORD-AUTH-1", "내 주문 목록");
 ok(JSON.parse(mem.get("order:ORD-AUTH-1")).uid === "naver:N1", "주문에 회원 연결");

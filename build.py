@@ -8,6 +8,8 @@ import os, re, csv, json, html, shutil, datetime, hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+# 화면 파일이 바뀌면 주소 뒤 번호도 바뀌어서 손님 브라우저가 옛 파일을 쓰지 않게 함
+ASSET_V = hashlib.md5(b"".join((ROOT / "static" / f).read_bytes() for f in ("style.css", "app.js"))).hexdigest()[:8]
 OUT = ROOT / "site"
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 BIZ = CFG["business"]
@@ -127,7 +129,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "order_sheets", "remote_ship")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "order_sheets", "remote_ship", "member_discount")}
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
     if CFG.get("catalog_api"):
@@ -149,7 +151,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="{root}style.css">{extra_head}
+<link rel="stylesheet" href="{root}style.css?v={ASSET_V}">{extra_head}
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
 <div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
@@ -174,7 +176,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 </div></footer>
 <nav class="tabbar" aria-label="하단 메뉴"><a href="{root}index.html">{I_HOME}홈</a><a href="{root}search.html">{I_MENU}전체</a><a href="{root}orders.html">{I_BOX}주문조회</a>
 <a href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a><a href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></nav>
-{scripts}<script src="{root}app.js"></script>
+{scripts}<script src="{root}app.js?v={ASSET_V}"></script>
 </body></html>'''
 
 
@@ -303,7 +305,11 @@ def product_body(p, related):
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}'>
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
-<a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}><span class="bulk-ico">📦</span><span><b>대량 구매 · 기업/단체 견적</b><small>10개 이상, 사은품·판촉물·회사 비품 — 수량에 맞춰 더 좋은 가격으로 견적 드려요</small></span><span class="bulk-go">견적 요청 ›</span></a>
+<a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
+<span class="bulk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/></svg></span>
+<span class="bulk-txt"><b>대량 구매 · 기업/단체 견적</b><small>수량에 맞춰 더 좋은 가격으로 견적을 보내 드려요</small>
+<span class="bulk-tags"><em>10개 이상</em><em>세금계산서</em><em>로고 인쇄·포장</em><em>여러 곳 배송</em></span></span>
+<span class="bulk-go">견적 요청<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></a>
 <div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>

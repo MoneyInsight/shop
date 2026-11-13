@@ -180,6 +180,31 @@
 
   // 수량 할인: 같은 상품을 n개(옵션 달라도 합산) 사면 개당 가격 qt[n-1] (11개 이상은 마지막 값)
   const unitFor = (p, n) => (p.qt && p.qt.length ? p.qt[Math.min(Math.max(n, 1), p.qt.length) - 1] : Number(p.price));
+  // 로그인 회원 추가 즉시 할인 (서버 worker/member.js 와 같은 계산, 순마진 8% 아래로는 안 깎음)
+  function memberDisc(lines) {
+    const P = CFG.member_discount; if (!P || !P.rate) return 0;
+    const k = 1 - P.card_fee - 1 / 11;
+    let d = 0;
+    for (const l of lines) {
+      let c = (l.list1 * k - P.ops_cost_won) / (10 / 11 + P.net_margin);
+      if (c * P.net_margin < P.min_margin_won) c = (l.list1 * k - P.ops_cost_won - P.min_margin_won) * 11 / 10;
+      c = Math.max(0, c);
+      const floor = (c * 10 / 11 + c * P.min_net_margin) / k;
+      d += Math.max(0, Math.min(l.price * P.rate, l.price - floor)) * l.qty;
+    }
+    return Math.floor(d / 10) * 10;
+  }
+  const memberPct = () => (CFG.member_discount?.rate ? Math.round(CFG.member_discount.rate * 100) : 0);
+  // 간편 로그인이 실제로 켜져 있을 때만 '로그인하면 할인' 안내 (세션마다 한 번 확인)
+  async function loginOn() {
+    let v = sessionStorage.getItem("login_on");
+    if (v == null) {
+      const h = API ? await fetch(API + "/health").then((r) => r.json()).catch(() => null) : null;
+      v = h?.login && Object.values(h.login).some(Boolean) ? "1" : "0";
+      try { sessionStorage.setItem("login_on", v); } catch (e) {}
+    }
+    return v === "1";
+  }
   // 제주·도서산간 추가 배송비 (서버 worker/region.js 와 같은 규칙)
   function regionFee(zip, addr) {
     const rule = CFG.remote_ship; if (!rule) return { fee: 0, label: "" };
@@ -201,8 +226,8 @@
     cart.filter((x) => map[x.id] && !isSold(x) && !x.offer).forEach((x) => (qn[x.id] = (qn[x.id] || 0) + x.qty));
     const lines = cart.filter((x) => map[x.id] && !isSold(x)).map((x) => {
       const p = map[x.id], o = x.opt != null && p.options ? p.options[x.opt] : null;
-      const list = unitFor(p, qn[x.id] || x.qty) + (o ? o.add : 0);
-      return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, offer: x.offer || "", optName: o ? o.v : "", ci: cart.indexOf(x) };
+      const list = unitFor(p, qn[x.id] || x.qty) + (o ? o.add : 0), list1 = unitFor(p, 1) + (o ? o.add : 0);
+      return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, list1, offer: x.offer || "", optName: o ? o.v : "", ci: cart.indexOf(x) };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     let shipping = lines.reduce((a, l) => a + (l.shipping_fee || 0), 0);
@@ -428,6 +453,10 @@
     const el = $("#buy");
     if (!el) return;
     document.body.classList.add("has-buybar");
+    if (memberPct() && $(".d-price")) {
+      if (token() && member()) $(".d-price").insertAdjacentHTML("afterend", `<p class="member-badge on">회원 ${memberPct()}% 추가 즉시 할인 · 결제할 때 적용</p>`);
+      else loginOn().then((on) => on && $(".d-price").insertAdjacentHTML("afterend", `<a class="member-badge" href="${ROOT}login.html">로그인하면 <b>${memberPct()}% 추가</b> 즉시 할인 ›</a>`));
+    }
     const id = el.dataset.id, name = el.dataset.name, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]"), qt = JSON.parse(el.dataset.qt || "[]");
     const unitAt = (n) => (qt.length ? qt[Math.min(n, qt.length) - 1] : base);
     store.set("recent", [id, ...store.get("recent", []).filter((x) => x !== id)].slice(0, 20));
@@ -644,11 +673,15 @@
       sums = calc(cart, products, discount);
       const rf = regionFee($("#zip").value, ($("#addr1").value + " " + $("#addr2").value).trim());
       if (rf.fee) { sums.shipping += rf.fee; sums.total += rf.fee; sums.remote = rf; }
+      sums.member = token() && member() ? memberDisc(sums.lines) : 0;
+      if (sums.member) sums.total -= sums.member;
       $("#order-sum").innerHTML = `<div class="sum"><div><span>상품 금액</span><span>${won(sums.subtotal)}</span></div>
         ${sums.discount ? `<div class="minus"><span>쿠폰 할인</span><span>−${won(sums.discount)}</span></div>` : ""}
+        ${sums.member ? `<div class="minus"><span>회원 즉시 할인 (${memberPct()}%)</span><span>−${won(sums.member)}</span></div>` : ""}
         <div><span>배송비</span><span>${sums.shipping ? won(sums.shipping) : "무료"}</span></div>
         ${sums.remote ? `<p class="muted" style="margin:4px 0 0;font-size:12px">${esc(sums.remote.label)} 지역 추가 배송비 ${won(sums.remote.fee)}이 포함됐어요.</p>` : ""}
-        <div class="total"><span>최종 결제 금액</span><b>${won(sums.total)}</b></div></div>`;
+        <div class="total"><span>최종 결제 금액</span><b>${won(sums.total)}</b></div></div>
+        ${!sums.member && memberPct() && !token() && sessionStorage.getItem("login_on") === "1" ? `<a class="member-nudge" href="${ROOT}login.html">로그인하면 <b>${memberPct()}% 더</b> 즉시 할인돼요 · 네이버·카카오로 3초 ›</a>` : ""}`;
       $("#pay-btn").textContent = won(sums.total) + " 결제하기";
       if (widgets) await widgets.setAmount({ currency: "KRW", value: sums.total });
     };
