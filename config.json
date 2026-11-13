@@ -122,6 +122,8 @@
   ],
   "margin_rate": 0.03,
   "min_margin_won": 0,
+  "catalog_api": false,
+  "_catalog_api_설명": "true = 상품을 서버 DB(/catalog)에서 불러옴. 서버(D1) 연결 후 켜기. false = products.json 사용",
   "worker_url": "https://ttaengjab.netlify.app/api",
   "pricing": {
     "net_margin": 0.12,

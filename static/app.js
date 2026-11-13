@@ -79,6 +79,14 @@
     if (!PRODUCTS) PRODUCTS = await (await fetch(ROOT + "products.json", { cache: "no-cache" })).json();
     return PRODUCTS;
   }
+  // 상품 DB 모드(config catalog_api=true): 상품을 서버에서 필요한 만큼만 받아옴 (100만 개용)
+  const DBMODE = !!(CFG.catalog_api && API);
+  async function apiGet(path) { try { const r = await fetch(API + path); return r.ok ? await r.json() : null; } catch (e) { return null; } }
+  async function getProducts(ids) {
+    if (!DBMODE) return loadProducts();
+    return (await Promise.all([...new Set(ids)].map((id) => apiGet("/catalog/item?id=" + encodeURIComponent(id))))).filter(Boolean);
+  }
+  const productHref = (id) => DBMODE ? `${ROOT}product/item.html?id=${encodeURIComponent(id)}` : `${ROOT}product/${encodeURIComponent(id)}.html`;
 
   // 금액: 상품금액(옵션 추가금 포함) + 배송비(상품별 1회) − 쿠폰
   function calc(cart, products, discount) {
@@ -101,7 +109,7 @@
   function cardHTML(p) {
     const rate = p.normal_price > p.price ? Math.round((1 - p.price / p.normal_price) * 100) : 0;
     const wished = getWish().includes(p.id);
-    return `<a class="p-card${p.soldout ? " is-soldout" : ""}" href="${ROOT}product/${encodeURIComponent(p.id)}.html">
+    return `<a class="p-card${p.soldout ? " is-soldout" : ""}" href="${productHref(p.id)}">
       <div class="p-thumb"><img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy">${p.badge ? `<span class="badge ${esc(p.badge)}">${esc(p.badge)}</span>` : ""}${p.soldout ? `<span class="soldout-cover">일시품절</span>` : ""}
       <button class="wish-btn${wished ? " on" : ""}" data-wish="${esc(p.id)}" aria-label="찜하기">${HEART}</button></div>
       <div class="p-brand">${esc(p.brand || "")}</div><div class="p-name">${esc(p.name)}</div>
@@ -137,7 +145,8 @@
     const q = new URLSearchParams(location.search);
     const mode = box.dataset.mode, grid = $("#list-grid"), pager = $("#pager");
     let sort = q.get("sort") || "rec", page = Math.max(1, parseInt(q.get("page")) || 1);
-    const all = await loadProducts();
+    if (DBMODE && mode !== "wish") return initListingDB(box, q, mode);
+    const all = mode === "wish" ? await getProducts(getWish()) : await loadProducts();
     let list = all;
     if (mode === "cat") list = all.filter((p) => p.category === box.dataset.cat);
     if (mode === "wish") { const w = getWish(); list = w.map((id) => all.find((p) => p.id === id)).filter(Boolean); }
@@ -181,13 +190,77 @@
     render();
   }
 
+  // 목록 (상품 DB 모드): 정렬·검색·페이지를 서버가 처리
+  async function initListingDB(box, q, mode) {
+    const grid = $("#list-grid"), pager = $("#pager");
+    let sort = q.get("sort") || "rec", page = Math.max(1, parseInt(q.get("page")) || 1);
+    const term = mode === "search" ? (q.get("q") || "").trim() : "";
+    if (mode === "search") { const si = $(".search input"); if (si) si.value = term; $("#list-title").firstChild.textContent = term ? `‘${term}’ 검색 결과` : "전체 상품"; }
+    const render = async () => {
+      const qs = new URLSearchParams({ sort, page, size: PER_PAGE });
+      if (term) qs.set("q", term);
+      if (mode === "cat") qs.set("cat", box.dataset.cat);
+      const d = await apiGet("/catalog/list?" + qs);
+      if (!d) { grid.innerHTML = `<div class="empty">상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`; return; }
+      const pages = Math.max(1, Math.ceil(d.total / PER_PAGE));
+      $("#list-count").textContent = d.total.toLocaleString() + "개";
+      grid.innerHTML = d.items.length ? d.items.map(cardHTML).join("") : `<div class="empty">${mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === sort));
+      let html = "";
+      if (pages > 1) {
+        const from = Math.max(1, Math.min(page - 4, pages - 8)), to = Math.min(pages, from + 8);
+        if (page > 1) html += `<button data-p="${page - 1}" aria-label="이전">‹</button>`;
+        for (let i = from; i <= to; i++) html += `<button data-p="${i}" class="${i === page ? "on" : ""}">${i}</button>`;
+        if (page < pages) html += `<button data-p="${page + 1}" aria-label="다음">›</button>`;
+      }
+      pager.innerHTML = html;
+      markWished();
+      const u = new URLSearchParams(location.search);
+      sort === "rec" ? u.delete("sort") : u.set("sort", sort);
+      page === 1 ? u.delete("page") : u.set("page", page);
+      history.replaceState(null, "", location.pathname + (u.toString() ? "?" + u : ""));
+    };
+    $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; page = 1; render(); }));
+    pager.addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; page = +b.dataset.p; render(); box.scrollIntoView({ behavior: "smooth" }); });
+    render();
+  }
+
+  // ── 상품 DB 템플릿(product/item.html) 채우기 ──
+  async function fillItem() {
+    const box = $("#item-tpl");
+    if (!box) return;
+    const id = new URLSearchParams(location.search).get("id") || "";
+    const p = id && API ? await apiGet("/catalog/item?id=" + encodeURIComponent(id)) : null;
+    if (!p) { box.innerHTML = `<div class="page"><div class="empty">상품을 찾을 수 없어요. <a href="${ROOT}index.html" style="text-decoration:underline">홈으로</a></div></div>`; return false; }
+    document.title = `${p.name} — ${CFG.shop_name || ""}`;
+    const cat = (CFG.cat_names || {})[p.category] || "";
+    $(".crumb").innerHTML = `<a href="${ROOT}index.html">홈</a>` + (p.category ? ` / <a href="${ROOT}category/${esc(p.category)}.html">${esc(cat || "카테고리")}</a>` : "");
+    const gallery = [p.image, ...(p.images || [])].filter(Boolean);
+    $("#main-img").src = img(p.image); $("#main-img").alt = p.name;
+    if (gallery.length > 1) $(".gallery").insertAdjacentHTML("beforeend", `<div class="thumbs">${gallery.map((u, i) => `<button data-src="${esc(img(u))}" class="${i ? "" : "on"}" aria-label="사진 ${i + 1}"><img src="${esc(img(u))}" alt="" loading="lazy"></button>`).join("")}</div>`);
+    if (p.brand) $(".d-name").insertAdjacentHTML("beforebegin", `<div class="d-brand">${esc(p.brand)}</div>`);
+    $(".d-name").textContent = p.name;
+    $(".d-price").innerHTML = `<span class="now">${won(p.price)}</span>`;
+    const meta = $(".d-meta dd:last-child"); if (meta) meta.textContent = p.origin || "상세설명 참조";
+    const opts = p.options || [];
+    if (opts.length) $(".qty-row").insertAdjacentHTML("beforebegin", `<label class="opt-label" for="opt">${esc(p.option_name || "옵션")}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>` +
+      opts.map((o, i) => `<option value="${i}"${o.so ? " disabled" : ""}>${o.so ? "[품절] " : ""}${esc(o.v)}${o.add > 0 ? ` (+${won(o.add)})` : o.add < 0 ? ` (${won(o.add)})` : ""}</option>`).join("") + `</select>`);
+    const buy = $("#buy");
+    Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)) });
+    if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }
+    $(".detail-body").innerHTML = p.detail_html ? `<div class="detail-html">${p.detail_html}</div>` : `<img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">${esc(p.name)}</p>`;
+    const nt = $$(".notice-table td");
+    if (nt.length > 3) { nt[0].textContent = p.name; nt[1].textContent = p.brand || "상세설명 참조"; nt[3].textContent = p.origin || "상세설명 참조"; }
+    return true;
+  }
+
   // ── 최근 본 상품 (메인) ──
   async function initRecent() {
     const box = $("#recent-box");
     if (!box) return;
     const ids = store.get("recent", []);
     if (!ids.length) return;
-    const all = await loadProducts();
+    const all = await getProducts(ids.slice(0, 8));
     const list = ids.map((id) => all.find((p) => p.id === id)).filter(Boolean).slice(0, 4);
     if (!list.length) return;
     $("#recent-grid").innerHTML = list.map(cardHTML).join("");
@@ -356,7 +429,7 @@
         box.innerHTML = `<div class="empty">장바구니에 담긴 상품이 없어요.<br><br><a class="btn btn-dark" style="max-width:240px;margin:0 auto" href="${ROOT}index.html">쇼핑 계속하기</a></div>`;
         $("#cart-sum").innerHTML = `<p class="muted">상품을 담으면 결제 금액이 여기에 보여요.</p>`; return;
       }
-      const { lines, subtotal, shipping, total, soldout } = calc(cart, await loadProducts());
+      const { lines, subtotal, shipping, total, soldout } = calc(cart, await getProducts(cart.map((x) => x.id)));
       const soldNote = soldout.length ? `<p class="note" style="margin-bottom:12px">일시품절: ${soldout.map(esc).join(", ")} — 결제 금액에서 빠져요.</p>` : "";
       box.innerHTML = soldNote + lines.map((l) => `<div class="c-row">
         <a href="${ROOT}product/${encodeURIComponent(l.id)}.html"><img src="${esc(img(l.image))}" alt=""></a>
@@ -392,7 +465,7 @@
     const now = new URLSearchParams(location.search).get("mode") === "now";
     const cart = now ? store.get("buynow", []) : getCart();
     if (!cart.length) { location.href = ROOT + "cart.html"; return; }
-    const products = await loadProducts();
+    const products = await getProducts(cart.map((x) => x.id));
     let coupon = "", discount = 0, widgets = null;
     let sums = calc(cart, products, 0);
     if (sums.soldout.length) {
@@ -644,5 +717,5 @@
   });
 
   updateCounts(); markWished();
-  initListing(); initRecent(); initDetail(); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs();
+  initListing(); initRecent(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs();
 })();

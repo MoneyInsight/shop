@@ -7,6 +7,12 @@ compatibility_date = "2026-11-01"
 binding = "SHOP"
 id = "여기에_KV_ID"
 
+# 상품 DB (100만 개용, 무료 5GB): npx wrangler d1 create ttaengjab 후 나온 id를 넣고 아래 4줄 앞의 # 를 지우세요
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "ttaengjab"
+# database_id = "여기에_D1_ID"
+
 [vars]
 GITHUB_REPO = "MoneyInsight/shop"
 SITE_URL = "https://moneyinsight.github.io/shop"

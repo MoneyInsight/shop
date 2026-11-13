@@ -4,7 +4,7 @@
 생성물: 메인·카테고리·상품상세·검색·장바구니·주문결제·완료/실패·약관·공급사·관리자 페이지,
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
-import re, csv, json, html, shutil, datetime, hashlib
+import os, re, csv, json, html, shutil, datetime, hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -125,7 +125,11 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "offer", "catalog_api")}
+    if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
+        public_cfg["catalog_api"] = CFG["catalog_api"] = True
+    if CFG.get("catalog_api"):
+        public_cfg["cat_names"] = {c["slug"]: c["name"] for c in CFG["categories"]}
     name = e(CFG["shop_name"])
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
@@ -244,32 +248,26 @@ def build_categories(ps):
               desc=f'{CFG["shop_name"]} {c["name"]} 상품 {len(items)}개. 전 상품 무료배송.', canonical=f'{BASE}/category/{c["slug"]}.html'))
 
 
-def build_products(ps):
-    by_cat = {}
-    for p in ps:
-        by_cat.setdefault(p["category"], []).append(p)
-    for p in ps:
-        r = rate(p)
-        img = p["image"] if p["image"].startswith("http") else "../" + p["image"]
-        url = f'{BASE}/product/{p["id"]}.html'
-        ld = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "image": [abs_img(p)] + p["images"],
-              "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
-              "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
-                         "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition",
-                         "shippingDetails": {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": p["shipping_fee"], "currency": "KRW"}}}}
-        gallery = [img] + p["images"]
-        thumbs = ('<div class="thumbs">' + "".join(f'<button data-src="{e(u)}" class="{"on" if i == 0 else ""}" aria-label="사진 {i + 1}"><img src="{e(u)}" alt="" loading="lazy"></button>' for i, u in enumerate(gallery)) + "</div>") if len(gallery) > 1 else ""
-        desc = "".join(f"<p>{e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
-        if not desc:
-            desc = f'<img src="{e(img)}" alt="{e(p["name"])}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">{e(p["name"])}</p><p class="muted">자세한 상품 정보는 고객센터로 문의해 주시면 안내해 드리겠습니다.</p>'
-        opts = ""
-        if p["options"]:
-            opts = f'<label class="opt-label" for="opt">{e(p["option_name"])}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(
-                f'<option value="{i}"{" disabled" if o.get("so") else ""}>{"[품절] " if o.get("so") else ""}{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
-        sib = by_cat[p["category"]]
-        k = sib.index(p)
-        related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
-        body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
+def product_body(p, related):
+    """상품 상세 본문 (정적 상품 페이지와 DB용 템플릿 item.html이 함께 씀)"""
+    r = rate(p)
+    img = p["image"] if p["image"].startswith("http") else "../" + p["image"]
+    url = f'{BASE}/product/{p["id"]}.html'
+    ld = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "image": [abs_img(p)] + p["images"],
+          "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
+          "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
+                     "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition",
+                     "shippingDetails": {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": p["shipping_fee"], "currency": "KRW"}}}}
+    gallery = [img] + p["images"]
+    thumbs = ('<div class="thumbs">' + "".join(f'<button data-src="{e(u)}" class="{"on" if i == 0 else ""}" aria-label="사진 {i + 1}"><img src="{e(u)}" alt="" loading="lazy"></button>' for i, u in enumerate(gallery)) + "</div>") if len(gallery) > 1 else ""
+    desc = "".join(f"<p>{e(x)}</p>" for x in p["desc_lines"]) + (f'<div class="detail-html">{p["detail_html"]}</div>' if p["detail_html"] else "")
+    if not desc:
+        desc = f'<img src="{e(img)}" alt="{e(p["name"])}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">{e(p["name"])}</p><p class="muted">자세한 상품 정보는 고객센터로 문의해 주시면 안내해 드리겠습니다.</p>'
+    opts = ""
+    if p["options"]:
+        opts = f'<label class="opt-label" for="opt">{e(p["option_name"])}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(
+            f'<option value="{i}"{" disabled" if o.get("so") else ""}>{"[품절] " if o.get("so") else ""}{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
+    body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / <a href="../category/{p["category"]}.html">{e(p["category_name"])}</a></div>
 <div class="detail">
 <div class="gallery"><div class="main-img"><img id="main-img" src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>{thumbs}</div>
 <div class="d-info-box">{f'<div class="d-brand">{e(p["brand"])}</div>' if p["brand"] else ""}<h1 class="d-name">{e(p["name"])}</h1>
@@ -321,9 +319,27 @@ def build_products(ps):
 <tr><th>신청 방법</th><td><a href="../orders.html" style="text-decoration:underline">주문·배송 조회</a>에서 주문번호와 연락처를 입력하신 뒤 신청하실 수 있습니다.</td></tr></table></section>
 {f'<section class="section last"><div class="sec-head"><div><h2>함께 보면 좋은 상품</h2></div><a href="../category/{p["category"]}.html">{e(p["category_name"])} 더 보기</a></div><div class="grid">{"".join(card(x, "../") for x in related)}</div></section>' if related else '<div class="section last"></div>'}
 </div>'''
+    return body, ld, url, img
+
+
+def build_products(ps):
+    by_cat = {}
+    for p in ps:
+        by_cat.setdefault(p["category"], []).append(p)
+    for p in ps:
+        sib = by_cat[p["category"]]
+        k = sib.index(p)
+        related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
+        body, ld, url, img = product_body(p, related)
         write(f'product/{p["id"]}.html', layout(f'{p["name"]} — {CFG["shop_name"]}', body, "../", active=p["category"],
               desc=f'{p["name"]} {won(p["price"])} 무료배송. {p["summary"]}'.strip(), canonical=url, og_img=abs_img(p),
               extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
+    # 상품 DB용 템플릿: product/item.html?id=상품번호 → 브라우저가 서버(/catalog/item)에서 받아 채움 (100만 개도 페이지 1장)
+    blank = {"id": "", "name": "상품 정보를 불러오고 있어요", "price": 0, "normal_price": 0, "image": "noimg.svg", "images": [], "summary": "",
+             "brand": "", "shipping_fee": 0, "desc_lines": [], "detail_html": "", "options": [], "option_name": "옵션", "category": "",
+             "category_name": "", "badge": "", "origin": "", "maker": "", "soldout": False}
+    body = product_body(blank, [])[0].replace('<div class="wrap"><div class="crumb">', '<div class="wrap" id="item-tpl"><div class="crumb">', 1)
+    write("product/item.html", layout(f'상품 — {CFG["shop_name"]}', body, "../", extra_head='<meta name="robots" content="noindex">'))
 
 
 def simple(path, title, inner, scripts="", root="./", heading=True):

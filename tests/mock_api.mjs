@@ -15,8 +15,14 @@ globalThis.fetch = async (url, o) => {
   return realFetch(url, o);
 };
 const env = { SHOP, SITE_URL: "http://local", TOSS_SECRET_KEY: "k", ADMIN_PASSWORD: "test1234" };
+// CATALOG=1 이면 dist/catalog.sqlite 를 상품 DB(D1 흉내)로 연결
+if (process.env.CATALOG) {
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(new URL("../dist/catalog.sqlite", import.meta.url).pathname);
+  env.DB = { prepare(sql) { let a = []; const st = db.prepare(sql); const o = { bind: (...x) => ((a = x), o), first: async () => st.get(...a) ?? null, all: async () => ({ results: st.all(...a) }), run: async () => st.run(...a) }; return o; } };
+}
 http.createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c);
-  const r = await handle(new Request("http://x" + req.url, { method: req.method, headers: req.headers, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), env, req.url);
+  const r = await handle(new Request("http://x" + req.url, { method: req.method, headers: req.headers, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), env, req.url.split("?")[0]);
   res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(await r.text());
 }).listen(8788, () => console.log("mock api :8788"));

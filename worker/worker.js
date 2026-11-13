@@ -16,12 +16,13 @@
  * KV 바인딩:         SHOP
  * 공급가는 이 서버(KV)에만 저장되고 공개 사이트에는 나가지 않습니다.
  */
+import * as catalog from "./catalog.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" } });
+const json = (d, status = 200, extra = {}) => new Response(JSON.stringify(d), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", ...extra } });
 const fail = (message, status = 400) => json({ message }, status);
 
 const b64encode = (str) => {
@@ -78,8 +79,7 @@ async function confirm(req, env) {
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
 
   // 사이트의 실제 가격으로 금액 다시 계산 (화면 금액 조작 방지)
-  const products = await (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
-  const map = Object.fromEntries(products.map((p) => [p.id, p]));
+  const map = await productMap(env, items.map((x) => x.id));
   let subtotal = 0, shipping = 0;
   const lines = [], usedOffers = [];
   for (const it of items) {
@@ -103,7 +103,8 @@ async function confirm(req, env) {
     }
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price, ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, supplier: sup.supplier, supply_price: sup.supply_price,
+      source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
@@ -205,6 +206,16 @@ const isPast = (iso) => iso && Date.parse(iso) < Date.now();
 async function siteProducts(env) {
   return (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
 }
+// 상품 찾기: 상품 DB(env.DB)가 있으면 DB에서, 없으면 사이트의 products.json에서
+async function productMap(env, ids) {
+  if (env.DB) {
+    const m = await catalog.itemsForOrder(env.DB, ids);
+    if (Object.keys(m).length === new Set(ids.map(String)).size) return m;
+    const rest = Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p]));  // 아직 DB로 안 옮긴 상품
+    return { ...rest, ...m };
+  }
+  return Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p]));
+}
 
 // 만료 처리 반영: 응답 대기 48시간, 수락 후 결제 72시간
 function offerState(of) {
@@ -229,7 +240,7 @@ const publicOffer = (of) => ({
 
 async function offerAdd(req, env) {
   const d = await req.json();
-  const p = (await siteProducts(env)).find((x) => String(x.id) === String(d.product_id));
+  const p = (await productMap(env, [d.product_id]))[String(d.product_id)];
   if (!p) return fail("판매하지 않는 상품이에요.");
   if (p.soldout) return fail("일시품절된 상품이라 지금은 제안할 수 없어요.");
   let unit = p.price, optName = "", opt = null;
@@ -850,8 +861,18 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-13a", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
-      kv: !!env.SHOP, email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+    return json({ ok: true, version: "2026-11-13b", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+      kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+  }
+  if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
+    if (!env.DB) return fail("상품 DB가 아직 연결되지 않았어요.", 503);
+    const u = new URL(req.url).searchParams, cache = { "Cache-Control": "public, max-age=60" };
+    try {
+      if (path === "/catalog/list") return json(await catalog.list(env.DB, { q: u.get("q") || "", cat: u.get("cat") || "", sort: u.get("sort") || "rec", page: u.get("page"), size: u.get("size") }), 200, cache);
+      if (path === "/catalog/item") { const it = await catalog.item(env.DB, u.get("id")); return it ? json(it, 200, cache) : fail("상품을 찾을 수 없어요.", 404); }
+      if (path === "/catalog/counts") return json(await catalog.counts(env.DB), 200, cache);
+    } catch (e) { return fail("상품 조회 중 오류가 났어요.", 500); }
+    return fail("Not found", 404);
   }
   if (req.method !== "POST") return fail("Not found", 404);
   try {
