@@ -1,6 +1,7 @@
 """도매매 스마트스토어용 DB 엑셀(판매가 요율 0 = 도매가) → 땡잡았땡 상품 CSV
 사용: python3 tools/domeme_convert.py <SMARTSTORE_x.xlsx> [옵션품절 xlsx] [이미지목록 txt]
- - 판매가 열 = 도매가(무료배송) → '공급가'로 넣어 쇼핑몰이 원가 기반 얇은 마진 가격을 계산
+ - 판매가 열 = 도매가 → '공급가'로 넣어 쇼핑몰이 (도매가+배송비)+12% 가격을 계산
+ - 유료·착불 배송비는 선결제가 되면 기본배송비를 원가에 더함 (착불만 되는 상품·수량별 배송비 상품은 제외)
  - 대표 이미지는 도매매 CDN 주소(이미지목록 txt: '상품번호 날짜 키')로 연결
  - 재고 0 옵션은 빼고, 옵션이 1개뿐이면 옵션 없이 등록
 """
@@ -42,8 +43,16 @@ def main(src, sold_out=None, imgs=None, out=ROOT / "data" / "도매매상품.csv
         g = lambda k: r[c[k]] if k in c and c[k] < len(r) else ""
         no, name = g("판매자 상품코드"), g("상품명")
         cost = int(float(g("판매가") or 0))
-        if not no or not name or not cost or g("배송비 유형") not in ("무료", ""):
+        if not no or not name or not cost:
             skip += 1; continue
+        ship_type, pay = g("배송비 유형"), g("배송비 결제방식")
+        ship = 0
+        if ship_type not in ("무료", ""):
+            # 착불만 되면 고객이 택배기사에게 돈을 내야 하므로 제외, 선결제가 되면 우리가 내고 원가에 포함
+            if "수량" in ship_type or (pay and "선결제" not in pay):
+                skip += 1; continue
+            ship = int(float(g("기본배송비") or 0))
+        cost += ship
         vals = g("옵션값").split("\n") if g("옵션값") else []
         adds = g("옵션가").split("\n") if g("옵션가") else []
         stocks = g("옵션 재고수량").split("\n") if g("옵션 재고수량") else []
