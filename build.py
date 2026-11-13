@@ -155,10 +155,10 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
 <div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
-<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
-<div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
+<div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인·가입</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
 <a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
 <a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
 </div></header>
@@ -225,7 +225,7 @@ def build_home(ps):
 <h1>좋은 물건을,<br>군더더기 없는 가격으로.</h1>
 <p>유통 단계의 수수료를 덜어내고 꼭 필요한 만큼만 남겼습니다. 모든 상품은 무료로 배송해 드립니다.</p>
 <p class="hero-instant"><b>포인트 적립 대신 즉시 할인</b> 언제 쓸지 모르는 적립금 말고, 결제하는 순간 바로 깎아 드려요.</p>
-{f'<p class="hero-member"><b>회원은 {round(CFG["member_discount"]["rate"] * 100)}% 더 할인</b> 네이버·카카오·구글로 3초 가입하면 모든 주문에서 추가로 즉시 할인돼요.</p>' if (CFG.get("member_discount") or {}).get("rate") else ''}
+{f'<p class="hero-member"><b>회원은 {round(CFG["member_discount"]["rate"] * 100)}% 더 할인</b> 네이버·카카오·구글로 3초 가입하면 모든 주문에서 추가로 즉시 할인돼요. <a href="login.html" class="hero-join">간편가입 ›</a></p>' if (CFG.get("member_discount") or {}).get("rate") else ''}
 {f'<p class="hero-deal"><b>많이 살수록 더 싸게!</b> 같은 상품 2개부터 자동 할인, <b>최대 {max_deal}%</b>까지 내려가요.</p>' if max_deal >= 2 else ''}
 <a class="btn" href="search.html">전체 상품 보기</a></div>
 <div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
@@ -423,12 +423,13 @@ def build_shop_pages():
 <div class="card" id="my-orders" style="display:none"></div></div>
 <div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
 ''')
-    simple("login.html", "로그인", f'''<div class="narrow"><div class="card login-box" id="login-box">
-<p class="login-lead">회원가입 없이 쓰던 계정으로 <b>3초 만에</b> 시작하세요</p>
+    simple("login.html", "로그인 · 간편 회원가입", f'''<div class="narrow"><div class="card login-box" id="login-box">
+<p class="login-lead">따로 회원가입할 필요 없이, 쓰던 계정으로 <b>3초 만에 가입·로그인</b>돼요</p>
+<p class="login-perk">가입하면 모든 주문 <b>{round((CFG.get("member_discount") or {}).get("rate", 0) * 100)}% 추가 즉시 할인</b></p>
 <a class="sns-btn naver" data-provider="naver" href="#"><span class="sns-ico">N</span>네이버로 시작하기</a>
 <a class="sns-btn kakao" data-provider="kakao" href="#"><span class="sns-ico">●</span>카카오로 시작하기</a>
 <a class="sns-btn google" data-provider="google" href="#"><span class="sns-ico">G</span>구글로 시작하기</a>
-<ul class="login-merit"><li>주문 내역·배송 조회를 어느 기기에서나</li><li>배송지 자동 입력으로 빠른 결제</li><li>찜한 상품·가격 제안 내역 보관</li></ul>
+<ul class="login-merit"><li>주문 내역·배송 조회를 어느 기기에서나</li><li>배송지 자동 입력으로 빠른 결제</li><li>찜한 상품 보관 · 회원 추가 할인</li></ul>
 <p class="muted" style="margin-top:14px">로그인하면 <a href="terms.html" style="text-decoration:underline">이용약관</a>과 <a href="privacy.html" style="text-decoration:underline">개인정보처리방침</a>에 동의한 것으로 봅니다. 회원이 아니어도 <a href="orders.html" style="text-decoration:underline">비회원 주문 조회</a>와 주문을 그대로 이용할 수 있어요.</p></div>
 <div class="card" id="me-box" hidden></div></div>''')
     faq = "".join(f"<details><summary>{e(q)}</summary><p>{e(a)}</p></details>" for q, a in FAQ)

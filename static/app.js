@@ -88,7 +88,7 @@
   }
   function paintLogin() {
     const u = member();
-    $$(".login-link").forEach((a) => { a.href = ROOT + "login.html"; const t = a.querySelector(".login-txt"); if (t) t.textContent = u ? "내 정보" : "로그인"; });
+    $$(".login-link").forEach((a) => { a.href = ROOT + "login.html"; const t = a.querySelector(".login-txt"); if (t) t.textContent = u ? "내 정보" : "로그인·가입"; });
   }
   async function memberRefresh() {
     if (!token()) return null;

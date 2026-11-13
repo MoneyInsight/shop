@@ -37,7 +37,7 @@ async def main():
         pg.on("dialog", lambda d: (dialogs.append(d.message), asyncio.ensure_future(d.accept())))
 
         await pg.goto(S + "index.html"); await pg.wait_for_timeout(500)
-        ok("헤더에 로그인", (await pg.locator(".login-txt").first.inner_text()) == "로그인")
+        ok("헤더에 로그인", (await pg.locator(".login-txt").first.inner_text()) == "로그인·가입")
         await pg.evaluate("localStorage.setItem('wish', JSON.stringify(['W1']))")
         await pg.goto(S + "login.html"); await pg.wait_for_timeout(800)
         ok("로그인 버튼 3개", await pg.locator(".sns-btn").count() == 3)
@@ -60,7 +60,7 @@ async def main():
         await pg.locator("#me-box #logout").count()
         await pg.goto(S + "login.html"); await pg.wait_for_timeout(800)
         await pg.locator("#logout").click(); await pg.wait_for_timeout(1200)
-        ok("로그아웃", await pg.locator("#login-box").is_visible() and (await pg.locator(".login-txt").first.inner_text()) == "로그인")
+        ok("로그아웃", await pg.locator("#login-box").is_visible() and (await pg.locator(".login-txt").first.inner_text()) == "로그인·가입")
         ok("자바스크립트 오류 없음", not errs, errs[:3])
         await b.close()
     print(f"로그인 화면 테스트: {sum(res)} / {len(res)}")
