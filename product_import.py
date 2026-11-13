@@ -233,12 +233,13 @@ def load(data_dir, cats, discount=0, pricing=None):
             name = get(r, "name")
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
-            qt = []
+            qt, sm = [], ""
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
                 goods, cship = cost, _num(get(r, "cost_ship"))
                 cost = goods + cship
                 price = price_from_cost(cost, pricing)
                 qt = qty_prices(goods, cship, _num(get(r, "box_qty")), _num(get(r, "free_over")), pricing)
+                sm = "선불" if cship else "무료"  # 도매처 발주서의 배송방식
                 if qt:
                     qt[0] = price
             if name.startswith("필수"):
@@ -261,7 +262,7 @@ def load(data_dir, cats, discount=0, pricing=None):
             img = get(r, "image")
             detail = get(r, "detail")
             products.append({
-                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),

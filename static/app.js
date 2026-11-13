@@ -644,7 +644,7 @@
       const first = sums.lines[0].name;
       const orderName = (first.length > 40 ? first.slice(0, 40) + "…" : first) + (sums.lines.length > 1 ? ` 외 ${sums.lines.length - 1}건` : "");
       const order = { orderId, orderName, amount: sums.total, items: cart, coupon, fromCart: !now,
-        customer: { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr: f("addr1") + " " + f("addr2"), memo: f("memo") } };
+        customer: { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr: f("addr1") + " " + f("addr2"), addr1: f("addr1"), addr2: f("addr2"), memo: f("memo") } };
       store.set("pending_order", order);
       try {
         await widgets.requestPayment({
