@@ -33,6 +33,19 @@ def _tokens(name):
     return out
 
 
+_KW = None
+
+
+def _supplier_kw(pid):
+    """도매처가 정한 검색 키워드 (도매꾹 API로 매일 갱신되는 data/domeme_keywords.json)"""
+    global _KW
+    if _KW is None:
+        import json, pathlib
+        f = pathlib.Path(__file__).resolve().parent / "data" / "domeme_keywords.json"
+        _KW = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    return _KW.get(pid, [])
+
+
 def tags(p, limit=12):
     seen, out = set(), []
     def add(w):
@@ -42,6 +55,8 @@ def tags(p, limit=12):
             seen.add(k); out.append(w)
     toks = _tokens(p.get("name", ""))
     for w in toks:
+        add(w)
+    for w in _supplier_kw(p.get("id", ""))[:6]:  # 도매처 검색 키워드 (실제 많이 찾는 말)
         add(w)
     # 두 단어 붙인 검색어 (예: 원통 목걸이 → 원통목걸이)
     for a, b in zip(toks, toks[1:]):

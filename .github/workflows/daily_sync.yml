@@ -1,0 +1,36 @@
+name: 매일 상품 점검 (도매꾹 API)
+on:
+  schedule:
+    - cron: "17 18 * * *"   # 한국 시간 새벽 3시 17분
+  workflow_dispatch:
+    inputs:
+      limit: { description: "조회할 상품 수", default: "4000" }
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency: { group: daily-sync, cancel-in-progress: false }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install openpyxl
+      - name: 도매매 상품 조회·배송비·품절·키워드 갱신
+        run: python3 tools/domeggook_sync.py && python3 tools/stock_sync.py data/_domeme_stock_result.json && rm -f data/_domeme_stock_result.json
+        env:
+          DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
+          LIMIT: ${{ github.event.inputs.limit || '4000' }}
+      - name: 빌드·손해 점검
+        run: python3 build.py && python3 tools/ship_audit.py | tee audit.txt && ! grep -q "8% 미만: [1-9]" audit.txt
+      - name: 저장
+        run: |
+          git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data && git commit -m "매일 상품 점검 (도매꾹 API)" && git push || echo "변경 없음"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - uses: actions/deploy-pages@v4
