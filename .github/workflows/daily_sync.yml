@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       limit: { description: "점검할 기존 상품 수", default: "4000" }
-      new_limit: { description: "새 상품 찾기 조회 수", default: "3000" }
+      new_limit: { description: "새 상품 찾기 조회 수", default: "20000" }
 permissions:
   contents: write
   pages: write
@@ -14,7 +14,7 @@ concurrency: { group: daily-sync, cancel-in-progress: false }
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 350
     environment: { name: github-pages }
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
         run: python3 tools/domeggook_discover.py
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
-          NEW_LIMIT: ${{ github.event.inputs.new_limit || '3000' }}
+          NEW_LIMIT: ${{ github.event.inputs.new_limit || '20000' }}
       - name: 빌드·손해 점검
         run: |
           python3 build.py

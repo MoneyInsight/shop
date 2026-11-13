@@ -14,7 +14,8 @@ sys.path.insert(0, str(ROOT))
 from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
-NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "3000"))
+NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "20000"))
+MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "40000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
 OUT = ROOT / "data" / "도매매API상품.csv"
 STATE = ROOT / "data" / "domeme_discover_state.json"
@@ -131,10 +132,12 @@ def main():
     cats = [c for c in cats if not any(k in n for n in c for k in SKIP_CAT)]
     if not cats:
         sys.exit("카테고리 목록을 못 받음")
-    views, added, why = 0, 0, {}
+    views, added, why, errs = 0, 0, {}, 0
+    total = sum(1 for p in [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "오너클랜DB상품.csv", "오너클랜상품.csv")] if p.exists()
+                for _ in csv.DictReader(open(p, encoding="utf-8-sig"))) + len(rows)
     ci = state.get("cat", 0) % len(cats)
     loops = 0
-    while views < NEW_LIMIT and loops < len(cats):
+    while views < NEW_LIMIT and loops < len(cats) and total + added < MAX_TOTAL and errs < 20:
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
         d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": "1"}).get("domeggook") or {})
@@ -145,14 +148,16 @@ def main():
             no = str(it.get("no", ""))
             if not no or no in have or no in seen or it.get("adultOnly") == "true" or num((it.get("deli") or {}).get("fee")) > MAX_SHIP:
                 continue
-            if views >= NEW_LIMIT:
+            if views >= NEW_LIMIT or total + added >= MAX_TOTAL or errs >= 20:
                 break
             v = (api({"ver": "4.5", "mode": "getItemView", "no": no}).get("domeggook") or {})
             views += 1
             time.sleep(0.25)
             if not v or "basis" not in v:
                 why["조회 실패"] = why.get("조회 실패", 0) + 1
+                errs += 1  # 연속 실패가 쌓이면(하루 호출 한도 등) 멈추고 내일 이어서
                 continue
+            errs = 0
             row, info = build_row(no, v)
             if row is None:
                 seen[no] = info
@@ -167,7 +172,7 @@ def main():
         w = csv.DictWriter(f, fieldnames=FIELDS); w.writeheader(); w.writerows(rows)
     STATE.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     KWF.write_text(json.dumps(kwmap, ensure_ascii=False), encoding="utf-8")
-    print(f"새 상품 {added}개 추가 (상품정보 조회 {views}회, 카테고리 {loops}개 검색) / 누적 {len(rows)}개 / 제외 사유 {why}")
+    print(f"[전체 {total + added}개] 새 상품 {added}개 추가 (상품정보 조회 {views}회, 카테고리 {loops}개 검색) / 누적 {len(rows)}개 / 제외 사유 {why}")
 
 
 if __name__ == "__main__":
