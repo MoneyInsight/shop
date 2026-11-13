@@ -83,24 +83,26 @@
   // 금액: 상품금액(옵션 추가금 포함) + 배송비(상품별 1회) − 쿠폰
   function calc(cart, products, discount) {
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
-    const lines = cart.filter((x) => map[x.id]).map((x) => {
+    const isSold = (x) => map[x.id] && (map[x.id].soldout || (x.opt != null && map[x.id].options?.[x.opt]?.so));
+    const soldout = cart.filter(isSold).map((x) => map[x.id].name);
+    const lines = cart.filter((x) => map[x.id] && !isSold(x)).map((x) => {
       const p = map[x.id], o = x.opt != null && p.options ? p.options[x.opt] : null;
       const list = p.price + (o ? o.add : 0);
-      return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, offer: x.offer || "", optName: o ? o.v : "" };
+      return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, offer: x.offer || "", optName: o ? o.v : "", ci: cart.indexOf(x) };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     let shipping = lines.reduce((a, l) => a + (l.shipping_fee || 0), 0);
     if (CFG.free_shipping_over && subtotal >= CFG.free_shipping_over) shipping = 0;
     discount = Math.min(discount || 0, subtotal);
-    return { lines, subtotal, shipping, discount, total: subtotal - discount + shipping };
+    return { lines, subtotal, shipping, discount, total: subtotal - discount + shipping, soldout };
   }
 
   // ── 상품 카드 ──
   function cardHTML(p) {
     const rate = p.normal_price > p.price ? Math.round((1 - p.price / p.normal_price) * 100) : 0;
     const wished = getWish().includes(p.id);
-    return `<a class="p-card" href="${ROOT}product/${encodeURIComponent(p.id)}.html">
-      <div class="p-thumb"><img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy">${p.badge ? `<span class="badge ${esc(p.badge)}">${esc(p.badge)}</span>` : ""}
+    return `<a class="p-card${p.soldout ? " is-soldout" : ""}" href="${ROOT}product/${encodeURIComponent(p.id)}.html">
+      <div class="p-thumb"><img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy">${p.badge ? `<span class="badge ${esc(p.badge)}">${esc(p.badge)}</span>` : ""}${p.soldout ? `<span class="soldout-cover">일시품절</span>` : ""}
       <button class="wish-btn${wished ? " on" : ""}" data-wish="${esc(p.id)}" aria-label="찜하기">${HEART}</button></div>
       <div class="p-brand">${esc(p.brand || "")}</div><div class="p-name">${esc(p.name)}</div>
       <div class="p-price">${rate ? `<span class="rate">${rate}%</span>` : ""}<span>${won(p.price)}</span>${rate ? `<del>${won(p.normal_price)}</del>` : ""}</div>
@@ -212,12 +214,12 @@
     inp.oninput = sync;
     if (sel) sel.onchange = sync;
     const needOpt = () => { if (sel && sel.value === "") { alert("옵션을 선택해 주세요."); sel.focus(); return true; } return false; };
-    $("#add-cart").onclick = () => {
+    if ($("#add-cart")) $("#add-cart").onclick = () => {
       if (needOpt()) return;
       addToCart(id, +inp.value, optIdx());
       if (confirm("장바구니에 담았어요. 장바구니로 이동할까요?")) location.href = ROOT + "cart.html";
     };
-    $("#buy-now").onclick = () => {
+    if ($("#buy-now")) $("#buy-now").onclick = () => {
       if (needOpt()) return;
       const o = optIdx();
       store.set("buynow", [o == null ? { id, qty: +inp.value } : { id, qty: +inp.value, opt: o }]);
@@ -354,14 +356,15 @@
         box.innerHTML = `<div class="empty">장바구니에 담긴 상품이 없어요.<br><br><a class="btn btn-dark" style="max-width:240px;margin:0 auto" href="${ROOT}index.html">쇼핑 계속하기</a></div>`;
         $("#cart-sum").innerHTML = `<p class="muted">상품을 담으면 결제 금액이 여기에 보여요.</p>`; return;
       }
-      const { lines, subtotal, shipping, total } = calc(cart, await loadProducts());
-      box.innerHTML = lines.map((l, i) => `<div class="c-row">
+      const { lines, subtotal, shipping, total, soldout } = calc(cart, await loadProducts());
+      const soldNote = soldout.length ? `<p class="note" style="margin-bottom:12px">일시품절: ${soldout.map(esc).join(", ")} — 결제 금액에서 빠져요.</p>` : "";
+      box.innerHTML = soldNote + lines.map((l) => `<div class="c-row">
         <a href="${ROOT}product/${encodeURIComponent(l.id)}.html"><img src="${esc(img(l.image))}" alt=""></a>
         <div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a>
           ${l.optName ? `<div class="muted">옵션: ${esc(l.optName)}</div>` : ""}
           <div class="muted">${won(l.price)} · ${l.shipping_fee ? "배송비 " + won(l.shipping_fee) : "무료배송"}</div>
-          <div class="qty" style="margin-top:10px"><button data-a="-" data-k="${i}" aria-label="빼기">−</button><input value="${l.qty}" readonly aria-label="수량"><button data-a="+" data-k="${i}" aria-label="더하기">+</button></div>
-          <button class="x" data-a="x" data-k="${i}">삭제</button></div>
+          <div class="qty" style="margin-top:10px"><button data-a="-" data-k="${l.ci}" aria-label="빼기">−</button><input value="${l.qty}" readonly aria-label="수량"><button data-a="+" data-k="${l.ci}" aria-label="더하기">+</button></div>
+          <button class="x" data-a="x" data-k="${l.ci}">삭제</button></div>
         <strong>${won(l.price * l.qty)}</strong></div>`).join("");
       $("#cart-sum").innerHTML = `<h2>결제 예정 금액</h2><div class="sum"><div><span>상품 금액</span><span>${won(subtotal)}</span></div>
         <div><span>배송비</span><span>${shipping ? won(shipping) : "무료"}</span></div>
@@ -392,6 +395,10 @@
     const products = await loadProducts();
     let coupon = "", discount = 0, widgets = null;
     let sums = calc(cart, products, 0);
+    if (sums.soldout.length) {
+      alert("일시품절된 상품은 주문에서 빠졌어요.\n- " + sums.soldout.join("\n- "));
+      if (!sums.lines.length) { location.href = ROOT + (now ? "index.html" : "cart.html"); return; }
+    }
 
     $("#order-items").innerHTML = sums.lines.map((l) => `<div class="c-row"><img src="${esc(img(l.image))}" alt=""><div><div class="nm">${esc(l.name)}</div>
       <div class="muted">${l.optName ? esc(l.optName) + " · " : ""}${l.qty}개${l.offer ? ` · <span style="color:var(--sale)">제안가 개당 ${won(l.price)}</span> <del>${won(l.list)}</del>` : ""}</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");

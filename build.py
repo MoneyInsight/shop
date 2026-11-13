@@ -69,9 +69,25 @@ def load_products():
         elif p["image"].startswith("http"):
             pass  # 외부 이미지 주소
         out.append(p)
+    # 재고 동기화 결과(data/stock.json) 반영: 품절 표시, 도매가 변동 시 12% 기준 재계산, 품절 옵션 제외
+    stock = json.loads((ROOT / "data/stock.json").read_text(encoding="utf-8")) if (ROOT / "data/stock.json").exists() else {}
+    import product_import as _pi
+    for p in out:
+        st = (stock.get("items") or {}).get(p["id"]) or {}
+        p["soldout"] = bool(st.get("soldout"))
+        if st.get("cost") and p.get("cost") and int(st["cost"]) != int(p["cost"]) and CFG.get("pricing"):
+            new = _pi.price_from_cost(int(st["cost"]), CFG["pricing"])
+            p["price"] = new; p["normal_price"] = new
+        if st.get("opts_soldout") and p["options"]:
+            gone = set(st["opts_soldout"])  # 순서(번호)는 유지하고 표시만 (장바구니의 옵션 번호가 어긋나지 않게)
+            for o in p["options"]:
+                o["so"] = o["v"] in gone
+            if all(o.get("so") for o in p["options"]):
+                p["soldout"] = True
     # 네이버 최저가보다 많이 싼 상품(절약률 큰 순)이 위로, 최저가 정보 없는 상품은 뒤로
     if CFG.get("show_naver", True):
         out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
+    out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
     return out
 
 
@@ -159,8 +175,8 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 def card(p, root):
     r = rate(p)
     img = p["image"] if p["image"].startswith("http") else root + p["image"]
-    return f'''<a class="p-card" href="{root}product/{p["id"]}.html">
-<div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}" loading="lazy">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}
+    return f'''<a class="p-card{' is-soldout' if p.get("soldout") else ''}" href="{root}product/{p["id"]}.html">
+<div class="p-thumb"><img src="{e(img)}" alt="{e(p["name"])}" loading="lazy">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}{'<span class="soldout-cover">일시품절</span>' if p.get("soldout") else ""}
 <button class="wish-btn" data-wish="{e(p["id"])}" aria-label="찜하기">{I_HEART}</button></div>
 <div class="p-brand">{e(p["brand"])}</div><div class="p-name">{e(p["name"])}</div>
 <div class="p-price">{f'<span class="rate">{r}%</span>' if r else ""}<span>{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
@@ -249,7 +265,7 @@ def build_products(ps):
         opts = ""
         if p["options"]:
             opts = f'<label class="opt-label" for="opt">{e(p["option_name"])}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>' + "".join(
-                f'<option value="{i}">{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
+                f'<option value="{i}"{" disabled" if o.get("so") else ""}>{"[품절] " if o.get("so") else ""}{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
         sib = by_cat[p["category"]]
         k = sib.index(p)
         related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
@@ -265,8 +281,8 @@ def build_products(ps):
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}'>
-<button class="wish-toggle" aria-label="찜하기">{I_HEART}</button><button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button></div>
-<div class="offer-box"><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
+<button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
+<div class="offer-box"{' hidden' if p.get("soldout") else ''}><button class="offer-open" id="offer-open" type="button"><b>대량 구매 가격 제안</b><span>3개 이상 사시면 최대 3%까지 가격을 제안할 수 있어요</span></button>
 <div class="offer-form" id="offer-form" hidden><div class="offer-calc" id="offer-calc"></div>
 <div class="offer-rates" id="offer-rates"></div>
 <label class="opt-label" for="offer-price">개당 제안 가격</label><input class="field" id="offer-price" inputmode="numeric">
@@ -500,7 +516,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name")} for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))
 
 

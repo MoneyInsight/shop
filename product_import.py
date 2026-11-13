@@ -186,7 +186,8 @@ def load(data_dir, cats, discount=0, pricing=None):
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
-                price = price_from_cost(cost + _num(get(r, "cost_ship")), pricing)
+                cost = cost + _num(get(r, "cost_ship"))
+                price = price_from_cost(cost, pricing)
             if name.startswith("필수"):
                 continue  # 양식 안내 줄
             if not name or not price:
@@ -207,7 +208,7 @@ def load(data_dir, cats, discount=0, pricing=None):
             img = get(r, "image")
             detail = get(r, "detail")
             products.append({
-                "id": code, "name": name[:100], "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),

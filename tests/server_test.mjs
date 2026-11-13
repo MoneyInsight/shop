@@ -150,4 +150,11 @@ r = await call("/health");
   r = await call("/admin/offer-reply", { id: r.d.offer.id, accept: false, note: "재고 부족" }, true);
   ok("제안 거절 메일", mails.some((m) => m.to[0].email === "choi@test.kr" && m.htmlContent.includes("재고 부족")), mails.at(-1));
   r = await call("/health"); ok("상태: 메일 켜짐", r.d.email === "켜짐", r.d); }
+// ── 일시품절 ──
+{ const f3 = globalThis.fetch; const prods = await (await f3(env.SITE_URL + "/products.json")).json();
+  globalThis.fetch = async (u, o) => String(u).endsWith("/products.json") ? new Response(JSON.stringify(prods.map((p) => p.id === "B1" ? { ...p, soldout: true } : p.id === "A1" ? { ...p, options: p.options.map((x, i) => i === 1 ? { ...x, so: true } : x) } : p))) : f3(u, o);
+  r = await call("/confirm", { paymentKey: "pk9", orderId: "ORD9", amount: 5000, items: [{ id: "B1", qty: 1 }], customer: cust }); ok("품절 상품 결제 거절", r.s === 400 && r.d.message.includes("품절"), r);
+  r = await call("/confirm", { paymentKey: "pk9", orderId: "ORD9", amount: 10500, items: [{ id: "A1", qty: 1, opt: 1 }], customer: cust }); ok("품절 옵션 결제 거절", r.s === 400 && r.d.message.includes("옵션"), r);
+  r = await call("/offer/add", { product_id: "B1", qty: 3, price: 4900, name: "김", phone: "01088887777" }); ok("품절 상품 제안 거절", r.s === 400, r);
+  globalThis.fetch = f3; }
 console.log(`통과 ${pass} / 실패 ${failn}`); process.exit(failn ? 1 : 0);

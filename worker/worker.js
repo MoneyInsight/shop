@@ -86,10 +86,12 @@ async function confirm(req, env) {
     const p = map[it.id];
     const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
     if (!p) return fail("판매하지 않는 상품이 포함되어 있어요.");
+    if (p.soldout) return fail(`일시품절된 상품이 있어요: ${p.name}`);
     let unit = p.price, optName = "";
     if (it.opt != null && it.opt !== "") {
       const o = (p.options || [])[Number(it.opt)];
       if (!o) return fail("선택한 옵션을 찾을 수 없어요. 다시 주문해 주세요.");
+      if (o.so) return fail(`품절된 옵션이 있어요: ${p.name} [${o.v}]`);
       unit += o.add; optName = o.v;
     } else if ((p.options || []).length) return fail("옵션이 선택되지 않은 상품이 있어요.");
     let offerId = "";
@@ -229,6 +231,7 @@ async function offerAdd(req, env) {
   const d = await req.json();
   const p = (await siteProducts(env)).find((x) => String(x.id) === String(d.product_id));
   if (!p) return fail("판매하지 않는 상품이에요.");
+  if (p.soldout) return fail("일시품절된 상품이라 지금은 제안할 수 없어요.");
   let unit = p.price, optName = "", opt = null;
   if ((p.options || []).length) {
     if (d.opt == null || d.opt === "") return fail("옵션을 선택해 주세요.");
@@ -847,7 +850,7 @@ export async function handle(req, env, path) {
   path = path || new URL(req.url).pathname;
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
-    return json({ ok: true, version: "2026-11-12g", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
+    return json({ ok: true, version: "2026-11-13a", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
   if (req.method !== "POST") return fail("Not found", 404);
