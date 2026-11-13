@@ -223,11 +223,13 @@ def build_home(ps):
 <div class="grid">{"".join(card(p, "./") for p in by_cat[c["slug"]][:4])}</div></div></section>''' for c in top)
     body = f'''<section class="hero"><div class="wrap"><div><small>THE HONEST PRICE</small>
 <h1>좋은 물건을,<br>군더더기 없는 가격으로.</h1>
-<p>유통 단계의 수수료를 덜어내고 꼭 필요한 만큼만 남겼습니다. 모든 상품은 무료로 배송해 드립니다.</p>
-<p class="hero-instant"><b>포인트 적립 대신 즉시 할인</b> 언제 쓸지 모르는 적립금 말고, 결제하는 순간 바로 깎아 드려요.</p>
-{f'<p class="hero-member"><b>회원은 {round(CFG["member_discount"]["rate"] * 100)}% 더 할인</b> 네이버·카카오·구글로 3초 가입하면 모든 주문에서 추가로 즉시 할인돼요. <a href="login.html" class="hero-join">간편가입 ›</a></p>' if (CFG.get("member_discount") or {}).get("rate") else ''}
-{f'<p class="hero-deal"><b>많이 살수록 더 싸게!</b> 같은 상품 2개부터 자동 할인, <b>최대 {max_deal}%</b>까지 내려가요.</p>' if max_deal >= 2 else ''}
-<a class="btn" href="search.html">전체 상품 보기</a></div>
+<p>유통 수수료를 덜어낸 정직한 가격, 모든 상품 무료배송.</p>
+<ul class="hero-perks">
+<li><b>즉시 할인</b><span>적립금 말고 바로</span></li>
+{f'<li><b>회원 {round(CFG["member_discount"]["rate"] * 100)}% 더</b><span>3초 간편가입</span></li>' if (CFG.get("member_discount") or {}).get("rate") else ''}
+{f'<li><b>최대 {max_deal}% 할인</b><span>같은 상품 2개부터</span></li>' if max_deal >= 2 else ''}
+</ul>
+<div class="hero-btns"><a class="btn" href="search.html">전체 상품 보기</a><a class="btn btn-ghost" href="login.html">간편가입</a></div></div>
 <div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
 <div class="benefits"><div class="wrap">
 <div>{I_TRUCK}<p><b>전 상품 무료배송</b><span>금액과 상관없이 배송비 0원</span></p></div>

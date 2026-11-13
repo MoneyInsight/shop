@@ -487,3 +487,12 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .login-perk b{color:var(--sale)}
 .hero-join{font-weight:700;color:var(--accent);text-decoration:underline;white-space:nowrap}
 .util nav a b{color:var(--accent)}
+
+/* 메인 혜택 (정리) */
+.hero-perks{list-style:none;padding:0;margin:22px 0 26px;display:flex;gap:10px;flex-wrap:wrap}
+.hero-perks li{background:rgba(255,255,255,.75);border:1px solid #eadfcd;border-radius:12px;padding:10px 14px;min-width:120px}
+.hero-perks b{display:block;font-size:15px;color:var(--ink)}
+.hero-perks span{display:block;font-size:12px;color:#8a7f70;margin-top:2px}
+.hero-btns{display:flex;gap:8px;flex-wrap:wrap}
+.hero .btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+@media (max-width:520px){.hero-perks li{flex:1;min-width:0;padding:9px 10px}.hero-perks b{font-size:14px}}
