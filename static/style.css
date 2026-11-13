@@ -384,3 +384,8 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .login-merit{text-align:left;margin:22px auto 0;max-width:320px;padding-left:18px;list-style:disc;color:var(--ink2);font-size:14px;line-height:1.9}
 .me-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .me-badge{font-size:12px;padding:3px 8px;border-radius:20px;background:var(--bg2,#f4f1ec)}
+
+/* 배송 조회 */
+.track-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+.track-btns{display:flex;gap:8px}
+.track-btns .btn{width:auto;padding:0 14px}

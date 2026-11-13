@@ -51,6 +51,22 @@
     } catch (e) { return { ok: false, d: { message: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." } }; }
   }
 
+  // ── 택배사 배송 조회 주소 (공식 사이트로 바로 이동, 무료) ──
+  const TRACK = {
+    "CJ대한통운": "https://trace.cjlogistics.com/next/tracking.html?wblNo=",
+    "한진택배": "https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038&schLang=KR&wblnumText2=",
+    "롯데택배": "https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo=",
+    "우체국택배": "https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm?sid1=",
+    "로젠택배": "https://www.ilogen.com/web/personal/trace/",
+    "경동택배": "https://kdexp.com/service/delivery/etc/delivery.do?barcode=",
+    "대신택배": "https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=",
+  };
+  const trackUrl = (courier, no) => { const n = digits(no); const b = TRACK[courier]; return b && n ? b + n : "https://search.naver.com/search.naver?query=" + encodeURIComponent((courier || "택배") + " 배송조회 " + n); };
+  const trackHTML = (o) => o.tracking ? `<div class="track-box"><div><span class="muted">${esc(o.courier || "택배")}</span> <b>${esc(o.tracking)}</b></div>
+      <div class="track-btns"><a class="btn btn-dark sm" target="_blank" rel="noopener" href="${esc(trackUrl(o.courier, o.tracking))}">실시간 배송 조회</a>
+      <button class="btn btn-line sm" type="button" data-copy="${esc(digits(o.tracking))}">송장번호 복사</button></div></div>` : "";
+  document.addEventListener("click", async (e) => { const b = e.target.closest("[data-copy]"); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "복사했어요"; } catch (x) {} });
+
   // ── 회원 (네이버·카카오·구글 간편 로그인) ──
   const member = () => store.get("user", null);
   const token = () => store.get("tk", "");
@@ -450,6 +466,12 @@
       form.classList.toggle("open");
       const my = store.get("my_orders", []).find((o) => (o.items || []).includes(id));
       if (my) { $("#rv-order").value = my.orderId; $("#rv-phone").value = my.phone || ""; }
+      const qo = new URLSearchParams(location.search).get("order");
+      if (qo && !$("#rv-order").value) $("#rv-order").value = qo;
+      if (token()) api("/me/orders", { token: token() }).then((r) => {  // 회원: 이 상품을 받은 주문 자동 선택
+        const o = r.ok && r.d.orders.find((x) => x.lines.some((l) => String(l.id) === String(id)) && ["배송중", "배송완료", "구매확정"].includes(x.status));
+        if (o) { $("#rv-order").value = o.orderId; $("#rv-phone").value = o.phone || ""; $("#rv-text").focus(); }
+      });
     };
     let rating = 5;
     const paint = () => $$(".star-pick button").forEach((b) => b.classList.toggle("on", +b.dataset.v <= rating));
@@ -669,7 +691,7 @@
       const canCancel = ["결제완료", "상품준비중"].includes(o.status), shipped = ["배송중", "배송완료"].includes(o.status);
       res.innerHTML = `<div class="card"><h2>주문 ${esc(o.orderId)} <span class="state${special ? "" : " done"}">${esc(o.status)}</span></h2>
         ${special ? "" : `<div class="track">${FLOW.map((s, i) => `<div class="${i <= step ? "on" : ""}">${s}</div>`).join("")}</div>`}
-        ${o.tracking ? `<p style="margin:14px 0 0;font-size:14px">${esc(o.courier)} <b>${esc(o.tracking)}</b> · <a style="text-decoration:underline" target="_blank" rel="noopener" href="https://search.naver.com/search.naver?query=${encodeURIComponent((o.courier || "택배") + " " + o.tracking)}">배송 추적</a></p>` : ""}
+        ${trackHTML(o)}
         ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${esc(o.claim.reason)}</div>` : ""}
         <div style="margin-top:20px">${o.lines.map((l) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a><div class="muted">${l.qty}개</div>
           ${shipped || o.status === "구매확정" ? `<a class="mini-btn" style="display:inline-block;margin-top:6px" href="${ROOT}product/${encodeURIComponent(l.id)}.html?write=1#review">리뷰 쓰기</a>` : ""}</div><strong>${won(l.price * l.qty)}</strong></div>`).join("")}</div>

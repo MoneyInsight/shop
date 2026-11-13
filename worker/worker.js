@@ -381,6 +381,15 @@ export const TEMPLATES = {
 송장번호: #{송장번호}
 
 배송 조회: #{링크}` },
+  REVIEW_ASK: { to: "고객", when: "배송완료로 바꿨을 때 (리뷰 요청)", text:
+`[땡잡았땡] #{고객명}님, 상품은 잘 받으셨나요?
+
+주문번호: #{주문번호}
+상품: #{상품명}
+
+사용해 보신 느낌을 리뷰로 남겨 주시면 다른 고객님께 큰 도움이 됩니다.
+
+리뷰 쓰기: #{링크}` },
   ADMIN_ORDER: { to: "대표", when: "새 주문이 들어왔을 때", text:
 `[땡잡았땡] 새 주문이 들어왔습니다.
 
@@ -502,7 +511,7 @@ async function email(env, to, subject, text, url) {
 }
 
 // 고객 알림 한 번에: 웹 푸시(무료) + 이메일(무료) + 알림톡(유료, 키 있을 때만)
-const ALERT_TITLE = { OFFER_ACCEPT: "가격 제안이 수락됐어요", OFFER_REJECT: "가격 제안 결과를 알려드려요", ORDER_DONE: "주문이 완료됐어요", SHIPPED: "상품이 출고됐어요" };
+const ALERT_TITLE = { OFFER_ACCEPT: "가격 제안이 수락됐어요", OFFER_REJECT: "가격 제안 결과를 알려드려요", ORDER_DONE: "주문이 완료됐어요", SHIPPED: "상품이 출고됐어요", REVIEW_ASK: "상품은 잘 받으셨나요?" };
 async function alertCustomer(env, key, who, vars) {
   const text = fill(TEMPLATES[key].text, vars), url = vars.링크;
   await pushTo(env, "p:" + digits(who.phone), { title: ALERT_TITLE[key] || "땡잡았땡", body: text.replace(/^\[땡잡았땡\]\s*/, "").split("\n\n").slice(0, 2).join("\n").slice(0, 180), url });
@@ -723,6 +732,11 @@ async function adminOrderUpdate(req, env) {
     if (status === "배송중" && o.tracking && !o.shipNotified) {
       o.shipNotified = true;
       await alertCustomer(env, "SHIPPED", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 택배사: o.courier || "-", 송장번호: o.tracking, 링크: siteLink(env, "orders.html?id=" + o.orderId) });
+    }
+    if (status === "배송완료" && !o.reviewAsked && o.lines?.length) {  // 리뷰 요청 (웹푸시·메일 무료, 알림톡은 템플릿 있을 때)
+      o.reviewAsked = true;
+      const l = o.lines[0];
+      await alertCustomer(env, "REVIEW_ASK", { phone: o.customer?.phone, email: o.customer?.email }, { 고객명: o.customer?.name, 주문번호: o.orderId, 상품명: l.name.slice(0, 40) + (o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""), 링크: siteLink(env, `product/${encodeURIComponent(l.id)}.html?write=1&order=${encodeURIComponent(o.orderId)}#review`) });
     }
     if (o.claim && /완료$/.test(status)) o.claim.status = "완료";
   }
