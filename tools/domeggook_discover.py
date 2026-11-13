@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
-NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "20000"))
+NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "30000"))
 MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "40000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
 OUT = ROOT / "data" / "도매매API상품.csv"

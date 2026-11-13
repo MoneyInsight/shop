@@ -93,8 +93,39 @@ def load_products():
     # 네이버 최저가보다 많이 싼 상품(절약률 큰 순)이 위로, 최저가 정보 없는 상품은 뒤로
     if CFG.get("show_naver", True):
         out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
+    out = clean_catalog(out)
     out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
     return out
+
+
+# 건강기능식품·성인용품은 등록하지 않음 (도매처 분류가 틀려도 이름으로 한 번 더 거름)
+BAN_WORDS = re.compile(r"건강기능식품|영양제|비타민|유산균|프로바이오틱|오메가\s?3|홍삼|녹용|콜라겐|루테인|밀크씨슬|글루코사민|코엔자임|"
+                       r"다이어트\s?보조|체지방\s?감소|성인용품|19금|성인\s?전용|콘돔|러브젤|딜도|바이브레이터|자위")
+
+
+def dedup_key(name):
+    """같은 상품을 여러 도매처가 올린 경우를 찾기 위한 이름 열쇠 (괄호 문구·특수문자·공백 제거, 소문자)"""
+    # 앞머리 홍보 문구([특가] (당일출고) 등)만 지우고, 규격·색상이 들어간 괄호는 남김 (A4/A3, 색상 다른 상품을 합치지 않게)
+    n = re.sub(r"^(\s*(\[[^\]]{0,12}\]|\([^)]{0,12}\)|【[^】]{0,12}】))+", " ", name or "")
+    n = re.sub(r"[^0-9a-zA-Z가-힣]", "", n).lower()
+    n = re.sub(r"(무료배송|당일출고|당일발송|빠른배송|국내배송|정품|신상|특가|초특가|최저가|인기)", "", n)
+    return n
+
+
+def clean_catalog(ps):
+    """① 건강기능식품·19세 상품 제외 ② 이름이 같은 중복 상품은 1개 살 때 가장 싼 것 하나만 남김"""
+    ps = [p for p in ps if not BAN_WORDS.search(p["name"])]
+    best = {}
+    for p in ps:
+        k = dedup_key(p["name"])
+        if len(k) < 6:  # 너무 짧은 이름(예: '원통목걸이')은 다른 상품일 수 있어 합치지 않음
+            best[("id", p["id"])] = p; continue
+        cur = best.get(k)
+        if cur is None or (p.get("soldout"), int(p["price"])) < (cur.get("soldout"), int(cur["price"])):
+            best[k] = p
+    kept = list(best.values())
+    print(f"정리: 건강기능식품·성인 제외 후 {len(ps)}개 → 중복 상품 정리 후 {len(kept)}개 (가장 싼 것만 남김)")
+    return kept
 
 
 def abs_img(p):
