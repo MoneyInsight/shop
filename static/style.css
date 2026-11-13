@@ -411,7 +411,7 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .qty-deal{margin-top:14px;padding:14px;border:1px solid #f0d9b5;background:#fffaf2;border-radius:12px}
 .qty-deal p{margin:0 0 10px;font-size:14px}
 .qty-deal p .muted{display:block;font-size:12px;margin-top:2px}
-.qty-cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qty-cells{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
 .qty-cells button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;cursor:pointer}
 .qty-cells button b{font-size:14px}
 .qty-cells button em{font-style:normal;color:var(--sale);font-weight:700}

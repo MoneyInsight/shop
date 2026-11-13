@@ -265,7 +265,7 @@ def qty_table(p):
     if not deal_shown(p):
         return '<div class="qty-deal" id="qty-deal" hidden></div>'
     cells = "".join(f'<button type="button" data-q="{n}"><b>{n}개</b><span>개당 {won(qt[n - 1])}</span>{f"<em>{round((1 - qt[n - 1] / qt[0]) * 100)}%↓</em>" if n > 1 and qt[n - 1] < qt[0] else "<em>&nbsp;</em>"}</button>'
-                    for n in (1, 2, 3, 5) if n <= len(qt))
+                    for n in (1, 2, 3, 5) if n <= len(qt) and not (n == 5 and qt[4] >= qt[2]))  # 5개가 3개보다 안 싸면 칸 생략
     return f'<div class="qty-deal" id="qty-deal"><p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">{cells}</div></div>'
 
 

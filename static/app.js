@@ -401,7 +401,7 @@
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; $(".offer-box").hidden = true;
       qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +
-        [1, 2, 3, 5].filter((n) => n <= p.qt.length).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;
+        [1, 2, 3, 5].filter((n) => n <= p.qt.length && !(n === 5 && p.qt[4] >= p.qt[2])).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;
     }
     if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }
     $(".detail-body").innerHTML = p.detail_html ? `<div class="detail-html">${p.detail_html}</div>` : `<img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">${esc(p.name)}</p>`;
@@ -438,7 +438,7 @@
       inp.value = v;
       const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
       $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v);
-      $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && v === 4)));
+      $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && (v === 4 || (v >= 5 && !$("#qty-deal [data-q='5']"))))));
     };
     $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
     $("#minus").onclick = () => { inp.value = +inp.value - 1; sync(); };
