@@ -1,0 +1,13 @@
+name: 오너클랜 API 연결 확인
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/ownerclan_probe.py
+        env:
+          OWNERCLAN_ID: ${{ secrets.OWNERCLAN_ID }}
+          OWNERCLAN_PW: ${{ secrets.OWNERCLAN_PW }}
+      - uses: actions/upload-artifact@v4
+        with: { name: probe, path: probe/, retention-days: 3 }
