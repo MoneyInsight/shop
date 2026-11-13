@@ -183,19 +183,32 @@ def ship_rule(ship, box_qty, pricing):
 
 
 def qty_prices(goods, ship, box_qty, free_over, pricing):
-    """n개 살 때 개당 가격 [1개, 2개, … 10개].
-    n개 원가 = 상품원가×n + 배송비×(택배 건수) (조건부 무료배송 기준을 넘으면 배송비 0)
-    → 같은 공식(순마진 12%, 카드수수료·부가세·운영비 반영)으로 n개 전체 가격을 계산해 n으로 나눔 (10원 단위 올림)
-    → 많이 살수록 배송비·운영비·최소마진이 나눠져서 개당 가격이 내려감"""
+    """n개 살 때 개당 가격 [1개, 2개, … 10개]
+    ① 배송비 절약형(도매처 배송비를 따로 내고 여러 개를 한 박스로): 2개 최소 3%, 3개 이상 최소 5% 할인,
+       아낀 배송비만큼(n개 원가 = 상품원가×n + 배송비×택배건수 → 12% 공식) 더 싸지면 그 가격
+    ② 개수만큼 배송비가 드는 상품(도매처 무료배송·1개마다 배송비·부피 큰 상품): 마진에서만 2개 2%, 3개 이상 4%
+    어느 경우든 원가 대비 순마진이 min_net_margin(8%) 아래로는 내려가지 않음"""
     if not goods or not pricing:
         return []
+    q = pricing.get("qty_price", {})
     k = ship_rule(ship, box_qty, pricing)
+    saving = ship > 0 and k > 1
+    rates = q.get("save_rates" if saving else "nosave_rates") or ({"2": 0.03, "3": 0.05} if saving else {"2": 0.02, "3": 0.04})
+    floor_m = q.get("min_net_margin", 0.08)
+    card, ops = pricing.get("card_fee", 0.034), pricing.get("ops_cost_won", 0)
+    p1 = price_from_cost(goods + ship, pricing)
     out = []
     for n in range(1, QT_MAX + 1):
-        boxes = -(-n // k)
+        boxes = -(-n // k) if saving else n
         sh = 0 if (free_over and goods * n >= free_over) else ship * boxes
-        out.append(math.ceil(price_from_cost(goods * n + sh, pricing) / n / 10) * 10)
-    # 택배가 한 건 더 늘어나는 수량(예: 4개)에서 개당 가격이 다시 오르지 않게, 뒤쪽 수량의 가장 높은 값으로 맞춤 (손해 없이 '많이 살수록 싸지게')
+        cost_n = goods * n + sh
+        d = 0 if n == 1 else rates.get(str(min(n, 3)), 0)
+        target = p1 * (1 - d)
+        if saving:
+            target = min(target, price_from_cost(cost_n, pricing) / n)
+        floor = (cost_n * 10 / 11 + ops + cost_n * floor_m) / (1 - card - 1 / 11) / n  # 순마진 8% 되는 개당 가격
+        out.append(p1 if n == 1 else math.ceil(max(target, floor) / 10) * 10)
+    # 택배가 한 건 더 늘어나는 수량에서 개당 가격이 다시 오르지 않게, 뒤쪽 수량의 가장 높은 값으로 맞춤 (손해 없이 '많이 살수록 싸지게')
     for i in range(len(out) - 2, -1, -1):
         out[i] = max(out[i], out[i + 1])
     return out if len(out) > 1 and out[1] < out[0] else []

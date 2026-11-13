@@ -343,7 +343,7 @@
     const qd = $("#qty-deal");
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; $(".offer-box").hidden = true;
-      qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">한 번에 보내서 아낀 배송·포장비를 돌려드려요</span></p><div class="qty-cells">` +
+      qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +
         [1, 2, 3, 5].filter((n) => n <= p.qt.length).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;
     }
     if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }

@@ -11,7 +11,7 @@ def ok(name, cond, info=""):
 
 async def main():
     products = json.load(open("site/products.json"))
-    opt = next(p for p in products if p["options"]); plain = next(p for p in products if not p["options"])
+    opt = next(p for p in products if p["options"] and not p.get("qt") and not p.get("soldout")); plain = next(p for p in products if not p["options"] and not p.get("qt") and not p.get("soldout"))  # 수량 할인 없는 상품(가격 제안 테스트용)
     async with async_playwright() as pw:
         b = await pw.chromium.launch(executable_path="/usr/bin/google-chrome")
         ctx = await b.new_context(viewport={"width": 1280, "height": 900})
