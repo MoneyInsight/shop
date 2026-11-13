@@ -505,3 +505,4 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .find-order{margin-top:16px;font-size:14px}
 .find-order summary{cursor:pointer;color:var(--ink2);text-decoration:underline}
 .link-btn{background:none;border:0;color:#999;text-decoration:underline;cursor:pointer;font-size:13px}
+.p-tags{margin-top:40px}.p-tags h3{font-size:15px;margin-bottom:10px}.p-tags a{display:inline-block;margin:0 6px 8px 0;padding:5px 11px;border:1px solid #e6dccb;border-radius:999px;font-size:13px;color:#7a6650;background:#fffaf2}.p-tags a:hover{border-color:#9b7b50;color:#5b4528}

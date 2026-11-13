@@ -5,7 +5,7 @@
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
 import os, re, csv, json, html, shutil, datetime, hashlib
-import notice
+import notice, seo
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -286,7 +286,8 @@ def product_body(p, related):
     img = p["image"] if p["image"].startswith("http") else "../" + p["image"]
     url = f'{BASE}/product/{p["id"]}.html'
     ld = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "image": [abs_img(p)] + p["images"],
-          "description": p["summary"] or p["name"], "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
+          "description": seo.description(p, seo.max_deal(p)), "sku": p["id"], "brand": {"@type": "Brand", "name": p["brand"] or CFG["shop_name"]},
+          "keywords": ", ".join(seo.tags(p)), "category": p.get("category_name", ""),
           "offers": {"@type": "Offer", "url": url, "priceCurrency": "KRW", "price": p["price"],
                      "availability": "https://schema.org/InStock", "itemCondition": "https://schema.org/NewCondition",
                      "shippingDetails": {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": p["shipping_fee"], "currency": "KRW"}}}}
@@ -301,7 +302,7 @@ def product_body(p, related):
             f'<option value="{i}"{" disabled" if o.get("so") else ""}>{"[품절] " if o.get("so") else ""}{e(o["v"])}{(" (+" + won(o["add"]) + ")") if o["add"] > 0 else ((" (" + won(o["add"]) + ")") if o["add"] < 0 else "")}</option>' for i, o in enumerate(p["options"])) + "</select>"
     body = f'''<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / {f'<a href="../category/{p["category"]}.html">{e(p["category_name"])}</a>' if p["category"] else ""}</div>
 <div class="detail">
-<div class="gallery"><div class="main-img"><img id="main-img" src="{e(img)}" alt="{e(p["name"])}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>{thumbs}</div>
+<div class="gallery"><div class="main-img"><img id="main-img" src="{e(img)}" alt="{e(p["name"] + " " + " ".join(seo.tags(p)[:3]))}">{f'<span class="badge {e(p["badge"])}">{e(p["badge"])}</span>' if p["badge"] else ""}</div>{thumbs}</div>
 <div class="d-info-box">{f'<div class="d-brand">{e(p["brand"])}</div>' if p["brand"] else ""}<h1 class="d-name">{e(p["name"])}</h1>
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
@@ -322,6 +323,7 @@ def product_body(p, related):
 </div></div>
 <nav class="tabs"><a href="#info" class="on">상세정보</a><a href="#review">리뷰 <span class="rv-count">0</span></a><a href="#qna">문의 <span class="qa-count">0</span></a><a href="#guide">배송·교환·반품</a></nav>
 <section class="tab-sec" id="info"><div class="detail-body">{desc}</div>
+<div class="p-tags"><h3>관련 태그</h3>{"".join(f'<a href="../search.html?q={e(t)}">#{e(t)}</a>' for t in seo.tags(p))}</div>
 <h3 style="margin-top:56px">상품정보 제공고시</h3><table class="notice-table">
 {"".join(f"<tr><th>{e(k)}</th><td>{e(v)}</td></tr>" for k, v in notice.rows(p, BIZ))}</table></section>
 <section class="tab-sec" id="review"><h3>리뷰 <button class="btn btn-line sm" id="rv-open">리뷰 쓰기</button></h3>
@@ -358,8 +360,8 @@ def build_products(ps):
         k = sib.index(p)
         related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
         body, ld, url, img = product_body(p, related)
-        write(f'product/{p["id"]}.html', layout(f'{p["name"]} — {CFG["shop_name"]}', body, "../", active=p["category"],
-              desc=f'{p["name"]} {won(p["price"])} 무료배송. {p["summary"]}'.strip(), canonical=url, og_img=abs_img(p),
+        write(f'product/{p["id"]}.html', layout(seo.title(p, CFG["shop_name"]), body, "../", active=p["category"],
+              desc=seo.description(p, seo.max_deal(p), (CFG.get("member_discount") or {}).get("rate", 0)), canonical=url, og_img=abs_img(p),
               extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
     # 상품 DB용 템플릿: product/item.html?id=상품번호 → 브라우저가 서버(/catalog/item)에서 받아 채움 (100만 개도 페이지 1장)
     blank = {"id": "", "name": "상품 정보를 불러오고 있어요", "price": 0, "normal_price": 0, "image": "noimg.svg", "images": [], "summary": "",
@@ -565,14 +567,14 @@ def build_partner_pages():
 # ---------------- 네이버 EP · 사이트맵 ----------------
 def build_feeds(ps):
     cols = ["id", "title", "price_pc", "price_mobile", "normal_price", "link", "mobile_link", "image_link",
-            "category_name1", "brand", "maker", "origin", "event_words", "shipping"]
+            "category_name1", "brand", "maker", "origin", "event_words", "shipping", "search_tag"]
     lines = ["\t".join(cols)]
     clean = lambda s: str(s).replace("\t", " ").replace("\n", " ").strip()
     for p in ps:
         link = f'{BASE}/product/{p["id"]}.html'
         row = [p["id"], p["name"], p["price"], p["price"], p["normal_price"], link, link, abs_img(p),
                p["category_name"], p["brand"], p["maker"], p["origin"],
-               "전 상품 무료배송", p["shipping_fee"]]
+               "전 상품 무료배송", p["shipping_fee"], "|".join(seo.tags(p, 10))]  # 네이버 검색 태그 (최대 10개, | 구분)
         lines.append("\t".join(clean(x) for x in row))
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
@@ -587,8 +589,8 @@ def build_feeds(ps):
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
     # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
     cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}
-    idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or ""] for p in pub]
-    write("idx.json", json.dumps({"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge"], "items": idx}, ensure_ascii=False, separators=(",", ":")))
+    idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or "", " ".join(seo.tags(p))] for p in pub]
+    write("idx.json", json.dumps({"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge", "tags"], "items": idx}, ensure_ascii=False, separators=(",", ":")))
     (OUT / "p").mkdir(exist_ok=True)
     for p in pub:
         (OUT / "p" / f'{p["id"]}.json').write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

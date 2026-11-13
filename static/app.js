@@ -176,7 +176,7 @@
     if (!PRODUCTS) {
       const d = await (await fetch(ROOT + "idx.json", { cache: "no-cache" })).json();
       PRODUCTS = d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
-        return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], shipping_fee: 0 }; });
+        return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: 0 }; });
     }
     return PRODUCTS;
   }
@@ -301,7 +301,7 @@
       if (DBMODE) list = ((await apiGet("/catalog/list?" + new URLSearchParams({ q, size: 8 }))) || {}).items || [];
       else {
         const all = await loadProducts();
-        list = all.filter((p) => !p.soldout && words.every((w) => (p.name + " " + (p.brand || "") + " " + (p.category_name || "")).toLowerCase().includes(w)))
+        list = all.filter((p) => !p.soldout && words.every((w) => (p.name + " " + (p.brand || "") + " " + (p.category_name || "") + " " + (p.tags || "")).toLowerCase().includes(w)))
           .sort((a, b) => a.name.toLowerCase().indexOf(words[0]) - b.name.toLowerCase().indexOf(words[0])).slice(0, 8);
       }
       if (my !== seq) return;
@@ -343,7 +343,7 @@
       const term = (q.get("q") || "").trim();
       const words = term.toLowerCase().split(/\s+/).filter(Boolean);
       const si = $(".search input"); if (si) si.value = term;
-      list = all.filter((p) => words.every((w) => (p.name + " " + p.category_name + " " + (p.brand || "") + " " + (p.summary || "")).toLowerCase().includes(w)));
+      list = all.filter((p) => words.every((w) => (p.name + " " + p.category_name + " " + (p.brand || "") + " " + (p.summary || "") + " " + (p.tags || "")).toLowerCase().includes(w)));
       $("#list-title").firstChild.textContent = term ? `‘${term}’ 검색 결과` : "전체 상품";
     }
     // 무한 스크롤: 처음 40개, 바닥 근처에 오면 40개씩 더 붙임
