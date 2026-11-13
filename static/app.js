@@ -180,6 +180,18 @@
 
   // 수량 할인: 같은 상품을 n개(옵션 달라도 합산) 사면 개당 가격 qt[n-1] (11개 이상은 마지막 값)
   const unitFor = (p, n) => (p.qt && p.qt.length ? p.qt[Math.min(Math.max(n, 1), p.qt.length) - 1] : Number(p.price));
+  // 제주·도서산간 추가 배송비 (서버 worker/region.js 와 같은 규칙)
+  function regionFee(zip, addr) {
+    const rule = CFG.remote_ship; if (!rule) return { fee: 0, label: "" };
+    const z = parseInt(String(zip || "").replace(/\D/g, "")) || 0, a = String(addr || "");
+    const inR = (rs) => (rs || []).some(([lo, hi]) => z >= lo && z <= hi);
+    const island = inR(rule.island_zip) || (rule.island_words || []).some((w) => a.includes(w));
+    const jeju = inR(rule.jeju_zip) || /^제주/.test(a.trim());
+    if (jeju && /추자|우도|가파|마라/.test(a)) return { fee: rule.jeju + rule.island, label: "제주 섬 지역" };
+    if (jeju) return { fee: rule.jeju, label: "제주" };
+    if (island) return { fee: rule.island, label: "도서산간" };
+    return { fee: 0, label: "" };
+  }
   // 금액: 상품금액(옵션 추가금 포함) + 배송비(상품별 1회) − 쿠폰
   function calc(cart, products, discount) {
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
@@ -629,9 +641,12 @@
       <div class="muted">${l.optName ? esc(l.optName) + " · " : ""}${l.qty}개${l.offer ? ` · <span style="color:var(--sale)">제안가 개당 ${won(l.price)}</span> <del>${won(l.list)}</del>` : ""}</div></div><strong>${won(l.price * l.qty)}</strong></div>`).join("");
     const paint = async () => {
       sums = calc(cart, products, discount);
+      const rf = regionFee($("#zip").value, ($("#addr1").value + " " + $("#addr2").value).trim());
+      if (rf.fee) { sums.shipping += rf.fee; sums.total += rf.fee; sums.remote = rf; }
       $("#order-sum").innerHTML = `<div class="sum"><div><span>상품 금액</span><span>${won(sums.subtotal)}</span></div>
         ${sums.discount ? `<div class="minus"><span>쿠폰 할인</span><span>−${won(sums.discount)}</span></div>` : ""}
         <div><span>배송비</span><span>${sums.shipping ? won(sums.shipping) : "무료"}</span></div>
+        ${sums.remote ? `<p class="muted" style="margin:4px 0 0;font-size:12px">${esc(sums.remote.label)} 지역 추가 배송비 ${won(sums.remote.fee)}이 포함됐어요.</p>` : ""}
         <div class="total"><span>최종 결제 금액</span><b>${won(sums.total)}</b></div></div>`;
       $("#pay-btn").textContent = won(sums.total) + " 결제하기";
       if (widgets) await widgets.setAmount({ currency: "KRW", value: sums.total });
@@ -647,7 +662,8 @@
       $("#order-items").insertAdjacentHTML("afterend", `<p class="note" style="margin-top:12px">가격 제안이 수락된 주문이에요. 제안을 보낸 연락처로 주문해 주셔야 제안 가격이 적용돼요.</p>`);
     }
     $("#memo-sel").onchange = (e) => { const v = e.target.value; $("#memo").style.display = v === "직접 입력" ? "" : "none"; $("#memo").value = v === "직접 입력" ? "" : v; };
-    $("#find-addr").onclick = () => new daum.Postcode({ oncomplete: (d) => { $("#zip").value = d.zonecode; $("#addr1").value = d.roadAddress || d.jibunAddress; $("#addr2").focus(); } }).open();
+    $("#find-addr").onclick = () => new daum.Postcode({ oncomplete: (d) => { $("#zip").value = d.zonecode; $("#addr1").value = d.roadAddress || d.jibunAddress; $("#addr2").focus(); paint(); } }).open();
+    ["zip", "addr1", "addr2"].forEach((k) => $("#" + k).addEventListener("change", () => paint()));
     // 약관 전체 동의
     const reqs = $$(".agree-req");
     $("#agree-all").onchange = (e) => reqs.forEach((c) => (c.checked = e.target.checked));
@@ -684,6 +700,7 @@
       if (!reqs.every((c) => c.checked)) { alert("필수 약관에 동의해 주세요."); return; }
       if ($("#save-addr").checked) { store.set("addr", { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr1: f("addr1"), addr2: f("addr2") }); memberSave({ addr: store.get("addr") }); }
       else store.set("addr", null);
+      await paint();  // 주소에 따른 추가 배송비 반영
       const orderId = "T" + new Date().toISOString().slice(2, 10).replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8).toUpperCase();
       const first = sums.lines[0].name;
       const orderName = (first.length > 40 ? first.slice(0, 40) + "…" : first) + (sums.lines.length > 1 ? ` 외 ${sums.lines.length - 1}건` : "");

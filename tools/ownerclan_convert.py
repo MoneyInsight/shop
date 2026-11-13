@@ -10,7 +10,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from product_import import price_from_cost
 
-PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
+CFG = json.load(open(ROOT / "config.json", encoding="utf-8"))
+PRICING = CFG["pricing"]
+MAX_GRADE = CFG.get("sourcing", {}).get("ownerclan_max_grade", 8)
 OLD = ROOT / "data" / "직영상품.csv"
 OUT = ROOT / "data" / "오너클랜상품.csv"
 
@@ -30,6 +32,9 @@ def main(src):
     for code, x in res.items():
         if x.get("error") or not x.get("base") or x.get("stat") not in ("SELL", ""):
             skipped.append((code, x.get("error") or x.get("stat") or "가격없음")); continue
+        g = x.get("grade")
+        if g is not None and (not isinstance(g, int) or g > MAX_GRADE):  # 상위 등급 공급사만 (신규·주의·BAD 제외)
+            skipped.append((code, f"공급사 {g}{'등급' if isinstance(g, int) else ''}")); continue
         ship = 0 if "무료" in (x.get("ship") or "") else won(x.get("ship"))
         cost = x["base"] + ship
         base_price = price_from_cost(cost, PRICING)

@@ -1,0 +1,17 @@
+import { regionFee } from "../worker/region.js";
+import { handle } from "../worker/worker.js";
+let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log("✗", m)); };
+ok(regionFee("63309", "제주특별자치도 제주시 첨단로 1").fee === 3000, "제주");
+ok(regionFee("63000", "제주특별자치도 제주시 우도면 연평리").fee === 8000, "제주 우도");
+ok(regionFee("40200", "경상북도 울릉군 울릉읍").fee === 5000, "울릉");
+ok(regionFee("58800", "전라남도 신안군 흑산면").fee === 5000, "신안 흑산");
+ok(regionFee("16200", "경기 수원시 권선구").fee === 0, "일반 지역");
+const mem = new Map();
+const SHOP = { get: async (k, t) => (mem.has(k) ? (t === "json" ? JSON.parse(mem.get(k)) : mem.get(k)) : null), put: async (k, v) => void mem.set(k, v), delete: async () => {}, list: async () => ({ keys: [] }) };
+globalThis.fetch = async (u) => String(u).endsWith("/products.json") ? new Response(JSON.stringify([{ id: "A", name: "a", price: 10000, options: [] }])) : new Response(JSON.stringify({ method: "카드" }));
+const env = { SHOP, SITE_URL: "https://s", TOSS_SECRET_KEY: "test_k" };
+const pay = async (id, amount, zip, addr) => (await handle(new Request("https://x/confirm", { method: "POST", body: JSON.stringify({ paymentKey: "k", orderId: id, amount, items: [{ id: "A", qty: 1 }], customer: { name: "a", phone: "010-1-1", zip, addr } }) }), env, "/confirm")).status;
+ok(await pay("R1", 10000, "63309", "제주특별자치도 제주시") === 400, "제주인데 추가배송비 없이 결제 → 거부");
+ok(await pay("R2", 13000, "63309", "제주특별자치도 제주시") === 200, "제주 추가배송비 포함 결제");
+ok(JSON.parse(mem.get("order:R2")).remote === "제주", "주문에 지역 기록");
+console.log(`region: ${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

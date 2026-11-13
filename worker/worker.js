@@ -20,6 +20,7 @@ import * as catalog from "./catalog.js";
 import * as auth from "./auth.js";
 import * as tracking from "./track.js";
 import * as stats from "./stats.js";
+import { regionFee } from "./region.js";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -114,6 +115,8 @@ async function confirm(req, env) {
   }
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
+  const remote = regionFee(customer?.zip, customer?.addr);  // 제주·도서산간 추가 배송비
+  shipping += remote.fee;
   let discount = 0, couponCode = "";
   if (coupon) {
     const c = await checkCoupon(env, coupon, subtotal);
@@ -131,7 +134,7 @@ async function confirm(req, env) {
   if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
 
   const now = new Date().toISOString();
-  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, lines, customer, method: pay.method, paymentKey,
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, lines, customer, method: pay.method, paymentKey,
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결

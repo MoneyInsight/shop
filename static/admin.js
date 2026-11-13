@@ -76,7 +76,14 @@
         <textarea id="trk-paste" style="width:100%;height:120px" placeholder="여기에 붙여넣기"></textarea>
         <div style="margin-top:8px"><input type="file" id="trk-file" accept=".csv,.txt"> <button data-act="trk-import">송장 넣기</button></div><div id="trk-result" class="muted" style="margin-top:8px"></div></div>`;
     }
-    if (tab === "claims") return `<div class="card"><h2>취소·반품·교환 요청</h2><p class="muted" style="margin-bottom:12px">환불 버튼을 누르면 결제가 실제로 취소돼요. 교환은 처리 후 상태를 ‘교환완료’로 바꿔 주세요.</p>${orderTable(D.orders.filter((o) => /요청$/.test(o.status)))}</div>
+    if (tab === "claims") return `<div class="card"><h2>처리 순서</h2><ol class="why" style="padding-left:18px;list-style:decimal">
+        <li><b>취소 (발주 전)</b>: 고객이 직접 취소하면 자동 환불돼요. 할 일 없음.</li>
+        <li><b>취소 (발주 후·출고 전)</b>: 도매처(도매매·오너클랜) 주문 화면에서 <b>주문 취소</b> 요청 → 취소되면 여기서 [환불].</li>
+        <li><b>반품</b>: 도매처 주문·배송 조회 → 해당 주문 <b>반품 신청</b> (사유·회수지 = 고객 주소) → 도매처가 회수 → 회수 확인되면 [환불] → 상태 ‘반품완료’.<br>
+          <span class="muted">단순 변심은 왕복 배송비를 고객 부담으로 빼고 부분 환불(환불 금액 입력), 불량·오배송은 전액 환불하고 도매처에 배송비 청구.</span></li>
+        <li><b>교환</b>: 도매처에 교환 신청 → 새 송장 받으면 송장 입력 → 상태 ‘교환완료’.</li>
+        <li>도매처 반품·교환 배송비는 상품마다 달라요. 도매처 상품 페이지의 반품/교환비를 확인하세요.</li></ol></div>
+      <div class="card"><h2>취소·반품·교환 요청</h2><p class="muted" style="margin-bottom:12px">환불 버튼을 누르면 결제가 실제로 취소돼요. 교환은 처리 후 상태를 ‘교환완료’로 바꿔 주세요.</p>${orderTable(D.orders.filter((o) => /요청$/.test(o.status)))}</div>
       <div class="card"><h2>처리 완료</h2>${orderTable(D.orders.filter((o) => ["취소완료", "반품완료", "교환완료"].includes(o.status)).slice(0, 30))}</div>`;
     if (tab === "qna") {
       const item = (q) => `<tr><td>${dt(q.at)}<br><span class="state${q.answer ? " done" : ""}" style="margin:0">${q.answer ? "답변완료" : "대기"}</span></td>
