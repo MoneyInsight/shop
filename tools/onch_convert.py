@@ -16,6 +16,10 @@ from product_import import cat_from_code
 _CFG = json.loads((Path(__file__).resolve().parent.parent / "config.json").read_text())
 CATS = _CFG["categories"]
 SHIP_RATIO = (_CFG.get("pricing") or {}).get("max_ship_ratio") or 0
+import re as _re
+_KW = _CFG.get("hide_no_kc_words") or []
+_EX, _EL = _re.compile(_CFG.get("hide_no_kc_except") or "$^"), _re.compile(_CFG.get("hide_no_kc_electric") or "$^")
+kc_risk = lambda n: any(k in n for k in _KW) and (not _EX.search(n) or bool(_EL.search(n)))  # KC 없는 전기 난방용품은 아예 안 받음
 
 MARGIN = 1.01
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -55,6 +59,8 @@ for f in sorted(src.glob("*.xlsx")):
         if code in seen:
             stat["중복"] += 1; continue
         seen.add(code)
+        if kc_risk(g(r, "상품명")) and not g(r, "상품정보제공고시인증허가사항"):
+            stat["KC없는전기난방"] = stat.get("KC없는전기난방", 0) + 1; continue
         if g(r, "금칙어"):
             stat["금칙어"] += 1; continue
         if g(r, "미성년자 구매").upper() == "N":
