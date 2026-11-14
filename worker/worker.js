@@ -1179,10 +1179,15 @@ export async function handle(req, env, path) {
       const d = await req.json().catch(() => ({}));
       const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(d.key || ""))))].map((b) => b.toString(16).padStart(2, "0")).join("");
       if (hash !== "f2855deba60152be96a93c35e81902bd8a5f36e3cf79ce13a91ed659d4b54ed8") return fail("권한 없음", 403);
-      const files = (Array.isArray(d.files) ? d.files : []).map((f) => String(f).split("/").pop()).filter((f) => /^product_smartstore_\d{14}_[0-9a-f]{10,20}\.xlsx$/.test(f));
-      if (!files.length || files.length > 100) return fail("파일 목록이 이상해요.");
-      const rec = { at: Date.now(), files, expected: Number(d.expected) || files.length };
-      await env.SHOP.put("onch_files", JSON.stringify(rec));
+      const ok = (arr) => (Array.isArray(arr) ? arr : []).map((f) => String(f).split("/").pop()).filter((f) => /^product_smartstore_\d{14}_[0-9a-f]{10,20}\.xlsx$/.test(f));
+      const groups = {};
+      for (const [g, v] of Object.entries(d.groups || { office: { files: d.files, expected: d.expected } })) {
+        if (!/^[a-z]{2,12}$/.test(g)) continue;
+        groups[g] = { files: ok(v && v.files), expected: Number(v && v.expected) || 0 };
+      }
+      const files = Object.values(groups).flatMap((g) => g.files);
+      if (!files.length || files.length > 400) return fail("파일 목록이 이상해요.");
+      await env.SHOP.put("onch_files", JSON.stringify({ at: Date.now(), groups }));
       return json({ ok: true, n: files.length });
     }
   }

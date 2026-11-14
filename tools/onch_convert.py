@@ -14,12 +14,14 @@ import openpyxl
 
 MARGIN = 1.01
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
+opt = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--") and "=" in a)  # --out=파일이름 --cat=쇼핑몰카테고리
 src = Path(args[0])
 strict = json.loads(Path(args[1]).read_text()) if len(args) > 1 else {}
-out = Path(__file__).resolve().parent.parent / "data" / "온채널상품.csv"
+out = Path(__file__).resolve().parent.parent / "data" / opt.get("out", "온채널상품.csv")
+MALL_CAT = opt.get("cat", "")
 
 COLS = ["상품코드", "상품명", "카테고리코드", "카테고리명", "공급가", "공급 배송비", "공급사최저판매가", "반품배송비", "교환배송비",
-        "대표 이미지 주소", "추가 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "인증정보", "옵션명", "옵션"]
+        "대표 이미지 주소", "추가 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "인증정보", "옵션명", "옵션", "쇼핑몰카테고리"]
 
 
 def n(v):
@@ -67,11 +69,11 @@ for f in sorted(src.glob("*.xlsx")):
             for i, v in enumerate(vals):
                 if v and (i >= len(stocks) or stocks[i] > 0):
                     opts.append(f"{v.replace('|', '/').replace('=', '-')}={math.ceil((adds[i] if i < len(adds) else 0) / MARGIN / 10) * 10}")
-        rows.append([code, g(r, "상품명"), g(r, "카테고리코드"), "생활/건강>문구/사무용품", cost, ship, minp,
+        rows.append([code, g(r, "상품명"), g(r, "카테고리코드"), "" if MALL_CAT else "생활/건강>문구/사무용품", cost, ship, minp,
                      n(g(r, "반품배송비")), n(g(r, "교환배송비")), g(r, "대표이미지"),
                      "|".join(x for x in g(r, "추가이미지").replace("\n", ",").split(",") if x.strip().startswith("http")),
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
-                     "옵션" if opts else "", "|".join(opts)])
+                     "옵션" if opts else "", "|".join(opts), MALL_CAT])
 
 old, prev = 0, []
 seen_ok = {r[0] for r in rows}

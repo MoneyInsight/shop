@@ -9,9 +9,9 @@ for f in "$@"; do
   curl -sSf -o "$D/$f" "https://export.onch3.co.kr/$f"
 done
 echo "받음: $(ls "$D" | wc -l)개"
-python3 -I tools/onch_convert.py "$D" data/onch_strict.json
+python3 -I tools/onch_convert.py "$D" data/onch_strict.json --out="${OUT:-온채널상품.csv}" ${CAT:+--cat=$CAT}
 [ -n "$NO_GIT" ] && exit 0
-git add data/온채널상품.csv
+git add "data/${OUT:-온채널상품.csv}"
 if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
 git commit -qm "온채널 품절·가격 점검 (매일)
 

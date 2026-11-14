@@ -20,6 +20,11 @@
   },
   "categories": [
     {
+      "slug": "winter",
+      "name": "겨울용품",
+      "emoji": "❄️"
+    },
+    {
       "slug": "living",
       "name": "생활용품",
       "emoji": "🏠"

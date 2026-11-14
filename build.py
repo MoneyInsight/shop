@@ -746,10 +746,11 @@ def build_feeds(ps):
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
                               "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
-    oc = ROOT / "data" / "온채널상품.csv"
-    if oc.exists():  # 온채널 매일 품절 점검용 상품코드 목록 (tools/onch_browser.js 가 읽음)
-        with oc.open(encoding="utf-8-sig") as fp:
-            write("onch_codes.json", json.dumps([r[0] for r in list(csv.reader(fp))[1:] if r], ensure_ascii=False))
+    for src, dst in (("온채널상품.csv", "onch_codes.json"), ("온채널겨울상품.csv", "onch_codes_winter.json")):
+        oc = ROOT / "data" / src
+        if oc.exists():  # 온채널 매일 품절 점검용 상품코드 목록 (tools/onch_browser.js 가 읽음)
+            with oc.open(encoding="utf-8-sig") as fp:
+                write(dst, json.dumps([r[0] for r in list(csv.reader(fp))[1:] if r], ensure_ascii=False))
     # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
     cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}
     idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or "", " ".join(seo.tags(p))] for p in pub]
