@@ -1,4 +1,4 @@
-/* 땡잡았땡 관리자 — 대시보드·주문·취소/반품·문의·리뷰·쿠폰·공급사 */
+/* 올채움 관리자 — 대시보드·주문·취소/반품·문의·리뷰·쿠폰·공급사 */
 (function () {
   const API = (window.SHOP_CFG || {}).worker_url;
   const $ = (s, el = document) => el.querySelector(s);
@@ -164,8 +164,8 @@
     "수령자 연락처": (l) => l.phone, 연락처: (l) => l.phone, 휴대폰: (l) => l.phone, 휴대전화: (l) => l.phone, "받는사람 휴대폰": (l) => l.phone, "받는사람 전화번호": (l) => l.phone, 추가연락처: () => "",
     우편번호: (l) => l.zip, 주소: (l) => l.addr, "받는사람 주소": (l) => l.addr, 배송지주소: (l) => l.addr1, 배송상세주소: (l) => l.addr2,
     배송메시지: memoWithId, 배송메모: memoWithId, 배송요청사항: (l) => l.memo, "배송시 요청사항": (l) => l.memo,
-    주문번호: (l) => l.orderId, 주문자관리번호: (l) => l.orderId, 원장주문코드: (l) => l.orderId, 전달사항: (l) => "주문 " + l.orderId, 쇼핑몰명: () => "땡잡았땡",
-    "판매사 주문관리 메모": (l) => "땡잡았땡 " + l.orderId, "마켓 정산가(배송비 포함)": (l) => l.amount };
+    주문번호: (l) => l.orderId, 주문자관리번호: (l) => l.orderId, 원장주문코드: (l) => l.orderId, 전달사항: (l) => "주문 " + l.orderId, 쇼핑몰명: () => "올채움",
+    "판매사 주문관리 메모": (l) => "올채움 " + l.orderId, "마켓 정산가(배송비 포함)": (l) => l.amount };
   const NO_COMMA = { ownerclan: true };  // 오너클랜 CSV는 값에 쉼표가 있으면 안 됨
   const csvDown = (rows, name) => {
     const csv = "\ufeff" + rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
@@ -266,7 +266,7 @@
       if (act === "backup") {
         const r = await fetch(API + "/admin/export", { method: "POST", headers: { Authorization: "Bearer " + encodeURIComponent(PW.trim()) } });
         if (!r.ok) { alert("백업을 받지 못했어요."); return; }
-        const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `땡잡았땡_백업_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `올채움_백업_${new Date().toISOString().slice(0, 10)}.json`; a.click();
         return load();
       }
       if (act === "period") { period = b.dataset.p; A = null; return paint(); }

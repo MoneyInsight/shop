@@ -1,4 +1,4 @@
-"""오너클랜 공식 '상품 DB 다운로드' 엑셀(브라우저에서 필요한 열만 JSON으로 묶은 것) → 땡잡았땡 상품 CSV
+"""오너클랜 공식 '상품 DB 다운로드' 엑셀(브라우저에서 필요한 열만 JSON으로 묶은 것) → 올채움 상품 CSV
 사용: python3 tools/ownerclan_db_convert.py <grades.json> <set1.json> [set2.json ...]
  - grades.json: {상품코드: [공급사코드, icon번호, 묶음배송가능수량]} 또는 {"vendors": {공급사코드: icon번호}, "products": {...}, "clusters": {...}}
  - 공급사 등급 = 18 - icon번호. config sourcing.ownerclan_max_grade(8) 이하만 등록 (신규·주의·BAD·미확인 제외)

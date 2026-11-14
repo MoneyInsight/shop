@@ -529,7 +529,7 @@ def build_shop_pages():
 <label for="bk-product">상품명 또는 상품 주소</label><input id="bk-product" placeholder="예) 메탈 선반 4단 화이트">
 <div class="row"><div><label for="bk-qty">필요 수량</label><input id="bk-qty" inputmode="numeric" placeholder="예) 200"></div><div><label for="bk-date">받고 싶은 날짜 (선택)</label><input id="bk-date" type="date"></div></div>
 <label for="bk-price">희망 단가 또는 예산 (선택)</label><input id="bk-price" placeholder="예) 개당 15,000원 / 총 300만 원">
-<div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 땡잡았땡상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
+<div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 올채움상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
 <label for="bk-email">이메일 (견적서 받을 곳, 선택)</label><input id="bk-email" type="email">
 <label class="check"><input type="checkbox" id="bk-tax"><span>세금계산서 발행이 필요해요</span></label>
 <label class="check"><input type="checkbox" id="bk-print"><span>로고 인쇄·개별 포장 등 맞춤 작업이 필요해요</span></label>
@@ -539,7 +539,7 @@ def build_shop_pages():
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
-    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">땡</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
+    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">올</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
           "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#fdf8ef",
           "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -617,9 +617,9 @@ def build_partner_pages():
 <label>상세 설명 (줄마다 한 가지 특징)</label><textarea name="description" style="height:120px"></textarea>
 <button class="btn btn-dark" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
 <div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록</h2>
-<p style="color:#555;font-size:15px">땡잡았땡 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
+<p style="color:#555;font-size:15px">올채움 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
 가격은 <b>오픈마켓 판매가(무료배송 기준)</b>이 그대로 판매가가 되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요.</p>
-<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>땡잡았땡 상품등록 양식 내려받기 (.xlsx)</a>
+<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>올채움 상품등록 양식 내려받기 (.xlsx)</a>
 <label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
@@ -673,7 +673,7 @@ def main():
     if (ROOT / "uploads").exists():
         shutil.copytree(ROOT / "uploads", OUT / "uploads")
     (OUT / ".nojekyll").write_text("")
-    tpl = ROOT / "data" / "땡잡았땡_상품등록양식.xlsx"
+    tpl = ROOT / "data" / "올채움_상품등록양식.xlsx"
     if tpl.exists():
         shutil.copy(tpl, OUT / "product_template.xlsx")
     ps = load_products()

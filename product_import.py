@@ -1,4 +1,4 @@
-"""땡잡았땡 상품등록 엑셀 → 쇼핑몰 상품 변환
+"""올채움 상품등록 엑셀 → 쇼핑몰 상품 변환
 data/ 폴더의 .xlsx / .csv 를 읽어 쇼핑몰 상품으로 바꿉니다.
 열 순서는 상관없고 열 이름으로 찾습니다. (다른 판매채널에서 내려받은 엑셀의 흔한 열 이름도 함께 인식)
 
@@ -224,12 +224,12 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
     cat_by_name = {c["name"]: c["slug"] for c in cats}
     for path in sorted(Path(data_dir).glob("*")):
-        if path.name in ("products.csv", "땡잡았땡_상품등록양식.xlsx") or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
+        if path.name in ("products.csv", "올채움_상품등록양식.xlsx") or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
             continue
         rows = _read_rows(path)
         h, col = _find_header(rows)
         if h is None:
-            warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (땡잡았땡 상품등록 양식의 열 이름이 있어야 해요)")
+            warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (올채움 상품등록 양식의 열 이름이 있어야 해요)")
             continue
         get = lambda r, k: (r[col[k]].strip() if k in col and col[k] < len(r) and r[col[k]] else "")
         skipped = no_detail = 0

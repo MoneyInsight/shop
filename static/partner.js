@@ -79,13 +79,13 @@
     const c = parseInt(costIn.value.replace(/\D/g, "")) || 0;
     if (!c) return;
     const price = Math.ceil(c / 10) * 10, card = Math.round(price * 0.034), fee = Math.round(price * 0.03), settle = Math.floor(price * 0.936);
-    $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 땡잡았땡 판매가 <b style="color:#e5322d">${won(price)}</b> (오픈마켓가 그대로)<br>
+    $("#price-preview").innerHTML = `오픈마켓 판매가 <b>${won(c)}</b> → 올채움 판매가 <b style="color:#e5322d">${won(price)}</b> (오픈마켓가 그대로)<br>
       공급사 정산금 <b>${won(settle)}</b> = 판매가 − 카드수수료 ${won(card)} − 플랫폼 3% ${won(fee)}<br>
       같은 상품을 오픈마켓(수수료 12%)에서 팔 때 정산금 약 <b>${won(Math.floor(c * 0.88))}</b>` +
       "";
   });
 
-  // ---------- 엑셀 일괄 등록 (땡잡았땡 양식) ----------
+  // ---------- 엑셀 일괄 등록 (올채움 양식) ----------
   const bulkBtn = $("#bulk-btn");
   if (bulkBtn) bulkBtn.addEventListener("click", async () => {
     if (!API && noApi()) return;
@@ -96,7 +96,7 @@
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
     const norm = (s) => String(s).replace(/\s+/g, "");
     const h = rows.findIndex((r) => r.map(norm).includes("상품명"));
-    if (h < 0) { alert("'상품명' 열을 찾지 못했어요. 땡잡았땡 상품등록 양식인지 확인해 주세요."); return; }
+    if (h < 0) { alert("'상품명' 열을 찾지 못했어요. 올채움 상품등록 양식인지 확인해 주세요."); return; }
     const head = rows[h].map(norm);
     const col = (...names) => { for (const n of names) { const i = head.indexOf(norm(n)); if (i >= 0) return i; } return -1; };
     const C = { name: col("상품명"), price: col("오픈마켓 판매가", "판매가"), img: col("대표 이미지 주소", "대표 이미지 파일명", "대표이미지", "대표 이미지 URL"), detail: col("상세 설명", "상품 상세정보", "상세설명"), summary: col("한 줄 소개"),

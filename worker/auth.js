@@ -1,5 +1,5 @@
 /**
- * 땡잡았땡 회원 로그인 (네이버·카카오·구글, 모두 무료)
+ * 올채움 회원 로그인 (네이버·카카오·구글, 모두 무료)
  *  GET  /auth/start?provider=naver|kakao|google&return=돌아갈주소  → 각 회사 로그인 화면으로
  *  GET  /auth/callback/{provider}?code&state                      → 회원 저장 후 사이트로 (#login=세션)
  *  POST /me            {token}                 → 내 정보

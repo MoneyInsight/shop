@@ -357,7 +357,7 @@ async function adminOfferReply(req, env) {
 // 템플릿 문구는 아래 TEMPLATES와 카카오에 등록한 문구가 글자 하나까지 같아야 함 (docs/알림톡_템플릿.md)
 export const TEMPLATES = {
   OFFER_NEW: { to: "공급사(직영은 대표)", when: "고객이 가격 제안을 보냈을 때", text:
-`[땡잡았땡] 새 가격 제안이 도착했습니다.
+`[올채움] 새 가격 제안이 도착했습니다.
 
 상품: #{상품명}
 수량: #{수량}개
@@ -369,7 +369,7 @@ export const TEMPLATES = {
 
 응답하기: #{링크}` },
   OFFER_ACCEPT: { to: "고객", when: "가격 제안이 수락됐을 때", text:
-`[땡잡았땡] #{고객명}님, 가격 제안이 수락되었습니다.
+`[올채움] #{고객명}님, 가격 제안이 수락되었습니다.
 
 상품: #{상품명}
 수량: #{수량}개
@@ -380,7 +380,7 @@ export const TEMPLATES = {
 
 주문하기: #{링크}` },
   OFFER_REJECT: { to: "고객", when: "가격 제안이 거절됐을 때", text:
-`[땡잡았땡] #{고객명}님, 보내주신 가격 제안이 이번에는 수락되지 않았습니다.
+`[올채움] #{고객명}님, 보내주신 가격 제안이 이번에는 수락되지 않았습니다.
 
 상품: #{상품명}
 제안번호: #{제안번호}
@@ -390,7 +390,7 @@ export const TEMPLATES = {
 
 상품 보기: #{링크}` },
   SOLDOUT_CANCEL: { to: "고객", when: "도매처 품절로 주문을 취소했을 때", text:
-`[땡잡았땡] #{고객명}님, 죄송합니다.
+`[올채움] #{고객명}님, 죄송합니다.
 
 주문하신 상품이 공급처에서 갑자기 품절되어 주문을 취소하고 결제 금액 전액을 환불해 드렸습니다.
 
@@ -402,7 +402,7 @@ export const TEMPLATES = {
 
 비슷한 상품 보기: #{링크}` },
   ORDER_DONE: { to: "고객", when: "결제가 완료됐을 때", text:
-`[땡잡았땡] #{고객명}님, 주문이 완료되었습니다.
+`[올채움] #{고객명}님, 주문이 완료되었습니다.
 
 주문번호: #{주문번호}
 상품: #{상품명}
@@ -412,7 +412,7 @@ export const TEMPLATES = {
 
 주문 조회: #{링크}` },
   SHIPPED: { to: "고객", when: "송장번호를 넣고 배송중으로 바꿨을 때", text:
-`[땡잡았땡] #{고객명}님, 주문하신 상품이 출고되었습니다.
+`[올채움] #{고객명}님, 주문하신 상품이 출고되었습니다.
 
 주문번호: #{주문번호}
 택배사: #{택배사}
@@ -420,7 +420,7 @@ export const TEMPLATES = {
 
 배송 조회: #{링크}` },
   REVIEW_ASK: { to: "고객", when: "배송완료로 바꿨을 때 (리뷰 요청)", text:
-`[땡잡았땡] #{고객명}님, 상품은 잘 받으셨나요?
+`[올채움] #{고객명}님, 상품은 잘 받으셨나요?
 
 주문번호: #{주문번호}
 상품: #{상품명}
@@ -429,7 +429,7 @@ export const TEMPLATES = {
 
 리뷰 쓰기: #{링크}` },
   ADMIN_ORDER: { to: "대표", when: "새 주문이 들어왔을 때", text:
-`[땡잡았땡] 새 주문이 들어왔습니다.
+`[올채움] 새 주문이 들어왔습니다.
 
 주문번호: #{주문번호}
 상품: #{상품명}
@@ -470,8 +470,8 @@ const clip = (s, n) => String(s || "").replace(/<[^>]*>/g, "").trim().slice(0, n
 // 대표님 알림: 카카오톡 "나와의 채팅"(무료) + 웹훅(선택)
 async function notify(env, text) {
   await kakaoMemo(env, text);
-  await pushTo(env, "admin", { title: "땡잡았땡 관리자", body: text.slice(0, 180), url: siteLink(env, "admin.html") });
-  await email(env, env.ADMIN_EMAIL, "[땡잡았땡 관리자] " + text.split("\n")[0].slice(0, 60), text, siteLink(env, "admin.html"));
+  await pushTo(env, "admin", { title: "올채움 관리자", body: text.slice(0, 180), url: siteLink(env, "admin.html") });
+  await email(env, env.ADMIN_EMAIL, "[올채움 관리자] " + text.split("\n")[0].slice(0, 60), text, siteLink(env, "admin.html"));
   if (!env.NOTIFY_WEBHOOK) return;
   try {
     await fetch(env.NOTIFY_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, content: text }) });
@@ -538,12 +538,12 @@ async function email(env, to, subject, text, url) {
   const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const body = esc(text).replace(/\n/g, "<br>");
   const html = `<div style="font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:520px;margin:0 auto;padding:28px 24px;color:#16171a;line-height:1.7;font-size:15px">
-    <div style="font-size:22px;font-weight:700;margin-bottom:18px">땡잡았땡<span style="color:#9a7b4f">.</span></div>${body}
+    <div style="font-size:22px;font-weight:700;margin-bottom:18px">올채움<span style="color:#9a7b4f">.</span></div>${body}
     ${url ? `<p style="margin-top:24px"><a href="${esc(url)}" style="display:inline-block;background:#9a7b4f;color:#fff;text-decoration:none;padding:12px 26px;border-radius:24px;font-weight:600">바로 확인하기</a></p>` : ""}
     <p style="margin-top:28px;color:#868a91;font-size:12px">이 메일은 발신 전용입니다. 문의는 쇼핑몰 고객센터를 이용해 주세요.</p></div>`;
   try {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { name: env.MAIL_FROM_NAME || "땡잡았땡", email: env.MAIL_FROM }, to: [{ email: to }], subject, htmlContent: html, textContent: text + (url ? "\n\n" + url : "") }) });
+      body: JSON.stringify({ sender: { name: env.MAIL_FROM_NAME || "올채움", email: env.MAIL_FROM }, to: [{ email: to }], subject, htmlContent: html, textContent: text + (url ? "\n\n" + url : "") }) });
     return r.ok;
   } catch (e) { return false; }
 }
@@ -552,9 +552,9 @@ async function email(env, to, subject, text, url) {
 const ALERT_TITLE = { OFFER_ACCEPT: "가격 제안이 수락됐어요", OFFER_REJECT: "가격 제안 결과를 알려드려요", ORDER_DONE: "주문이 완료됐어요", SHIPPED: "상품이 출고됐어요", REVIEW_ASK: "상품은 잘 받으셨나요?" };
 async function alertCustomer(env, key, who, vars) {
   const text = fill(TEMPLATES[key].text, vars), url = vars.링크;
-  await pushTo(env, "p:" + digits(who.phone), { title: ALERT_TITLE[key] || "땡잡았땡", body: text.replace(/^\[땡잡았땡\]\s*/, "").split("\n\n").slice(0, 2).join("\n").slice(0, 180), url });
+  await pushTo(env, "p:" + digits(who.phone), { title: ALERT_TITLE[key] || "올채움", body: text.replace(/^\[올채움\]\s*/, "").split("\n\n").slice(0, 2).join("\n").slice(0, 180), url });
   const noLink = fill(TEMPLATES[key].text.split("\n\n").slice(0, -1).join("\n\n"), vars);  // 마지막 줄(링크)은 메일 버튼으로
-  await email(env, who.email, "[땡잡았땡] " + (ALERT_TITLE[key] || "알림"), noLink, url);
+  await email(env, who.email, "[올채움] " + (ALERT_TITLE[key] || "알림"), noLink, url);
   await kakao(env, key, who.phone, vars);
 }
 
@@ -591,11 +591,11 @@ async function adminKakaoConnect(req, env) {
   if (!code) return fail("카카오 인증 코드가 없어요.");
   try { await kakaoToken(env, { grant_type: "authorization_code", redirect_uri, code }); }
   catch (e) { return fail("카카오 연결 실패: " + e.message); }
-  const sent = await kakaoMemo(env, "✅ 땡잡았땡 알림이 연결되었습니다. 이제 주문·가격 제안·문의가 들어오면 이 채팅으로 알려드려요.");
+  const sent = await kakaoMemo(env, "✅ 올채움 알림이 연결되었습니다. 이제 주문·가격 제안·문의가 들어오면 이 채팅으로 알려드려요.");
   return json({ ok: true, message: sent ? "연결됐어요. 카카오톡 ‘나와의 채팅’에 테스트 알림을 보냈어요." : "연결은 됐는데 테스트 알림을 못 보냈어요. 동의항목 ‘카카오톡 메시지 전송’을 확인해 주세요." });
 }
 async function adminKakaoTest(env) {
-  const sent = await kakaoMemo(env, "🔔 땡잡았땡 테스트 알림입니다.");
+  const sent = await kakaoMemo(env, "🔔 올채움 테스트 알림입니다.");
   return sent ? json({ ok: true, message: "카카오톡 ‘나와의 채팅’으로 보냈어요." }) : fail("보내지 못했어요. 카카오톡 연결을 다시 해 주세요.");
 }
 
@@ -1163,7 +1163,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
       if (path === "/admin/kakao-test") return await adminKakaoTest(env);
       if (path === "/admin/push-subscribe") return await pushSubscribe(env, (await req.json()).sub, "admin");
-      if (path === "/admin/push-test") { const n = await pushTo(env, "admin", { title: "땡잡았땡 관리자", body: "🔔 테스트 알림입니다.", url: siteLink(env, "admin.html") }); return n ? json({ ok: true, message: `${n}대 기기로 보냈어요.` }) : fail("알림을 켠 기기가 없어요."); }
+      if (path === "/admin/push-test") { const n = await pushTo(env, "admin", { title: "올채움 관리자", body: "🔔 테스트 알림입니다.", url: siteLink(env, "admin.html") }); return n ? json({ ok: true, message: `${n}대 기기로 보냈어요.` }) : fail("알림을 켠 기기가 없어요."); }
       if (path === "/admin/approve-seller") return await approveSeller(req, env);
       if (path === "/admin/approve-product") return await approveProduct(req, env);
       if (path === "/admin/reject-product") return await rejectProduct(req, env);

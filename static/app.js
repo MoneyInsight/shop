@@ -1,4 +1,4 @@
-/* 땡잡았땡 쇼핑몰 스크립트 — 목록·상세·찜·장바구니·결제·주문조회·리뷰·문의 */
+/* 올채움 쇼핑몰 스크립트 — 목록·상세·찜·장바구니·결제·주문조회·리뷰·문의 */
 (function () {
   const ROOT = document.body.dataset.root || "./";
   const CFG = window.SHOP_CFG || {};
@@ -112,7 +112,7 @@
     const addr = !u.addr && store.get("addr", null);
     const r = await api("/me/save", { token: token(), wish, ...(addr ? { addr } : {}) });
     if (r.ok) store.set("user", r.d.user);
-    if (h.get("new")) alert(`${u.name || "회원"}님, 땡잡았땡 가입을 환영해요!`);
+    if (h.get("new")) alert(`${u.name || "회원"}님, 올채움 가입을 환영해요!`);
     const back = sessionStorage.getItem("login_back");
     if (back) { sessionStorage.removeItem("login_back"); location.href = back; }
   }
