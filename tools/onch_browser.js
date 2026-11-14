@@ -8,6 +8,7 @@ const ONCH_GROUPS = {
     lists: ["핫팩", "손난로", "방한", "장갑", "목도리", "넥워머", "귀마개", "털모자", "비니", "전기요", "전기매트", "온수매트", "히터", "난로", "난방", "담요",
       "극세사", "수면양말", "발열", "내복", "기모", "털슬리퍼", "방풍", "단열", "뽁뽁이", "가습기", "패딩", "롱패딩", "부츠", "크리스마스", "트리", "눈썰매", "스키", "보온", "온열", "무릎담요", "방한화", "바라클라바"]
       .map((k) => "keyword=" + encodeURIComponent(k)) },
+  more: { codes: "onch_codes_more.json", lists: [], pages: 0 },  // 겨울 검색에서 함께 온 일반 상품 (품절·가격 점검만)
 };
 window.ONCH = async (step, group = "office") => {
   const LS = localStorage, now = Date.now(), G = ONCH_GROUPS[group], K = (x) => `__oc_${group}_${x}`;

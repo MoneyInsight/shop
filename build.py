@@ -279,7 +279,7 @@ I_PHONE = ico('<path d="M6.5 3.500h3l1.5 4-2 1.500a11 11 0 0 0 6 6l1.5-2 4 1.500
 # ---------------- 공통 레이아웃 ----------------
 CHROME = {}
 GUIDE_TXT = {}
-GUIDE_CUT = {"g1": ("<tr><th>배송</th>", "<tr><th>교환·반품 비용</th>"), "g2": ("<tr><th>반품 방법</th>", "</table></section>")}
+GUIDE_CUT = {"g1": ("<tr><th>배송</th>", "<tr><th>교환·반품 비용</th>"), "g2": ("<tr><th>반품 방법</th>", "</table></section>"), "g3": ('<span class="bulk-ico"', '</a>\n<div class="d-share">'), "g4": ('<section class="tab-sec" id="review">', '<section class="tab-sec" id="guide">')}
 
 
 def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts="", og_img="", active="", lite=False):
@@ -766,7 +766,7 @@ def build_feeds(ps):
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
                               "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
-    for src, dst in (("온채널상품.csv", "onch_codes.json"), ("온채널겨울상품.csv", "onch_codes_winter.json")):
+    for src, dst in (("온채널상품.csv", "onch_codes.json"), ("온채널겨울상품.csv", "onch_codes_winter.json"), ("온채널추가상품.csv", "onch_codes_more.json")):
         oc = ROOT / "data" / src
         if oc.exists():  # 온채널 매일 품절 점검용 상품코드 목록 (tools/onch_browser.js 가 읽음)
             with oc.open(encoding="utf-8-sig") as fp:

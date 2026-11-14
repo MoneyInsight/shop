@@ -22,6 +22,9 @@ src = Path(args[0])
 strict = json.loads(Path(args[1]).read_text()) if len(args) > 1 else {}
 out = Path(__file__).resolve().parent.parent / "data" / opt.get("out", "온채널상품.csv")
 MALL_CAT = opt.get("cat", "")
+AUTO = MALL_CAT == "auto"  # 카테고리는 스마트스토어 코드·상품명으로 자동 분류
+if AUTO:
+    MALL_CAT = ""
 
 COLS = ["상품코드", "상품명", "카테고리코드", "카테고리명", "공급가", "공급 배송비", "공급사최저판매가", "반품배송비", "교환배송비",
         "대표 이미지 주소", "추가 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "인증정보", "옵션명", "옵션", "쇼핑몰카테고리"]
@@ -74,13 +77,20 @@ for f in sorted(src.glob("*.xlsx")):
             for i, v in enumerate(vals):
                 if v and (i >= len(stocks) or stocks[i] > 0):
                     opts.append(f"{v.replace('|', '/').replace('=', '-')}={math.ceil((adds[i] if i < len(adds) else 0) / MARGIN / 10) * 10}")
-        rows.append([code, g(r, "상품명"), g(r, "카테고리코드"), "" if MALL_CAT else "생활/건강>문구/사무용품", cost, ship, minp,
+        rows.append([code, g(r, "상품명"), g(r, "카테고리코드"), "" if (MALL_CAT or AUTO) else "생활/건강>문구/사무용품", cost, ship, minp,
                      n(g(r, "반품배송비")), n(g(r, "교환배송비")), g(r, "대표이미지"),
                      "|".join(x for x in g(r, "추가이미지").replace("\n", ",").split(",") if x.strip().startswith("http")),
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
                      "옵션" if opts else "", "|".join(opts), MALL_CAT])
 
-PICK = [k for k in opt.get("pick", "").split(",") if k]  # 상품명에 이 단어가 있는 것만, 앞 단어일수록 먼저
+PICK = [k for k in opt.get("pick", "").split(",") if k]
+SKIP = [k for k in opt.get("skip", "").split(",") if k]  # 상품명에 이 단어가 있으면 뺌 (다른 그룹이 가져감)
+EXCL = set()
+for f in opt.get("exclude", "").split(","):  # 다른 파일에 이미 있는 상품코드는 뺌
+    fp = Path(__file__).resolve().parent.parent / "data" / f
+    if f and fp.exists():
+        with fp.open(encoding="utf-8-sig") as x:
+            EXCL |= {r[0] for r in list(csv.reader(x))[1:] if r}  # 상품명에 이 단어가 있는 것만, 앞 단어일수록 먼저
 MAX = int(opt.get("max", 0) or 0)
 old, prev = 0, []
 seen_ok = {r[0] for r in rows}
@@ -88,6 +98,13 @@ if out.exists():
     with out.open(encoding="utf-8-sig") as fp:
         prev = [r[0] for r in list(csv.reader(fp))[1:]]
 old = len(prev)
+if SKIP or EXCL:
+    n0 = len(rows)
+    rows = [r for r in rows if r[0] not in EXCL and not any(k in r[1] for k in SKIP)]
+    stat["다른그룹"] = n0 - len(rows)
+if MAX and not PICK and len(rows) > MAX:
+    had = set(prev); rows.sort(key=lambda r: (r[0] not in had, r[4])); stat["한도초과"] = len(rows) - MAX; rows = rows[:MAX]
+seen_ok = {r[0] for r in rows}
 if PICK:
     pos = lambda name: next((i for i, k in enumerate(PICK) if k in name), None)
     keep = [r for r in rows if pos(r[1]) is not None]
