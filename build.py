@@ -784,7 +784,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) | ({"pk": p["pk"]} if (p.get("pk") or 1) > 1 else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
     for src, dst in (("온채널상품.csv", "onch_codes.json"), ("온채널겨울상품.csv", "onch_codes_winter.json"), ("온채널추가상품.csv", "onch_codes_more.json")):
         oc = ROOT / "data" / src

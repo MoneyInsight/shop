@@ -218,7 +218,7 @@ async function confirm(req, env) {
     const listUnit = (qt.length ? Number(qt[0]) : Number(p.price)) + (optName ? p.options[Number(it.opt)].add : 0);
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
@@ -949,7 +949,7 @@ async function adminPo(env) {
       if (l.po) return;
       const src = srcOf(l) || "direct";
       (groups[src] = groups[src] || { source: src, name: SOURCE_NAME[src] || (src === "direct" ? "직영·공급사" : src), lines: [] }).lines.push({
-        orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty,
+        orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty * (Number(l.pk) || 1), pk: Number(l.pk) || 1,
         cost: l.cost || 0, amount: l.price * l.qty, ship_mode: l.ship_mode || "", receiver: o.customer?.name || "", phone: o.customer?.phone || "", zip: o.customer?.zip || "",
         addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "" });
     });

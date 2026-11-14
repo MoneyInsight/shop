@@ -29,7 +29,7 @@ if AUTO:
     MALL_CAT = ""
 
 COLS = ["상품코드", "상품명", "카테고리코드", "카테고리명", "공급가", "공급 배송비", "공급사최저판매가", "반품배송비", "교환배송비",
-        "대표 이미지 주소", "추가 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "인증정보", "옵션명", "옵션", "쇼핑몰카테고리"]
+        "대표 이미지 주소", "추가 이미지 주소", "브랜드", "제조사", "원산지", "상세 설명", "인증정보", "옵션명", "옵션", "쇼핑몰카테고리", "묶음배송수량"]
 
 
 def n(v):
@@ -71,7 +71,8 @@ for f in sorted(src.glob("*.xlsx")):
         if cost <= 0:
             stat["가격없음"] += 1; continue
         ship = 0 if "무료" in g(r, "배송비유형") else n(g(r, "기본배송비"))
-        if SHIP_RATIO and ship > cost * SHIP_RATIO:
+        box = n(g(r, "수량별부과-수량")) if g(r, "배송비유형") == "수량별" else 0  # 이 개수까지 택배 1건
+        if SHIP_RATIO and ship > cost * SHIP_RATIO and not (box >= 2 and box * cost >= ship):
             stat["저가낱개"] = stat.get("저가낱개", 0) + 1; continue
         vals = [v.strip() for v in g(r, "옵션값").split(",")]
         adds = [n(a) for a in g(r, "옵션가").split(",")]
@@ -85,7 +86,7 @@ for f in sorted(src.glob("*.xlsx")):
                      n(g(r, "반품배송비")), n(g(r, "교환배송비")), g(r, "대표이미지"),
                      "|".join(x for x in g(r, "추가이미지").replace("\n", ",").split(",") if x.strip().startswith("http")),
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
-                     "옵션" if opts else "", "|".join(opts), MALL_CAT])
+                     "옵션" if opts else "", "|".join(opts), MALL_CAT, box if (box >= 2 and SHIP_RATIO and ship > cost * SHIP_RATIO) else ""])  # 묶음 정보는 낱개 저가품 묶음 만들 때만
 
 PICK = [k for k in opt.get("pick", "").split(",") if k]
 SKIP = [k for k in opt.get("skip", "").split(",") if k]  # 상품명에 이 단어가 있으면 뺌 (다른 그룹이 가져감)

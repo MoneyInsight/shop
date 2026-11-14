@@ -238,18 +238,23 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             name = get(r, "name")
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
-            qt, sm = [], ""
+            qt, sm, pk = [], "", 1
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
-                goods, cship = cost, _num(get(r, "cost_ship"))
-                if pricing.get("max_ship_ratio") and cship > goods * pricing["max_ship_ratio"]:
-                    cheap += 1; continue  # 배송비가 상품값보다 비싼 낱개 저가품 (1개 가격이 너무 비싸짐)
+                goods, cship, box = cost, _num(get(r, "cost_ship")), _num(get(r, "box_qty"))
+                ratio = pricing.get("max_ship_ratio")
+                if ratio and cship > goods * ratio:  # 배송비가 상품값보다 비싼 낱개 저가품 (1개 가격이 너무 비싸짐)
+                    k = max(2, math.ceil(cship / goods)) if goods else 0  # 묶음 상품값이 배송비 이상 되는 최소 개수
+                    if not (box >= 2 and k and k <= box):
+                        cheap += 1; continue  # 한 박스 묶음 정보가 없으면 묶음으로도 못 팖 → 올리지 않음
+                    pk, goods, box = k, goods * k, 1  # k개 묶음 1세트 = 택배 1건 (여러 세트는 세트마다 배송비로 안전하게)
+                    name = f"[{k}개 묶음] {name}"
                 cost = goods + cship
                 price = price_from_cost(cost, pricing)
-                qt = qty_prices(goods, cship, _num(get(r, "box_qty")), _num(get(r, "free_over")), pricing)
+                qt = qty_prices(goods, cship, box, _num(get(r, "free_over")), pricing)
                 sm = "선불" if cship else "무료"  # 도매처 발주서의 배송방식
                 if qt:
                     qt[0] = price
-                minp = _num(get(r, "min_price"))
+                minp = _num(get(r, "min_price")) * pk
                 if minp:  # 공급사가 정한 최저 판매가 아래로는 팔지 않음 (수량 할인 포함)
                     price = max(price, minp)
                     qt = [max(x, minp) for x in qt]
@@ -280,14 +285,14 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             if require_detail and not detail.strip():
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
-                "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) if (cost and pricing) else 0, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) * pk if (cost and pricing) else 0, "pk": pk, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": clean_html(detail) if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),
-                "options": parse_options(get, r, discount), "option_name": get(r, "opt_name").replace("\n", " / "),
+                "options": [o | {"add": o["add"] * pk} for o in parse_options(get, r, discount)], "option_name": get(r, "opt_name").replace("\n", " / "),
                 "images": [x for x in re.split(r"[|\n,]", get(r, "images")) if x.strip().startswith("http")][:9],
             })
         if skipped:
