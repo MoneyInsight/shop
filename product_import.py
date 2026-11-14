@@ -271,6 +271,9 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 shipx = math.ceil(cship * pricing.get("card_fee", 0.034) / (1 - pricing.get("card_fee", 0.034) - 1 / 11) / 10) * 10 if cship else 0  # 배송비에 붙는 카드수수료
                 price = price_from_cost(goods, pricing) + shipx
                 qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, pricing)]
+                card_, ops_, fm_ = pricing.get("card_fee", 0.034), pricing.get("ops_cost_won", 0), pricing.get("qty_price", {}).get("min_net_margin", 0.08)
+                need1 = (fm_ * (goods + cship) + cship * card_ + goods * 10 / 11 + ops_) / (1 - card_ - 1 / 11)  # 1개 주문도 배송비 포함 원가 대비 순마진 8% 이상
+                price = max(price, math.ceil(need1 / 10) * 10)
                 mo = pricing.get("min_order_won") or 0
                 if mo and price < mo:  # 싼 상품: 원래 1개 가격 + 'N개부터 구매' (고정비는 최소 수량에 나눠 담음)
                     mq = max(2, math.ceil(mo / max(1, math.ceil(goods * 1.25))))
