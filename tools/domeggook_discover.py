@@ -89,7 +89,9 @@ def build_row(no, v):
     price = num((v.get("price") or {}).get("supply"))
     if not price:
         return None, "가격 없음"
-    sup = deli.get("supply") or deli.get("dome") or {}
+    sup = deli.get("supply") or {}  # 도매매(위탁) 배송정보만 씀 — 도매꾹(도매·최소구매수량) 배송정보로 대신하면 배송비 0원으로 잘못 잡힘
+    if not sup:
+        return None, "도매매 배송정보 없음"
     stype = sup.get("type", "")
     ship = 0 if "무료" in stype else num(sup.get("fee"))
     if ship > MAX_SHIP:

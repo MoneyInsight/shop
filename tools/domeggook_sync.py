@@ -35,7 +35,7 @@ def view(no):
 def summarize(v):
     if "_err" in v:
         return {"err": v["_err"][:200]}
-    b, deli, sel = v.get("basis", {}), v.get("deli", {}), v.get("seller", {})
+    sup = deli.get("supply") or {}  # 도매매(위탁) 배송정보만 (도매꾹 도매 배송정보로 대신하지 않음)
     sup = deli.get("supply") or deli.get("dome") or {}
     kw = (b.get("keywords") or {}).get("kw") or []
     if isinstance(kw, str):
