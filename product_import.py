@@ -261,8 +261,9 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 goods, cship, box = cost, _num(get(r, "cost_ship")), _num(get(r, "box_qty"))
                 ratio = pricing.get("max_ship_ratio")
                 if ratio and cship > goods * ratio:  # 배송비가 상품값보다 비싼 낱개 저가품
-                    k = max(2, math.ceil(cship / goods)) if goods else 0  # 묶음 상품값이 배송비 이상 되는 최소 개수
-                    if not (box >= 2 and k and k <= box):
+                    need = math.ceil(cship / goods) if goods else 0  # 묶음 상품값이 배송비 이상 되는 최소 개수
+                    k = next((x for x in (2, 3, 5, 10, 20, 30, 50, 100) if x >= need and x <= box), 0)  # 딱 떨어지는 개수로
+                    if not (box >= 2 and k):
                         cheap += 1; continue
                     pk, goods, box = k, goods * k, 0  # k개 묶음 1세트
                     name = f"[{k}개 묶음] {name}"
