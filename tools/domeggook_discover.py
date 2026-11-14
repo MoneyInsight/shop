@@ -30,7 +30,7 @@ def skip_cat(names):
     if len(names) >= 2 and names[0] == "식품" and names[1] == "건강식품" and not any("다이어트" in n for n in names):
         return False
     return any(k in n for n in names for k in SKIP_CAT)
-MAX_RANK, MAX_SHIP, BUNDLE_BOX = 8, 3500, 10
+MAX_RANK, MAX_SHIP, BUNDLE_BOX = 8, 3500, 1  # 고정배송비 = 1개마다 배송비 (대표님 확인)
 FIELDS = ["상품코드", "상품명", "카테고리명", "공급가", "공급 배송비", "묶음배송수량", "반품배송비", "교환배송비",
           "대표 이미지 주소", "브랜드", "제조사", "상세 설명", "재고", "옵션명", "옵션", "공급사등급", "공급사최저판매가"]
 

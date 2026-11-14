@@ -15,7 +15,7 @@ from product_import import price_from_cost, SS_CATEGORY
 CFG = json.load(open(ROOT / "config.json", encoding="utf-8"))
 PRICING = CFG["pricing"]
 MAX_GRADE = CFG.get("sourcing", {}).get("domeme_max_grade", 8)
-BUNDLE_BOX = 10
+BUNDLE_BOX = 1  # 고정배송비 = 1개마다 배송비 (대표님 확인)
 OUT = ROOT / "data" / "도매매묶음상품.csv"
 VERIFIED_FILE = ROOT / "data" / "domeme_ship_verified.json"  # {상품번호: "고정배송비" | "비례:첫상자:이후N개" | 기타 문구}
 VERIFIED = json.load(open(VERIFIED_FILE, encoding="utf-8")) if VERIFIED_FILE.exists() else {}

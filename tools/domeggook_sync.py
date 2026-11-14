@@ -16,7 +16,7 @@ LIMIT = int(os.environ.get("LIMIT", "4000"))
 CACHE = ROOT / "data" / "domeme_api_cache.json"
 CSVS = [ROOT / "data" / "도매매묶음상품.csv", ROOT / "data" / "도매매상품.csv"]
 MAX_RANK = 8
-BUNDLE_BOX = 10
+BUNDLE_BOX = 1  # 고정배송비 = 1개마다 배송비 (대표님 확인)
 
 
 def view(no):
