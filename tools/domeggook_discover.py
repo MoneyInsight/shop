@@ -96,7 +96,7 @@ def build_row(no, v):
     ship = 0 if "무료" in stype else num(sup.get("fee"))
     if ship > MAX_SHIP:
         return None, "배송비 큼"
-    box = (BUNDLE_BOX if stype == "고정배송비" else 1) if ship else ""
+    box = ("" if stype == "고정배송비" else 1) if ship else ""  # 고정배송비 = 주문당 1번(빈칸), 수량별 = 1개마다(N 모름)
     base = price_from_cost(price + ship, PRICING)
     opts, oname = [], ""
     so = v.get("selectOpt")

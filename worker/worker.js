@@ -192,6 +192,7 @@ async function confirm(req, env) {
   // 사이트의 실제 가격으로 금액 다시 계산 (화면 금액 조작 방지)
   const map = await productMap(env, items.map((x) => x.id));
   let subtotal = 0, shipping = 0;
+  const shipUnits = {}, shipProd = {};  // 같은 상품은 수량·옵션을 합쳐 배송비 계산
   const lines = [], usedOffers = [];
   const qn = {};  // 수량 할인: 같은 상품 수량 합계 (가격 제안 줄 제외)
   for (const it of items) if (!it.offer) qn[it.id] = (qn[it.id] || 0) + Math.max(1, Math.min(99, parseInt(it.qty) || 1));
@@ -216,13 +217,18 @@ async function confirm(req, env) {
       unit = of.price; offerId = of.id; usedOffers.push(of);
     }
     const listUnit = (qt.length ? Number(qt[0]) : Number(p.price)) + (optName ? p.options[Number(it.opt)].add : 0);
-    subtotal += unit * qty; shipping += p.shipping_fee || 0;
+    subtotal += unit * qty;
+    shipUnits[p.id] = (shipUnits[p.id] || 0) + qty * (Number(p.pk) || 1); shipProd[p.id] = p;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
     lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
+  const shipBy = {};
+  for (const [pid, u] of Object.entries(shipUnits)) { shipBy[pid] = shipFor(shipProd[pid], u); shipping += shipBy[pid]; }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
-  const lv = await live.check(env, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price, option: l.option })), PRICING(env));
+  const firstLine = {};
+  const lv = await live.check(env, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, pk: l.pk, price: l.price, option: l.option,
+    ship: firstLine[l.id] ? 0 : ((firstLine[l.id] = 1), shipBy[l.id] || 0), ship_fee: Number(shipProd[l.id]?.shipping_fee) || 0 })), PRICING(env));
   if (!lv.ok) return fail(lv.message);
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
@@ -330,6 +336,12 @@ const HOUR = 3600 * 1000;
 const offerFloor = (unit) => Math.ceil((unit * (1 - OFFER_MAX_RATE)) / 10) * 10;
 const isPast = (iso) => iso && Date.parse(iso) < Date.now();
 
+// 배송비: 상품별 (sn=0 → 주문당 1번, sn=N → N개마다), 단위는 낱개(묶음 상품은 묶음 수×개수)
+function shipFor(p, units) {
+  const fee = Number(p?.shipping_fee) || 0, sn = Number(p?.sn) || 0, pk = Number(p?.pk) || 1;
+  if (!fee || units <= 0) return 0;
+  return sn ? fee * Math.ceil(units / sn) : fee;
+}
 async function siteProducts(env) {
   return (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
 }

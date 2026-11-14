@@ -98,7 +98,7 @@ def main():
             if ship and num(info.get("ship_fee")) and num(info.get("ship_fee")) != ship:
                 r["공급 배송비"] = str(num(info.get("ship_fee"))); ship = num(info.get("ship_fee")); repriced += 1
             if ship and "묶음배송수량" in r:
-                box = str(BUNDLE_BOX) if info.get("ship_type") == "고정배송비" and info.get("pay", "선결제") == "선결제" else "1"
+                box = "" if info.get("ship_type") == "고정배송비" and info.get("pay", "선결제") == "선결제" else "1"  # 고정 = 주문당 1번
                 fixed += box != "1"
                 if r.get("묶음배송수량") != box:
                     r["묶음배송수량"] = box; changed += 1

@@ -77,13 +77,14 @@ def title(p, shop):
     t = tags(p)
     extra = [w for w in t if w.lower() not in p["name"].lower() and " " not in w][:2]
     base = f'{p["name"]} {" ".join(extra)}'.strip()
-    s = f"{base} 무료배송 | {shop}"
-    return s if len(s) <= 60 else f'{p["name"][:60 - len(shop) - 10]} 무료배송 | {shop}'
+    fr = " 무료배송" if not int(p.get("shipping_fee") or 0) else ""
+    s = f"{base}{fr} | {shop}"
+    return s if len(s) <= 60 else f'{p["name"][:60 - len(shop) - 10]}{fr} | {shop}'
 
 
 def description(p, max_deal=0, member_rate=0):
     price = f'{int(p["price"]):,}원'
-    parts = [f'{p["name"]} {price}, 전 상품 무료배송.']
+    parts = [f'{p["name"]} {price}' + (", 무료배송." if not int(p.get("shipping_fee") or 0) else ".")]
     if max_deal:
         parts.append(f"2개부터 자동 할인 최대 {max_deal}%.")
     if member_rate:

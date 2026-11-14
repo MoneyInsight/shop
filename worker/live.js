@@ -21,7 +21,7 @@ export async function check(env, lines, pricing = { card_fee: 0.034, ops_cost_wo
     if (!v || !v.basis) return null;  // 조회 실패 → 막지 않음
     const b = v.basis, inv = n(v.qty?.inventory);
     if (b.status !== "판매중" || b.adult === "true") return `${l.name} 상품이 방금 품절되었어요.`;
-    if (inv < l.qty) return `${l.name} 상품 재고가 부족해요 (남은 수량 ${inv}개).`;
+    if (inv < l.qty * (l.pk || 1)) return `${l.name} 상품 재고가 부족해요 (남은 수량 ${inv}개).`;
     let add = 0;
     if (l.option) {
       try {
@@ -31,11 +31,12 @@ export async function check(env, lines, pricing = { card_fee: 0.034, ops_cost_wo
         add = n(o.supPrice);
       } catch (e) {}
     }
-    const sup = v.deli?.supply || v.deli?.dome || {};
-    const fee = /무료/.test(sup.type || "") ? 0 : n(sup.fee);
-    const boxes = sup.type === "고정배송비" ? 1 : l.qty;
-    const cost = (n(v.price?.supply) + add) * l.qty + fee * boxes;
-    const rev = l.price * l.qty;
+    const sup = v.deli?.supply || {};  // 도매매(위탁) 배송정보만 — 도매꾹 도매 배송정보로 대신하지 않음
+    const units = l.qty * (l.pk || 1);
+    const fee = /무료/.test(sup.type || "") ? 0 : n(sup.fee || l.ship_fee || 0);
+    const boxes = sup.type === "고정배송비" ? 1 : units;
+    const cost = (n(v.price?.supply) + add) * units + fee * boxes;
+    const rev = l.price * l.qty + (l.ship || 0);  // 손님이 낸 상품값 + 배송비
     const net = rev - rev * pricing.card_fee - (rev - cost) / 11 - cost - pricing.ops_cost_won;
     if (net < 0) return `${l.name} 상품 가격이 도매처에서 바뀌어 지금은 주문할 수 없어요. 잠시 후 다시 확인해 주세요.`;
     return null;

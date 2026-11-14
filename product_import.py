@@ -173,6 +173,24 @@ def price_from_cost(cost, pricing):
     return math.ceil((cost * 10 / 11 + ops + net) / (1 - card - 1 / 11) / 10) * 10
 
 
+def code_raw(get):
+    return get("code") or get("product_no") or ""
+
+
+def ship_every(code, box, ship):
+    """배송비를 몇 개마다 받는지 (0 = 같은 상품이면 수량·옵션 상관없이 주문당 1번)
+    - 온채널(CH): 발주 화면 계산으로 확인 → 상품당 1번
+    - 도매매(DM): 고정배송비 → 1번, 수량별(묶음 수량 N) → N개마다, N 모름(1) → 1개마다
+    - 오너클랜 등 확인 안 된 곳 → 1개마다 (손해 방지)"""
+    if not ship:
+        return 0
+    if code.startswith("CH"):
+        return 0
+    if code.startswith("DM"):
+        return int(box) if box else 0
+    return int(box) if box and box > 1 else 1
+
+
 QT_MAX = 10  # 수량별 개당 가격을 1~10개까지 계산 (11개 이상은 10개 가격)
 
 
@@ -238,22 +256,33 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             name = get(r, "name")
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
-            qt, sm, pk = [], "", 1
-            if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
+            qt, sm, pk, sf, sn = [], "", 1, 0, 0
+            if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비는 따로 받음 — 도매처 배송 규칙 그대로)
                 goods, cship, box = cost, _num(get(r, "cost_ship")), _num(get(r, "box_qty"))
                 ratio = pricing.get("max_ship_ratio")
-                if ratio and cship > goods * ratio:  # 배송비가 상품값보다 비싼 낱개 저가품 (1개 가격이 너무 비싸짐)
+                if ratio and cship > goods * ratio:  # 배송비가 상품값보다 비싼 낱개 저가품
                     k = max(2, math.ceil(cship / goods)) if goods else 0  # 묶음 상품값이 배송비 이상 되는 최소 개수
                     if not (box >= 2 and k and k <= box):
-                        cheap += 1; continue  # 한 박스 묶음 정보가 없으면 묶음으로도 못 팖 → 올리지 않음
-                    pk, goods, box = k, goods * k, 1  # k개 묶음 1세트 = 택배 1건 (여러 세트는 세트마다 배송비로 안전하게)
+                        cheap += 1; continue
+                    pk, goods, box = k, goods * k, 0  # k개 묶음 1세트
                     name = f"[{k}개 묶음] {name}"
-                cost = goods + cship
-                price = price_from_cost(cost, pricing)
-                qt = qty_prices(goods, cship, box, _num(get(r, "free_over")), pricing)
+                sf, sn = cship, ship_every(get(r, "code") or get(r, "product_no") or "", box, cship)
+                shipx = math.ceil(cship * pricing.get("card_fee", 0.034) / (1 - pricing.get("card_fee", 0.034) - 1 / 11) / 10) * 10 if cship else 0  # 배송비에 붙는 카드수수료
+                price = price_from_cost(goods, pricing) + shipx
+                qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, pricing)]
                 sm = "선불" if cship else "무료"  # 도매처 발주서의 배송방식
                 if qt:
                     qt[0] = price
+                    card, ops, fm = pricing.get("card_fee", 0.034), pricing.get("ops_cost_won", 0), pricing.get("qty_price", {}).get("min_net_margin", 0.08)
+                    for n in range(1, len(qt) + 1):  # 배송비까지 합친 원가 대비 순마진 8% 아래로 안 내려가게
+                        S = (cship * math.ceil(n * pk / sn) if sn else cship) if cship else 0
+                        need = (fm * (goods * n + S) + S * card + goods * n * 10 / 11 + ops) / (n * (1 - card - 1 / 11))
+                        qt[n - 1] = max(qt[n - 1], math.ceil(need / 10) * 10)
+                    for i in range(len(qt) - 2, -1, -1):
+                        qt[i] = max(qt[i], qt[i + 1])
+                    price = qt[0]
+                    if len(qt) < 2 or qt[1] >= qt[0]:
+                        qt = []
                 minp = _num(get(r, "min_price")) * pk
                 if minp:  # 공급사가 정한 최저 판매가 아래로는 팔지 않음 (수량 할인 포함)
                     price = max(price, minp)
@@ -286,9 +315,9 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
                 "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) * pk if (cost and pricing) else 0, "pk": pk, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
-                "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
+                "shipping_fee": str(sf), "sn": sn, "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
-                "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),
+                "event": get(r, "event") or ("" if sf else "무료배송"), "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
                 "detail_html": clean_html(detail) if detail.lstrip().startswith("<") else "",
                 "supplier": "직영", "status": "판매중", "naver_low": str(low or ""),

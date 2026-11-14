@@ -173,7 +173,7 @@
   // 목록·검색용 가벼운 색인 (idx/카테고리.json): 카테고리 화면은 그 카테고리만, 검색은 전체를 나눠 받음
   const IDX = {};
   const toP = (d) => d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
-    return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: 0 }; });
+    return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: r[10] || 0 }; });
   const loadCat = (slug) => (IDX[slug] = IDX[slug] || fetch(`${ROOT}idx/${slug}.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : { items: [], cats: [] })).then(toP).catch(() => []));
   let ALL = null;
   async function loadProducts(cat) {
@@ -216,6 +216,8 @@
     }
     return v === "1";
   }
+  // 배송비 (서버 worker.js shipFor 와 같은 규칙): sn=0 → 같은 상품 주문당 1번, sn=N → N개마다
+  const shipFor = (p, units) => { const fee = +p.shipping_fee || 0, sn = +p.sn || 0; return !fee || units <= 0 ? 0 : sn ? fee * Math.ceil(units / sn) : fee; };
   // 제주·도서산간 추가 배송비 (서버 worker/region.js 와 같은 규칙)
   function regionFee(zip, addr) {
     const rule = CFG.remote_ship; if (!rule) return { fee: 0, label: "" };
@@ -241,7 +243,11 @@
       return { ...p, qty: x.qty, opt: x.opt, price: x.offer_price || list, list, list1, offer: x.offer || "", optName: o ? o.v : "", ci: cart.indexOf(x) };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
-    let shipping = lines.reduce((a, l) => a + (l.shipping_fee || 0), 0);
+    const units = {}, prodOf = {};
+    lines.forEach((l) => { units[l.id] = (units[l.id] || 0) + l.qty * (+l.pk || 1); prodOf[l.id] = l; });
+    const shipBy = Object.fromEntries(Object.keys(units).map((id) => [id, shipFor(prodOf[id], units[id])]));
+    let shipping = Object.values(shipBy).reduce((a, b) => a + b, 0);
+    lines.forEach((l) => (l.ship_total = shipBy[l.id]));
     if (CFG.free_shipping_over && subtotal >= CFG.free_shipping_over) shipping = 0;
     discount = Math.min(discount || 0, subtotal);
     return { lines, subtotal, shipping, discount, total: subtotal - discount + shipping, soldout };
@@ -388,9 +394,10 @@
       markWished();
       pager.innerHTML = grid.querySelectorAll(".p-card").length < sorted.length ? `<div class="loading-more">상품을 더 불러오고 있어요…</div>` : (sorted.length > PER_PAGE ? `<p class="end-note">모든 상품을 다 봤어요 (${sorted.length.toLocaleString()}개)</p>` : "");
     };
-    let pf = "";
+    let pf = "", freeOnly = q.get("free") === "1";
     const render = () => {
       sorted = [...list];
+      if (freeOnly) sorted = sorted.filter((p) => !p.shipping_fee);
       if (pf) { const [lo, hi] = pf.split("-").map((x) => (x ? +x : null)); sorted = sorted.filter((p) => (lo == null || p.price >= lo) && (hi == null || p.price < hi)); }
       if (sort === "rec" && mode === "search") {  // 검색 추천순: 상품명에 검색어가 그대로 → 단어가 모두 상품명에 → 그 외, 같은 단계에서는 싼 것부터
         const term = (q.get("q") || "").trim().toLowerCase(), words = term.split(/\s+/).filter(Boolean);
@@ -416,7 +423,8 @@
       box.dataset.bound = 1;
       $$(".sort button").forEach((b) => b.addEventListener("click", () => { sort = b.dataset.sort; page = 1; render(); }));
       watchBottom(pager, () => more());
-      $$(".price-filter button").forEach((b) => b.addEventListener("click", () => { pf = b.dataset.pf; $$(".price-filter button").forEach((x) => x.classList.toggle("on", x === b)); page = 1; render(); }));
+      const fb = $(".price-filter .free-only"); if (fb) { fb.classList.toggle("on", freeOnly); fb.addEventListener("click", (ev) => { ev.stopImmediatePropagation(); freeOnly = !freeOnly; fb.classList.toggle("on", freeOnly); page = 1; render(); }); }
+      $$(".price-filter button:not(.free-only)").forEach((b) => b.addEventListener("click", () => { pf = b.dataset.pf; $$(".price-filter button:not(.free-only)").forEach((x) => x.classList.toggle("on", x === b)); page = 1; render(); }));
     }
     render();
   }
@@ -518,6 +526,7 @@
       if (token() && member()) $(".d-price").insertAdjacentHTML("afterend", `<p class="member-badge on">회원 ${memberPct()}% 추가 즉시 할인 · 결제할 때 적용</p>`);
       else loginOn().then((on) => on && $(".d-price").insertAdjacentHTML("afterend", `<a class="member-badge" href="${ROOT}login.html">로그인하면 <b>${memberPct()}% 추가</b> 즉시 할인 ›</a>`));
     }
+    const shipP = { shipping_fee: +el.dataset.ship || 0, sn: +el.dataset.sn || 0 }, pkN = +el.dataset.pk || 1;
     const id = el.dataset.id, name = el.dataset.name, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]"), qt = JSON.parse(el.dataset.qt || "[]");
     const unitAt = (n) => (qt.length ? qt[Math.min(n, qt.length) - 1] : base);
     store.set("recent", [id, ...store.get("recent", []).filter((x) => x !== id)].slice(0, 20));
@@ -527,7 +536,7 @@
       const v = Math.max(1, Math.min(99, parseInt(inp.value) || 1));
       inp.value = v;
       const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
-      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v);
+      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v) + (shipP.shipping_fee ? `<small class="per ship">+ 배송비 ${won(shipFor(shipP, v * pkN))}</small>` : `<small class="per ship free">무료배송</small>`);
       $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && (v === 4 || (v >= 5 && !$("#qty-deal [data-q='5']"))))));
     };
     $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
