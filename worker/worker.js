@@ -731,8 +731,12 @@ const publicOrder = (o) => ({
 });
 
 async function findOrder(env, orderId, phone) {
-  const o = orderId && (await env.SHOP.get("order:" + String(orderId).trim(), "json"));
-  if (!o || !digits(phone) || digits(o.customer?.phone) !== digits(phone)) return null;
+  const id = String(orderId || "").trim();
+  const o = id && (await env.SHOP.get("order:" + id, "json"));
+  if (!o) return null;
+  // 한 주문번호에 틀린 연락처를 1시간에 10번 넣으면 그 주문만 1시간 잠금 (다른 손님은 영향 없음, 맞게 넣은 조회는 횟수에 안 셈)
+  if (await overLimit(env, "badphone:" + id, 10, 3600, false)) return null;
+  if (!digits(phone) || digits(o.customer?.phone) !== digits(phone)) { await overLimit(env, "badphone:" + id, 10, 3600); return null; }
   return o;
 }
 
@@ -1194,8 +1198,9 @@ export async function handle(req, env, path) {
   try {
     if (["/inquiry/add", "/qna/add", "/review/add", "/seller/apply", "/seller/product", "/report-price"].includes(path) && (await overLimit(env, "w:" + ipOf(req), 20, 3600)))
       return fail("잠시 후 다시 시도해 주세요. (짧은 시간에 너무 많이 보냈어요)", 429);
-    // 장난·무차별 시도 막기 (IP당 1시간 횟수 제한)
-    const RL = { "/confirm": 30, "/stock/check": 120, "/order/lookup": 30, "/order/cancel": 15, "/order/claim": 15, "/order/confirm-receipt": 30, "/coupon/check": 30, "/offer/add": 10, "/member/quote": 120 };
+    // 장난 막기: 휴대폰 통신사·회사처럼 여러 사람이 같은 IP를 쓰므로 IP 제한은 넉넉하게, 쿠폰 번호 맞히기·제안 도배만 막음
+    // (주문 조회·취소의 연락처 맞히기는 주문번호별 '틀린 횟수'로 막음 → findOrder)
+    const RL = { "/coupon/check": 200, "/offer/add": 60 };
     if (RL[path] && (await overLimit(env, "rl2:" + path + ":" + ipOf(req), RL[path], 3600)))
       return fail("짧은 시간에 너무 많이 시도했어요. 잠시 후 다시 시도해 주세요.", 429);
     if (path === "/confirm") return await confirm(req, env);
