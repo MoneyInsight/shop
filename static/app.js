@@ -173,7 +173,7 @@
   // 목록·검색용 가벼운 색인 (idx/카테고리.json): 카테고리 화면은 그 카테고리만, 검색은 전체를 나눠 받음
   const IDX = {};
   const toP = (d) => d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
-    return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: r[10] || 0 }; });
+    return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: r[10] || 0, mq: r[11] || 1 }; });
   const loadCat = (slug) => (IDX[slug] = IDX[slug] || fetch(`${ROOT}idx/${slug}.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : { items: [], cats: [] })).then(toP).catch(() => []));
   let ALL = null;
   async function loadProducts(cat) {
@@ -233,6 +233,11 @@
   // 금액: 상품금액(옵션 추가금 포함) + 배송비(상품별 1회) − 쿠폰
   function calc(cart, products, discount) {
     const map = Object.fromEntries(products.map((p) => [p.id, p]));
+    // 'N개부터 구매' 상품: 같은 상품(옵션 합산) 수량이 모자라면 마지막 줄 수량을 채움
+    const tot = {}; cart.forEach((x) => (tot[x.id] = (tot[x.id] || 0) + x.qty));
+    let fixed = false;
+    Object.entries(tot).forEach(([id, n]) => { const mq = +(map[id]?.mq) || 1; if (n < mq) { const last = [...cart].reverse().find((x) => x.id === id); last.qty += mq - n; fixed = true; } });
+    if (fixed) store.set("cart", cart);
     const isSold = (x) => map[x.id] && (map[x.id].soldout || (x.opt != null && map[x.id].options?.[x.opt]?.so));
     const soldout = cart.filter(isSold).map((x) => map[x.id].name);
     const qn = {};
@@ -262,7 +267,7 @@
       <button class="wish-btn${wished ? " on" : ""}" data-wish="${esc(p.id)}" aria-label="찜하기">${HEART}</button></div>
       <div class="p-brand">${esc(p.brand || "")}</div><div class="p-name">${esc(p.name)}</div>
       <div class="p-price">${rate ? `<span class="rate">${rate}%</span>` : ""}<span>${won(p.price)}</span>${rate ? `<del>${won(p.normal_price)}</del>` : ""}</div>
-      <div class="p-ship">${p.shipping_fee ? "배송비 " + won(p.shipping_fee) : "무료배송"}</div></a>`;
+      <div class="p-ship">${p.shipping_fee ? "배송비 " + won(p.shipping_fee) : "무료배송"}${(p.mq || 1) > 1 ? ` · ${p.mq}개부터` : ""}</div></a>`;
   }
   // 상품 페이지 '함께 보면 좋은 상품': 카드 정보는 p/상품번호.json 에서 (페이지 용량 줄이기)
   document.querySelectorAll("[data-rel]").forEach(async (g) => {
@@ -526,14 +531,15 @@
       if (token() && member()) $(".d-price").insertAdjacentHTML("afterend", `<p class="member-badge on">회원 ${memberPct()}% 추가 즉시 할인 · 결제할 때 적용</p>`);
       else loginOn().then((on) => on && $(".d-price").insertAdjacentHTML("afterend", `<a class="member-badge" href="${ROOT}login.html">로그인하면 <b>${memberPct()}% 추가</b> 즉시 할인 ›</a>`));
     }
-    const shipP = { shipping_fee: +el.dataset.ship || 0, sn: +el.dataset.sn || 0 }, pkN = +el.dataset.pk || 1;
+    const shipP = { shipping_fee: +el.dataset.ship || 0, sn: +el.dataset.sn || 0 }, pkN = +el.dataset.pk || 1, mqN = +el.dataset.mq || 1;
     const id = el.dataset.id, name = el.dataset.name, base = Number(el.dataset.price), adds = JSON.parse(el.dataset.opts || "[]"), qt = JSON.parse(el.dataset.qt || "[]");
     const unitAt = (n) => (qt.length ? qt[Math.min(n, qt.length) - 1] : base);
     store.set("recent", [id, ...store.get("recent", []).filter((x) => x !== id)].slice(0, 20));
     const inp = $("#qty"), sel = $("#opt");
+    if (mqN > 1 && (+inp.value || 1) < mqN) inp.value = mqN;
     const optIdx = () => (sel && sel.value !== "" ? Number(sel.value) : null);
     const sync = () => {
-      const v = Math.max(1, Math.min(99, parseInt(inp.value) || 1));
+      const v = Math.max(mqN, Math.min(99, parseInt(inp.value) || mqN));
       inp.value = v;
       const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
       $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v) + (shipP.shipping_fee ? `<small class="per ship">+ 배송비 ${won(shipFor(shipP, v * pkN))}</small>` : `<small class="per ship free">무료배송</small>`);

@@ -224,6 +224,10 @@ async function confirm(req, env) {
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const shipBy = {};
+  for (const [pid, u] of Object.entries(shipUnits)) {  // 'N개부터 구매' 상품은 최소 수량 확인
+    const mq = Number(shipProd[pid]?.mq) || 1;
+    if (u < mq * (Number(shipProd[pid]?.pk) || 1)) return fail(`${shipProd[pid].name} 상품은 ${mq}개부터 주문할 수 있어요.`);
+  }
   for (const [pid, u] of Object.entries(shipUnits)) { shipBy[pid] = shipFor(shipProd[pid], u); shipping += shipBy[pid]; }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
   const firstLine = {};

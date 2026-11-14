@@ -256,7 +256,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             name = get(r, "name")
             price = _num(get(r, "price"))
             cost = _num(get(r, "cost"))
-            qt, sm, pk, sf, sn = [], "", 1, 0, 0
+            qt, sm, pk, sf, sn, mq = [], "", 1, 0, 0, 1
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비는 따로 받음 — 도매처 배송 규칙 그대로)
                 goods, cship, box = cost, _num(get(r, "cost_ship")), _num(get(r, "box_qty"))
                 ratio = pricing.get("max_ship_ratio")
@@ -271,6 +271,15 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 shipx = math.ceil(cship * pricing.get("card_fee", 0.034) / (1 - pricing.get("card_fee", 0.034) - 1 / 11) / 10) * 10 if cship else 0  # 배송비에 붙는 카드수수료
                 price = price_from_cost(goods, pricing) + shipx
                 qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, pricing)]
+                mo = pricing.get("min_order_won") or 0
+                if mo and price < mo:  # 싼 상품: 원래 1개 가격 + 'N개부터 구매' (고정비는 최소 수량에 나눠 담음)
+                    mq = max(2, math.ceil(mo / max(1, math.ceil(goods * 1.25))))
+                    if mq > 50:
+                        cheap += 1; continue  # 너무 싼 상품 (50개 넘게 사야 함)
+                    price = math.ceil((price_from_cost(goods * mq, pricing) + shipx) / mq / 10) * 10
+                    while price * mq < mo:
+                        mq += 1
+                    qt = []
                 sm = "선불" if cship else "무료"  # 도매처 발주서의 배송방식
                 if qt:
                     qt[0] = price
@@ -316,7 +325,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
                 "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) * pk if (cost and pricing) else 0, "pk": pk, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
-                "shipping_fee": str(sf), "sn": sn, "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
+                "shipping_fee": str(sf), "sn": sn, "mq": mq, "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or ("" if sf else "무료배송"), "badge": "", "summary": get(r, "summary"),
                 "description": "" if detail.lstrip().startswith("<") else detail.replace("\n", "|"),
@@ -328,7 +337,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
         if cheap:
-            warns.append(f"{path.name}: 배송비가 상품값보다 비싼 낱개 저가품 {cheap}개는 올리지 않음")
+            warns.append(f"{path.name}: 너무 싼 상품(50개 넘게 사야 최소 주문 금액) {cheap}개는 올리지 않음")
         if no_detail:
             warns.append(f"{path.name}: 상세페이지가 없는 {no_detail}개는 올리지 않음")
     keep = []

@@ -376,7 +376,7 @@ def card(p, root):
 <button class="wish-btn" data-wish="{e(p["id"])}" aria-label="찜하기">{I_HEART}</button></div>
 <div class="p-brand">{e(p["brand"])}</div><div class="p-name">{e(p["name"])}</div>
 <div class="p-price">{f'<span class="rate">{r}%</span>' if r else ""}<span>{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
-<div class="p-ship{'' if p["shipping_fee"] else ' free'}">{ship_text(p, True)}</div></a>'''
+<div class="p-ship{'' if p["shipping_fee"] else ' free'}">{ship_text(p, True)}{f' · {int(p["mq"])}개부터' if int(p.get("mq") or 1) > 1 else ""}</div></a>'''
 
 
 def write(path, text):
@@ -510,11 +510,11 @@ def product_body(p, related):
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else e(ship_text(p))}{'<br><small class="muted">같은 상품은 수량·옵션을 섞어도 배송비 한 번</small>' if p["shipping_fee"] and not int(p.get("sn") or 0) else ""}</dd>
-<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd></dl>
+{f'<dt>구매 수량</dt><dd><b>{int(p["mq"])}개부터 구매</b> <small class="muted">(1개 {won(p["price"])} · 상품값 {won(int(p["price"]) * int(p["mq"]))}부터)</small></dd>' if int(p.get("mq") or 1) > 1 else ""}<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
-<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}">
+<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
 <a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
@@ -798,7 +798,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) | ({"sn": int(p["sn"])} if p.get("sn") else {}) | ({"pk": p["pk"]} if (p.get("pk") or 1) > 1 else {}) for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) | ({"sn": int(p["sn"])} if p.get("sn") else {}) | ({"mq": int(p["mq"])} if int(p.get("mq") or 1) > 1 else {}) | ({"pk": p["pk"]} if (p.get("pk") or 1) > 1 else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
     for src, dst in (("온채널상품.csv", "onch_codes.json"), ("온채널겨울상품.csv", "onch_codes_winter.json"), ("온채널추가상품.csv", "onch_codes_more.json")):
         oc = ROOT / "data" / src
@@ -807,8 +807,8 @@ def build_feeds(ps):
                 write(dst, json.dumps([r[0] for r in list(csv.reader(fp))[1:] if r], ensure_ascii=False))
     # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
     cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}
-    idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or "", " ".join(seo.tags(p)), int(p["shipping_fee"] or 0)] for p in pub]
-    head = {"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge", "tags", "ship"]}
+    idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or "", " ".join(seo.tags(p)), int(p["shipping_fee"] or 0), int(p.get("mq") or 1)] for p in pub]
+    head = {"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge", "tags", "ship", "mq"]}
     (OUT / "idx").mkdir(exist_ok=True)
     by = {}
     for r in idx:

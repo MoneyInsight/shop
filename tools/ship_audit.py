@@ -37,7 +37,8 @@ for pid, p in prods.items():
     t = '무료' if not sh else ('주문당1번' if not sn else '개당' if sn == 1 else '묶음')
     types[t] = types.get(t, 0) + 1
     qt = p.get('qt') or [int(p['price'])]
-    for n in range(1, 11):
+    mq = int(p.get('mq') or 1)  # 'N개부터 구매' 상품은 N개부터 검사
+    for n in range(mq, mq + 10):
         u = qt[min(n, len(qt)) - 1]
         charged = ship(fee, sn, n * pk)
         rev = u * n + charged
