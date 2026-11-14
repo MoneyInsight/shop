@@ -51,6 +51,18 @@ jobs:
           fi
           echo "KV id: $ID"
           sed -i "s/^id = .*/id = \"$ID\"/" wrangler.toml
+      - name: workers.dev 주소 등록 (처음 한 번)
+        if: steps.chk.outputs.skip != '1'
+        run: |
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain"
+          H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          cur=$(curl -s -H "$H" "$API" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log((JSON.parse(s).result||{}).subdomain||"")}catch(e){console.log("")}})')
+          if [ -z "$cur" ]; then
+            for name in ttaengjab ttaengjab-shop ttaengjab$RANDOM; do
+              r=$(curl -s -X PUT -H "$H" -H "Content-Type: application/json" --data "{\"subdomain\":\"$name\"}" "$API")
+              echo "$r" | grep -q '"success":true' && { echo "등록: $name.workers.dev"; break; } || echo "실패: $name"
+            done
+          else echo "이미 있음: $cur.workers.dev"; fi
       - name: 서버 배포
         if: steps.chk.outputs.skip != '1'
         working-directory: worker
