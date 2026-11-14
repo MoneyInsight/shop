@@ -533,3 +533,5 @@ footer .logo .logo-mark{width:24px;height:24px}
 .office-band .office-btns{display:flex;gap:8px}
 .office-band .btn-ghost{color:#fff;border-color:#6b6b6b}
 @media (max-width:640px){.office-band b{font-size:16px}.office-band .office-btns{width:100%}.office-band .office-btns .btn{flex:1;text-align:center}}
+.office-band .btn{white-space:nowrap;padding:11px 18px}
+.office-band .office-btns .btn:not(.btn-ghost){background:#c9a15e;color:#16171a;border-color:#c9a15e}

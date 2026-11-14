@@ -1,5 +1,5 @@
 // 올채움 서비스워커 — 항상 최신 화면을 먼저 받고, 인터넷이 끊겼을 때만 안내 화면을 보여줍니다.
-const CACHE = "allchaeum-v9";
+const CACHE = "allchaeum-v10";
 const API = new URL(self.location.href).searchParams.get("api") || "";
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["offline.html", "style.css", "favicon.svg"]))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
