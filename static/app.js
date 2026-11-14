@@ -335,7 +335,7 @@
       else {
         const all = await loadProducts();
         list = all.filter((p) => !p.soldout && words.every((w) => (p.name + " " + (p.brand || "") + " " + (p.category_name || "") + " " + (p.tags || "")).toLowerCase().includes(w)))
-          .sort((a, b) => a.name.toLowerCase().indexOf(words[0]) - b.name.toLowerCase().indexOf(words[0])).slice(0, 8);
+          .sort((a, b) => (a.name.toLowerCase().includes(words[0]) ? 0 : 1) - (b.name.toLowerCase().includes(words[0]) ? 0 : 1) || a.price - b.price).slice(0, 8);
       }
       if (my !== seq) return;
       idx = -1;
@@ -392,6 +392,11 @@
     const render = () => {
       sorted = [...list];
       if (pf) { const [lo, hi] = pf.split("-").map((x) => (x ? +x : null)); sorted = sorted.filter((p) => (lo == null || p.price >= lo) && (hi == null || p.price < hi)); }
+      if (sort === "rec" && mode === "search") {  // 검색 추천순: 상품명에 검색어가 그대로 → 단어가 모두 상품명에 → 그 외, 같은 단계에서는 싼 것부터
+        const term = (q.get("q") || "").trim().toLowerCase(), words = term.split(/\s+/).filter(Boolean);
+        const tier = (p) => { const n = p.name.toLowerCase(); return n.includes(term) ? 0 : words.every((w) => n.includes(w)) ? 1 : 2; };
+        sorted = sorted.map((p) => [tier(p), p]).sort((a, b) => a[0] - b[0] || a[1].price - b[1].price).map((x) => x[1]);
+      }
       if (sort === "low") sorted.sort((a, b) => a.price - b.price);
       if (sort === "high") sorted.sort((a, b) => b.price - a.price);
       if (sort === "sale") sorted.sort((a, b) => (1 - b.price / b.normal_price) - (1 - a.price / a.normal_price));

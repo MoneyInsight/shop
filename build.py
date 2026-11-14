@@ -45,7 +45,10 @@ def load_products():
     kw = CFG.get("hide_no_kc_words") or []
     if kw:  # 전기 난방용품인데 KC 인증번호가 없으면 판매하지 않음
         n0 = len(ss_rows)
-        ss_rows = [p for p in ss_rows if p.get("kc") or not any(k in p["name"] for k in kw)]
+        ex, el = re.compile(CFG.get("hide_no_kc_except") or "$^"), re.compile(CFG.get("hide_no_kc_electric") or "$^")
+        def kc_risk(n):  # 손난로·핫팩처럼 전기가 아닌 건 제외, 단 충전식·USB 손난로는 전기용품
+            return any(k in n for k in kw) and (not ex.search(n) or bool(el.search(n)))
+        ss_rows = [p for p in ss_rows if p.get("kc") or not kc_risk(p["name"])]
         if n0 != len(ss_rows):
             print(f"KC 인증번호 없는 전기 난방용품 {n0 - len(ss_rows)}개 숨김")
     for w in warns:
