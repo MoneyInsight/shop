@@ -53,6 +53,15 @@ jobs:
           fi
           echo "KV id: $ID"
           sed -i "s/^id = .*/id = \"$ID\"/" wrangler.toml
+      - name: 상품 DB(D1) 연결 (매일 채우는 allchaeum DB가 있으면)
+        if: steps.chk.outputs.skip != '1'
+        working-directory: worker
+        run: |
+          DID=$(npx -y wrangler@4 d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const a=JSON.parse(s.slice(s.indexOf("[")));const d=a.find(x=>x.name==="allchaeum");console.log(d?(d.uuid||d.id):"")}catch(e){console.log("")}})')
+          if [ -n "$DID" ]; then
+            printf '\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "allchaeum"\ndatabase_id = "%s"\n' "$DID" >> wrangler.toml
+            echo "상품 DB 연결: ${DID:0:8}…"
+          else echo "상품 DB 아직 없음"; fi
       - name: workers.dev 주소 등록 (처음 한 번)
         if: steps.chk.outputs.skip != '1'
         run: |

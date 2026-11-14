@@ -349,21 +349,16 @@ function shipFor(p, units) {
 async function siteProducts(env) {
   return (await fetch(env.SITE_URL.replace(/\/$/, "") + "/products.json", { cf: { cacheTtl: 0 } })).json();
 }
-// 상품 찾기: 상품 DB(env.DB)가 있으면 DB에서, 없으면 사이트의 products.json에서
+// 상품 찾기: 사이트의 상품 파일(p/상품번호.json — 가격·품절이 가장 먼저 갱신됨)을 먼저, 없는 상품(상품 DB에만 있는 것)은 상품 DB에서
 async function productMap(env, ids) {
-  if (env.DB) {
-    const m = await catalog.itemsForOrder(env.DB, ids);
-    if (Object.keys(m).length === new Set(ids.map(String)).size) return m;
-    const rest = Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p]));  // 아직 DB로 안 옮긴 상품
-    return { ...rest, ...m };
-  }
-  // 상품별 작은 파일(p/상품번호.json)로 확인, 없으면 전체 파일로
   const base = String(env.SITE_URL || "").replace(/\/$/, ""), out = {};
   const uniq = [...new Set(ids.map(String))];
   await Promise.all(uniq.map(async (id) => {
     try { const r = await fetch(`${base}/p/${encodeURIComponent(id)}.json`, { cf: { cacheTtl: 0 } }); if (r.ok) { const p = await r.json(); if (p && p.id) out[p.id] = p; } } catch (e) {}
   }));
-  if (Object.keys(out).length === uniq.length) return out;
+  const miss = uniq.filter((id) => !out[id]);
+  if (miss.length && env.DB) Object.assign(out, await catalog.itemsForOrder(env.DB, miss));
+  if (uniq.every((id) => out[id])) return out;
   return { ...Object.fromEntries((await siteProducts(env)).map((p) => [p.id, p])), ...out };
 }
 

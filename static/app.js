@@ -447,6 +447,7 @@
       const qs = new URLSearchParams({ sort, page, size: PER_PAGE });
       if (term) qs.set("q", term);
       if (mode === "cat") qs.set("cat", box.dataset.cat);
+      if (q.get("free") === "1") qs.set("free", "1");  // 무료배송만
       const d = await apiGet("/catalog/list?" + qs);
       loading = false;
       if (!d) { if (reset) grid.innerHTML = `<div class="empty">상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`; return; }
@@ -490,7 +491,11 @@
     if (opts.length) $(".qty-row").insertAdjacentHTML("beforebegin", `<label class="opt-label" for="opt">${esc(p.option_name || "옵션")}</label><select id="opt" class="opt-select"><option value="">선택해 주세요</option>` +
       opts.map((o, i) => `<option value="${i}"${o.so ? " disabled" : ""}>${o.so ? "[품절] " : ""}${esc(o.v)}${o.add > 0 ? ` (+${won(o.add)})` : o.add < 0 ? ` (${won(o.add)})` : ""}</option>`).join("") + `</select>`);
     const buy = $("#buy");
-    Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []) });
+    Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []),
+      ship: p.shipping_fee || 0, sn: p.sn || 0, pk: p.pk || 1, mq: p.mq || 1 });  // 배송비 규칙 (서버 결제 검증과 같게)
+    const sdd = $(".d-meta dd");
+    if (sdd) sdd.innerHTML = !p.shipping_fee ? "<b>무료배송</b>" : esc("배송비 " + won(p.shipping_fee) + (p.sn === 1 ? " (1개마다)" : p.sn > 1 ? ` (${p.sn}개마다)` : "")) +
+      (!p.sn ? '<br><small class="muted">같은 상품은 수량·옵션을 섞어도 배송비 한 번</small>' : "") + ((p.mq || 1) > 1 ? `<br><small class="muted">${p.mq}개부터 구매</small>` : "");
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
     const qd = $("#qty-deal");
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {

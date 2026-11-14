@@ -1,11 +1,11 @@
 name: 새 상품 찾기 (도매꾹 API, 매일)
 on:
   schedule:
-    - cron: "17 18 * * *"   # 한국 시간 새벽 3시 17분
+    - cron: "17 5 * * *"    # 한국 시간 오후 2시 17분 — 기존 상품 품절 점검(1시 17분)이 도매꾹 호출 한도를 먼저 쓰게 한 뒤
   workflow_dispatch:
     inputs:
       limit: { description: "점검할 기존 상품 수", default: "4000" }
-      new_limit: { description: "새 상품 찾기 조회 수", default: "10000" }
+      new_limit: { description: "새 상품 찾기 조회 수", default: "60000" }
 permissions:
   contents: write
   pages: write
@@ -33,7 +33,9 @@ jobs:
         run: python3 tools/domeggook_discover.py
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
-          NEW_LIMIT: ${{ github.event.inputs.new_limit || '10000' }}
+          NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
+          ADD_TARGET: "27000"
+          MAX_MIN: "270"
       - name: 빌드·손해 점검
         run: |
           python3 build.py

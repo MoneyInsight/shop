@@ -100,6 +100,12 @@ def main():
     ap.add_argument("--budget", type=int, default=85000)  # 하루 무료 한도 10만 줄 중 오늘 쓸 몫
     a = ap.parse_args()
     ps, unsafe, nwh = products()
+    import csv, gzip, io
+    whids = set()
+    for f in (ROOT / "warehouse").glob("*.csv.gz"):
+        whids |= {r["상품코드"] for r in csv.DictReader(io.StringIO(gzip.decompress(f.read_bytes()).decode("utf-8-sig")))}
+    (ROOT / "dist").mkdir(exist_ok=True)
+    (ROOT / "dist/site_ids.json").write_text(json.dumps([p["id"] for p in ps if p["id"] not in whids]), encoding="utf-8")  # 자동 전환 점검용
     stp = Path(a.state)
     state = json.loads(stp.read_text(encoding="utf-8")) if stp.exists() else {}
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")

@@ -22,6 +22,8 @@ STATE = ROOT / "data" / "domeme_discover_state.json"
 KWF = ROOT / "data" / "domeme_keywords.json"
 WH = ROOT / "warehouse"  # 상품 창고: 사이트 한도(MAX_TOTAL)를 넘는 상품은 여기로 → 상품 DB(D1)에만 올림
 WH_MAX = int(os.environ.get("WH_MAX", "1000000"))
+ADD_TARGET = int(os.environ.get("ADD_TARGET", "27000"))  # 하루 새 상품 목표 (도매꾹 하루 호출 한도에 먼저 닿으면 거기서 멈춤)
+MAX_MIN = float(os.environ.get("MAX_MIN", "290"))  # 실행 시간 상한(분) — GitHub 작업 6시간 제한 안에서 저장까지
 EXISTING = [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "도매매API상품.csv")]
 SKIP_CAT = ("식품", "건강", "의료", "성인", "의약", "다이어트", "담배", "주류")
 
@@ -171,7 +173,11 @@ def main():
     total += len(rows)
     ci = state.get("cat", 0) % len(cats)
     loops = 0
-    while views < NEW_LIMIT and loops < len(cats) * 30 and wh_have + len(wh_rows) < WH_MAX and errs < 20:
+    t0 = time.time()
+    def more():
+        return (views < NEW_LIMIT and errs < 20 and added + len(wh_rows) < ADD_TARGET and wh_have + len(wh_rows) < WH_MAX
+                and time.time() - t0 < MAX_MIN * 60)
+    while more() and loops < len(cats) * 30:
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
         pg = int(pgs.get(kw, 1))
@@ -184,7 +190,7 @@ def main():
             no = str(it.get("no", ""))
             if not no or no in have or no in seen or it.get("adultOnly") == "true" or num((it.get("deli") or {}).get("fee")) > MAX_SHIP:
                 continue
-            if views >= NEW_LIMIT or errs >= 20:
+            if not more():
                 break
             v = (api({"ver": "4.5", "mode": "getItemView", "no": no}).get("domeggook") or {})
             views += 1

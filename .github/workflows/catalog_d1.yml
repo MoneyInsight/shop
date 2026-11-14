@@ -1,17 +1,20 @@
 name: 상품 DB(D1) 매일 채우기 — 무료 한도 안에서
 on:
   schedule:
-    - cron: "23 1 * * *"   # 한국 시간 오전 10시 23분 (D1 하루 한도는 오전 9시에 초기화, 도매매 새 상품 찾기(새벽 3시) 이후)
+    - cron: "23 1 * * *"   # 한국 시간 오전 10시 23분 (D1 하루 한도는 오전 9시에 초기화)
+    - cron: "53 6 * * *"   # 오후 3시 53분 — 오후 품절·가격 점검 반영 (바뀐 상품부터, 최근 24시간 쓰기 한도 안에서)
+    - cron: "53 19 * * *"  # 새벽 4시 53분 — 새벽 점검 반영
   workflow_dispatch:
   push:  # 이 작업의 코드가 바뀌면 바로 한 번 실행
     branches: [main]
     paths: [".github/workflows/catalog_d1.yml", "tools/d1_push.py", "tools/catalog_build.py", "worker/catalog.js"]
 concurrency: { group: catalog-d1, cancel-in-progress: false }
-permissions: { contents: write }
+permissions: { contents: write, pages: write, id-token: write }
 jobs:
   fill:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    environment: { name: github-pages }
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -49,3 +52,21 @@ jobs:
           git add data/d1_status.json
           git commit -m "상품 DB 채우기 결과 $(date -u +%F)" || exit 0
           for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done
+      - name: 사이트를 상품 DB 모드로 자동 전환 (점검 모두 통과할 때 한 번만)
+        id: sw
+        run: python3 tools/d1_switch.py
+      - name: 전환 반영 — 빌드·손해 점검·배포
+        if: steps.sw.outputs.switched == '1'
+        run: |
+          python3 build.py
+          python3 tools/site_check.py
+          git add config.json
+          git commit -m "사이트를 상품 DB 모드로 전환 (자동 점검 통과: DB 연결·검색·가격 표본 일치)"
+          for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done
+      - if: steps.sw.outputs.switched == '1'
+        uses: actions/configure-pages@v5
+      - if: steps.sw.outputs.switched == '1'
+        uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - if: steps.sw.outputs.switched == '1'
+        uses: actions/deploy-pages@v4
