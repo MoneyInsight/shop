@@ -335,8 +335,8 @@ def build_home(ps):
 <p>유통 수수료를 덜어낸 정직한 가격, 모든 상품 무료배송.</p>
 <ul class="hero-perks">
 <li><b>즉시 할인</b><span>적립금 말고 바로</span></li>
-{f'<li><b>회원 {round(CFG["member_discount"]["rate"] * 100)}% 더</b><span>3초 간편가입</span></li>' if (CFG.get("member_discount") or {}).get("rate") else ''}
-{f'<li><b>최대 {max_deal}% 할인</b><span>같은 상품 2개부터</span></li>' if max_deal >= 2 else ''}
+{f'<li><b>회원 {round(CFG["member_discount"]["rate"] * 100)}% 더 할인</b><span>3초 간편가입</span></li>' if (CFG.get("member_discount") or {}).get("rate") else ''}
+{'<li><b>담을수록 할인</b><span>같은 상품 2개부터</span></li>' if max_deal >= 2 else ''}
 </ul>
 <div class="hero-btns"><a class="btn" href="search.html">전체 상품 보기</a><a class="btn btn-ghost" href="login.html">간편가입</a></div></div>
 <div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>

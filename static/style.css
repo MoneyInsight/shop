@@ -519,3 +519,5 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 @media (max-width:899px){
   .gnb::after{content:"";position:absolute;right:0;top:0;bottom:1px;width:40px;pointer-events:none;background:linear-gradient(to right,rgba(255,255,255,0),var(--paper))}
 }
+.hero-perks b{white-space:nowrap}
+@media (max-width:380px){.hero-perks b{font-size:13px}.hero-perks span{font-size:11px}}
