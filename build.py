@@ -788,7 +788,15 @@ def build_feeds(ps):
     # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
     cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}
     idx = [[p["id"], p["name"], int(p["price"]), int(p["normal_price"]) if int(p["normal_price"]) != int(p["price"]) else 0, p["image"], p["brand"] or "", cat_idx.get(p["category"], -1), 1 if p.get("soldout") else 0, p.get("badge") or "", " ".join(seo.tags(p))] for p in pub]
-    write("idx.json", json.dumps({"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge", "tags"], "items": idx}, ensure_ascii=False, separators=(",", ":")))
+    head = {"cats": [[c["slug"], c["name"]] for c in CATS], "f": ["id", "name", "price", "normal_price", "image", "brand", "cat", "soldout", "badge", "tags"]}
+    (OUT / "idx").mkdir(exist_ok=True)
+    by = {}
+    for r in idx:
+        by.setdefault(r[6], []).append(r)
+    for i, c in enumerate(CATS):  # 카테고리별 색인: 카테고리 화면은 자기 것만, 검색은 전부 (휴대폰에서 빠르게)
+        if by.get(i):
+            write(f'idx/{c["slug"]}.json', json.dumps(head | {"items": by[i]}, ensure_ascii=False, separators=(",", ":")))
+    write("idx/list.json", json.dumps([c["slug"] for i, c in enumerate(CATS) if by.get(i)]))
     (OUT / "p").mkdir(exist_ok=True)
     for p in pub:
         (OUT / "p" / f'{p["id"]}.json').write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

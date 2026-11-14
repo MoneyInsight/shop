@@ -57,6 +57,20 @@ for js in ("app.js", "admin.js", "sw.js"):
     if r.returncode:
         err(f"{js} 문법 오류: " + r.stderr[-200:])
 
+# 3-2) 카테고리별 색인
+L = SITE / "idx" / "list.json"
+if not L.exists():
+    err("idx/list.json 없음")
+else:
+    n = 0
+    for c in json.loads(L.read_text()):
+        f = SITE / "idx" / f"{c}.json"
+        if not f.exists():
+            err(f"idx/{c}.json 없음")
+        else:
+            n += len(json.loads(f.read_text(encoding="utf-8"))["items"])
+    IDX_N = n
+
 # 4) 상품 데이터·가격
 ps = json.loads((SITE / "products.json").read_text(encoding="utf-8"))
 ids = set()
@@ -81,6 +95,9 @@ for p in ps:
         warns.append(f"{pid}: 대표 이미지 없음")
     if not p.get("category"):
         err(f"{pid}: 카테고리 없음")
+
+if L.exists() and IDX_N != len(ps):
+    err(f"색인 상품 수 {IDX_N} ≠ 전체 {len(ps)}")
 
 # 5) 상품 페이지 (전부 훑음)
 need_prod = ["chrome.js", "CH.top()", "CH.bot()", "data-qt=", 'id="buy"', "app.js", "application/ld+json"]

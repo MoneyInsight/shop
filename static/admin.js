@@ -195,7 +195,9 @@
       <div class="card"><h2>고친 상품 <small id="p-cnt"></small></h2><div id="p-edited"><p class="muted">불러오는 중…</p></div></div>`;
   }
   async function prodInit() {
-    if (!PIDX) PIDX = await fetch("idx.json?t=" + Date.now()).then((r) => r.json()).catch(() => null);
+    if (!PIDX) PIDX = await fetch("idx/list.json?t=" + Date.now()).then((r) => r.json())
+      .then((L) => Promise.all(L.map((c) => fetch(`idx/${c}.json?t=${Date.now()}`).then((r) => r.json()))))
+      .then((a) => ({ ...a[0], items: a.flatMap((d) => d.items) })).catch(() => null);
     PEDITS = await call("/admin/product-edits").catch(() => ({ items: {} }));
     const q = $("#p-q"); if (!q) return;
     q.oninput = () => { clearTimeout(q._t); q._t = setTimeout(prodSearch, 200); };

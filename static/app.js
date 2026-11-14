@@ -170,15 +170,16 @@
     b.disabled = true; if (await enablePush(b.dataset.phone)) b.outerHTML = `<p class="muted" style="margin-top:10px">🔔 이 기기로 알림을 받고 있어요.</p>`; else b.disabled = false;
   });
 
-  let PRODUCTS = null;
-  // 목록·검색용 가벼운 색인 (idx.json): 상품 수가 많아도 한 번만 받음
-  async function loadProducts() {
-    if (!PRODUCTS) {
-      const d = await (await fetch(ROOT + "idx.json", { cache: "no-cache" })).json();
-      PRODUCTS = d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
-        return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: 0 }; });
-    }
-    return PRODUCTS;
+  // 목록·검색용 가벼운 색인 (idx/카테고리.json): 카테고리 화면은 그 카테고리만, 검색은 전체를 나눠 받음
+  const IDX = {};
+  const toP = (d) => d.items.map((r) => { const c = d.cats[r[6]] || ["", ""];
+    return { id: r[0], name: r[1], price: r[2], normal_price: r[3] || r[2], image: r[4], brand: r[5], category: c[0], category_name: c[1], soldout: !!r[7], badge: r[8], tags: r[9] || "", shipping_fee: 0 }; });
+  const loadCat = (slug) => (IDX[slug] = IDX[slug] || fetch(`${ROOT}idx/${slug}.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : { items: [], cats: [] })).then(toP).catch(() => []));
+  let ALL = null;
+  async function loadProducts(cat) {
+    if (cat) return loadCat(cat);
+    if (!ALL) ALL = fetch(ROOT + "idx/list.json", { cache: "no-cache" }).then((r) => r.json()).then((L) => Promise.all(L.map(loadCat))).then((a) => a.flat());
+    return ALL;
   }
   // 장바구니·결제용 상품 상세 정보 (옵션·수량 할인): 필요한 상품만 p/상품번호.json
   const PCACHE = {};
@@ -367,7 +368,7 @@
     const mode = box.dataset.mode, grid = $("#list-grid"), pager = $("#pager");
     let sort = q.get("sort") || "rec", page = Math.max(1, parseInt(q.get("page")) || 1);
     if (DBMODE && mode !== "wish") { const pfb = $(".price-filter"); if (pfb) pfb.hidden = true; return initListingDB(box, q, mode); }
-    const all = mode === "wish" ? await getProducts(getWish()) : await loadProducts();
+    const all = mode === "wish" ? await getProducts(getWish()) : await loadProducts(mode === "cat" ? box.dataset.cat : "");
     let list = all;
     if (mode === "cat") list = all.filter((p) => p.category === box.dataset.cat);
     if (mode === "wish") { const w = getWish(); list = w.map((id) => all.find((p) => p.id === id)).filter(Boolean); }
