@@ -94,6 +94,10 @@ def load_products():
     # 네이버 최저가보다 많이 싼 상품(절약률 큰 순)이 위로, 최저가 정보 없는 상품은 뒤로
     if CFG.get("show_naver", True):
         out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
+    hide = set(CFG.get("hide_sources") or [])
+    if "ownerclan" in hide:  # 품절 자동 점검이 안 되는 오너클랜 상품은 점검이 붙을 때까지 숨김
+        before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
+        print(f"오너클랜 상품 {before - len(out)}개 숨김 (품절 자동 점검 연결 전)")
     out = clean_catalog(out)
     out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
     return out
@@ -673,6 +677,8 @@ def main():
     if tpl.exists():
         shutil.copy(tpl, OUT / "product_template.xlsx")
     ps = load_products()
+    used_cats = {p["category"] for p in ps}
+    SHOW_CATS[:] = [c for c in SHOW_CATS if c["slug"] in used_cats]  # 상품이 하나도 없는 카테고리(예: 중고)는 메뉴에서 숨김
     adult_slugs = {c["slug"] for c in CATS if c.get("adult")}
     adult = [p for p in ps if p["category"] in adult_slugs]
     if not CFG.get("adult_verified"):

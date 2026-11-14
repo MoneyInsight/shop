@@ -13,6 +13,7 @@ jobs:
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
       NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+      DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -64,4 +65,5 @@ jobs:
           [ -n "$ADMIN_PASSWORD" ] && printf '%s' "$ADMIN_PASSWORD" | npx -y wrangler@4 secret put ADMIN_PASSWORD
           printf '%s' "${TOSS_SECRET_KEY:-test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}" | npx -y wrangler@4 secret put TOSS_SECRET_KEY
           [ -n "$NOTIFY_WEBHOOK" ] && printf '%s' "$NOTIFY_WEBHOOK" | npx -y wrangler@4 secret put NOTIFY_WEBHOOK
+          [ -n "$DOMEGGOOK_API_KEY" ] && printf '%s' "$DOMEGGOOK_API_KEY" | npx -y wrangler@4 secret put DOMEGGOOK_API_KEY  # 결제 직전 실시간 재고 확인
           true

@@ -16,6 +16,7 @@
  * KV 바인딩:         SHOP
  * 공급가는 이 서버(KV)에만 저장되고 공개 사이트에는 나가지 않습니다.
  */
+import * as live from "./live.js";
 import * as catalog from "./catalog.js";
 import * as auth from "./auth.js";
 import * as tracking from "./track.js";
@@ -115,6 +116,9 @@ async function confirm(req, env) {
     lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
+  // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
+  const lv = await live.check(env, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price, option: l.option })), PRICING(env));
+  if (!lv.ok) return fail(lv.message);
   const free = Number(env.FREE_SHIPPING_OVER || 0);
   if (free && subtotal >= free) shipping = 0;
   const remote = regionFee(customer?.zip, customer?.addr);  // 제주·도서산간 추가 배송비
@@ -1066,6 +1070,22 @@ export async function handle(req, env, path) {
     if (["/inquiry/add", "/qna/add", "/review/add", "/seller/apply", "/seller/product", "/report-price"].includes(path) && (await overLimit(env, "w:" + ipOf(req), 20, 3600)))
       return fail("잠시 후 다시 시도해 주세요. (짧은 시간에 너무 많이 보냈어요)", 429);
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/stock/check") {  // 결제창 열기 전 재고 확인 (손님 화면용)
+      const d = await req.json().catch(() => ({}));
+      const its = Array.isArray(d.items) ? d.items.slice(0, 50) : [];
+      const map = await productMap(env, its.map((x) => x.id));
+      const lines = [];
+      for (const it of its) {
+        const p = map[it.id]; if (!p) continue;
+        if (p.soldout) return fail(`일시품절된 상품이 있어요: ${p.name}`);
+        const o = it.opt != null && it.opt !== "" ? (p.options || [])[Number(it.opt)] : null;
+        const qt = Array.isArray(p.qt) ? p.qt : JSON.parse(p.qt || "[]");
+        const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
+        lines.push({ id: p.id, name: p.name, qty, option: o ? o.v : "", price: (qt.length ? Number(qt[Math.min(qty, qt.length) - 1]) : Number(p.price)) + (o ? o.add : 0) });
+      }
+      const r = await live.check(env, lines, PRICING(env));
+      return r.ok ? json({ ok: true }) : fail(r.message);
+    }
     if (path === "/member/quote") {  // 로그인 회원 추가 할인 금액 (결제 화면 표시용, 계산은 결제 확인과 같음)
       const d = await req.json().catch(() => ({}));
       if (!(await auth.userFromToken(env, d.token))) return json({ discount: 0 });
