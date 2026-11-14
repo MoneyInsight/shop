@@ -98,9 +98,55 @@ def load_products():
     if "ownerclan" in hide:  # 품절 자동 점검이 안 되는 오너클랜 상품은 점검이 붙을 때까지 숨김
         before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
         print(f"오너클랜 상품 {before - len(out)}개 숨김 (품절 자동 점검 연결 전)")
+    out = apply_edits(out)
     out = clean_catalog(out)
     mark_new(out)
     out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
+    return out
+
+
+EDITS_VER = "0"
+
+
+def apply_edits(ps):
+    """관리자 화면에서 고친 상품(이름·가격·카테고리·숨김·품절·소개·표시)을 서버에서 받아 반영.
+    가격은 손해 방지: 공급사 최저가, 1개 기준 순마진 8% 아래로는 내려가지 않음"""
+    global EDITS_VER
+    import urllib.request
+    url = (CFG.get("worker_url") or "").rstrip("/") + "/edits"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except Exception as ex:
+        print("상품 수정 내역을 못 받음(이번엔 건너뜀):", ex); return ps
+    EDITS_VER = str(data.get("ver", 0)); items = data.get("items") or {}
+    if not items:
+        return ps
+    import product_import as _pi
+    floor_p = dict(CFG.get("pricing", {})); floor_p["net_margin"] = (floor_p.get("qty_price") or {}).get("min_net_margin", 0.08); floor_p["min_margin_won"] = 0
+    slugs = {c["slug"] for c in CATS}; out, n = [], 0
+    for p in ps:
+        e = items.get(p["id"])
+        if not e:
+            out.append(p); continue
+        n += 1
+        if e.get("hidden"):
+            continue
+        if e.get("name"): p["name"] = e["name"]
+        if e.get("summary"): p["summary"] = e["summary"]
+        if e.get("badge"): p["badge"] = e["badge"]
+        if e.get("soldout"): p["soldout"] = True
+        if e.get("category") in slugs:
+            p["category"] = e["category"]; p["category_name"] = CAT_NAME.get(e["category"], p.get("category_name", ""))
+        if e.get("price"):
+            new = int(e["price"])
+            if p.get("mp"): new = max(new, int(p["mp"]))
+            if p.get("cost"): new = max(new, _pi.price_from_cost(int(p["cost"]), floor_p))
+            p["price"] = str(new); p["normal_price"] = str(max(new, int(p.get("normal_price") or new)))
+            if p.get("qt"):
+                p["qt"] = [new] + [min(int(x), new) for x in p["qt"][1:]]
+        out.append(p)
+    print(f"관리자 수정 반영: {n}개")
     return out
 
 
@@ -688,6 +734,7 @@ def build_feeds(ps):
     today = datetime.date.today().isoformat()
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+    write("edits_ver.txt", EDITS_VER)  # 관리자 수정 반영 확인용
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",

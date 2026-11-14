@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -63,6 +63,7 @@
         <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
     }
     if (tab === "stats") return statsView();
+    if (tab === "products") { setTimeout(prodInit, 0); return prodShell(); }
     if (tab === "po") {
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
@@ -153,6 +154,68 @@
     D.kc = await fetch("kc_check.json").then((r) => r.json()).catch(() => []);
     $("#admin-login").style.display = "none"; $("#admin-body").style.display = "";
     paint();
+  }
+
+  // ── 상품 관리: 검색 → 이름·가격·카테고리·소개·표시·품절·숨김 고치기 (서버 저장 → 사이트 빌드 때 반영) ──
+  let PIDX = null, PEDITS = null, PSEL = null;
+  const BADGES = ["", "NEW", "BEST", "SALE", "추천", "특가"];
+  function prodShell() {
+    return `<div class="card form"><h2>상품 찾기</h2>
+      <input id="p-q" placeholder="상품명 또는 상품코드(예: DM12345678)" autocomplete="off" style="width:100%">
+      <p class="muted" style="margin-top:6px">고친 내용은 서버에 저장되고, 30분 안에 사이트에 자동으로 반영돼요. 가격은 손해를 막기 위해 공급사 최저가·순마진 8% 아래로는 내려가지 않아요.</p>
+      <div id="p-res" style="margin-top:10px"></div></div>
+      <div class="card form" id="p-edit" style="display:none"></div>
+      <div class="card"><h2>고친 상품 <small id="p-cnt"></small></h2><div id="p-edited"><p class="muted">불러오는 중…</p></div></div>`;
+  }
+  async function prodInit() {
+    if (!PIDX) PIDX = await fetch("idx.json?t=" + Date.now()).then((r) => r.json()).catch(() => null);
+    PEDITS = await call("/admin/product-edits").catch(() => ({ items: {} }));
+    const q = $("#p-q"); if (!q) return;
+    q.oninput = () => { clearTimeout(q._t); q._t = setTimeout(prodSearch, 200); };
+    prodEdited(); if (PSEL) prodForm(PSEL.id);
+  }
+  const catName = (i) => (PIDX && PIDX.cats[i] ? PIDX.cats[i][1] : "");
+  function prodSearch() {
+    const v = ($("#p-q").value || "").trim().toLowerCase(), box = $("#p-res");
+    if (!PIDX) { box.innerHTML = `<p class="muted">상품 목록을 불러오지 못했어요.</p>`; return; }
+    if (v.length < 2) { box.innerHTML = ""; return; }
+    const words = v.split(/\s+/), hits = [];
+    for (const r of PIDX.items) { const t = (r[0] + " " + r[1]).toLowerCase(); if (words.every((w) => t.includes(w))) { hits.push(r); if (hits.length >= 40) break; } }
+    box.innerHTML = hits.length ? `<table class="adm-table"><tr><th></th><th>상품</th><th>카테고리</th><th>가격</th><th></th></tr>${hits.map((r) => `<tr>
+      <td><img src="${esc(r[4])}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px"></td>
+      <td>${esc(r[1])}<br><span class="muted">${esc(r[0])}${r[7] ? " · 품절" : ""}${PEDITS.items[r[0]] ? " · ✏️ 고침" : ""}</span></td>
+      <td>${esc(catName(r[6]))}</td><td>${won(r[2])}</td>
+      <td><button data-act="p-pick" data-id="${esc(r[0])}">수정</button> <a class="muted" href="product/${esc(r[0])}.html" target="_blank">보기</a></td></tr>`).join("")}</table>` : `<p class="muted">찾는 상품이 없어요.</p>`;
+  }
+  async function prodForm(id) {
+    const r = PIDX && PIDX.items.find((x) => x[0] === id);
+    const det = await fetch(`p/${id}.json`).then((x) => x.json()).catch(() => ({}));
+    const e = (PEDITS.items || {})[id] || {};
+    const cur = { name: det.name || (r && r[1]) || "", price: det.price || (r && r[2]) || 0, category: det.category || "", summary: det.summary || "", badge: det.badge || "" };
+    PSEL = { id, cur };
+    const box = $("#p-edit"); box.style.display = "";
+    box.innerHTML = `<h2>상품 수정 <small>${esc(id)}</small></h2>
+      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+        <img src="${esc(det.image || (r && r[4]) || "")}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px">
+        <div style="flex:1;min-width:260px">
+          <label>상품명</label><input id="pe-name" value="${esc(e.name || cur.name)}" maxlength="100">
+          <label>판매가 (1개)</label><input id="pe-price" type="number" min="0" step="10" value="${esc(e.price || cur.price)}">
+          <label>카테고리</label><select id="pe-cat">${(PIDX ? PIDX.cats : []).filter((c) => !["food", "adult"].includes(c[0])).map((c) => `<option value="${esc(c[0])}"${c[0] === (e.category || cur.category) ? " selected" : ""}>${esc(c[1])}</option>`).join("")}</select>
+          <label>한 줄 소개</label><input id="pe-sum" value="${esc(e.summary || cur.summary)}" maxlength="80" placeholder="상품명 아래에 보이는 짧은 소개">
+          <label>사진 표시</label><select id="pe-badge">${BADGES.map((b) => `<option value="${b}"${b === (e.badge || "") ? " selected" : ""}>${b || "없음"}</option>`).join("")}</select>
+          <label style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="pe-sold"${e.soldout ? " checked" : ""} style="width:auto"> 품절로 표시</label>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="pe-hide"${e.hidden ? " checked" : ""} style="width:auto"> 사이트에서 숨기기 (판매 중지)</label>
+          <div style="margin-top:12px;display:flex;gap:8px"><button data-act="p-save" data-id="${esc(id)}">저장</button>${PEDITS.items[id] ? `<button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로</button>` : ""}<a class="btn btn-ghost" href="product/${esc(id)}.html" target="_blank">상품 화면 보기</a></div>
+        </div></div>`;
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function prodEdited() {
+    const it = Object.entries((PEDITS || {}).items || {}).sort((a, b) => String(b[1].at).localeCompare(String(a[1].at)));
+    if ($("#p-cnt")) $("#p-cnt").textContent = it.length + "개";
+    const L = { name: "이름", price: "가격", category: "카테고리", summary: "소개", badge: "표시", soldout: "품절", hidden: "숨김" };
+    $("#p-edited").innerHTML = it.length ? `<table class="adm-table"><tr><th>상품코드</th><th>고친 내용</th><th>고친 때</th><th></th></tr>${it.map(([id, e]) => `<tr><td>${esc(id)}</td>
+      <td>${Object.keys(L).filter((k) => e[k] !== undefined).map((k) => `${L[k]}: ${k === "price" ? won(e[k]) : e[k] === true ? "예" : esc(e[k])}`).join("<br>")}</td>
+      <td class="muted">${e.at ? dt(e.at) : ""}</td><td><button data-act="p-pick" data-id="${esc(id)}">수정</button> <button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로</button></td></tr>`).join("")}</table>` : `<p class="muted">아직 고친 상품이 없어요.</p>`;
   }
 
   // 도매처 주문서: 열 이름은 config.json 의 order_sheets 로 바꿀 수 있음 (도매처 대량주문 양식에 맞추기)
@@ -271,6 +334,21 @@
       }
       if (act === "period") { period = b.dataset.p; A = null; return paint(); }
       if (act === "po-sheet") return poSheet(b.dataset.src);
+      if (act === "p-pick") return prodForm(b.dataset.id);
+      if (act === "p-save" || act === "p-reset") {
+        const pid = b.dataset.id;
+        if (act === "p-reset" && !confirm("고친 내용을 지우고 원래대로 되돌릴까요?")) return;
+        const c = (PSEL && PSEL.cur) || {}, fields = {};
+        if (act === "p-save") {  // 원래 값과 다른 것만 저장
+          const v = { name: $("#pe-name").value.trim(), price: $("#pe-price").value, category: $("#pe-cat").value, summary: $("#pe-sum").value.trim(), badge: $("#pe-badge").value };
+          for (const k of Object.keys(v)) if (String(v[k]) !== String(c[k] ?? "")) fields[k] = v[k];
+          if ($("#pe-sold").checked) fields.soldout = true;
+          if ($("#pe-hide").checked) fields.hidden = true;
+        }
+        const r = await call("/admin/product-save", { id: pid, fields, reset: act === "p-reset" });
+        PEDITS = await call("/admin/product-edits").catch(() => PEDITS);
+        alert(r.message); prodEdited(); if (act === "p-reset") { $("#p-edit").style.display = "none"; PSEL = null; } return;
+      }
       if (act === "po-nos") { const g = (D.po || []).find((x) => x.source === "domeme"); await navigator.clipboard.writeText([...new Set(g.lines.map((l) => l.product_no))].join(",")); alert("상품번호를 복사했어요. 도매매 ‘일괄주문서작성’의 상품번호 칸에 붙여넣으세요. (1회 30개까지)"); return; }
       if (act === "po-done") {
         const g = (D.po || []).find((x) => x.source === b.dataset.src);

@@ -65,6 +65,35 @@ async function ghPut(env, path, contentB64, message, sha) {
   return gh(env, `contents/${path}`, { method: "PUT", body: JSON.stringify({ message, content: contentB64, ...(sha ? { sha } : {}) }) });
 }
 
+// ---------- 관리자 상품 수정 (이름·가격·카테고리·숨김·품절·소개·표시) ----------
+// KV "product_edits"에 저장 → 사이트 빌드 때 반영 (30분마다 확인, 깃허브 토큰이 있으면 바로 다시 배포)
+const EDIT_FIELDS = { name: 100, price: 0, category: 30, hidden: 0, soldout: 0, summary: 80, badge: 10 };
+async function adminProductSave(req, env) {
+  const d = await req.json().catch(() => ({}));
+  const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "");
+  if (!id) return fail("상품코드가 없어요.");
+  const all = (await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} };
+  if (d.reset) delete all.items[id];
+  else {
+    const e = {};
+    for (const [k, max] of Object.entries(EDIT_FIELDS)) {
+      const v = (d.fields || {})[k];
+      if (v === undefined || v === null || v === "") continue;
+      if (k === "price") { const n = parseInt(v); if (n > 0) e.price = n; }
+      else if (k === "hidden" || k === "soldout") { if (v === true) e[k] = true; }
+      else e[k] = String(v).slice(0, max);
+    }
+    if (Object.keys(e).length) all.items[id] = { ...e, at: new Date().toISOString() }; else delete all.items[id];
+  }
+  all.ver = Date.now();
+  await env.SHOP.put("product_edits", JSON.stringify(all));
+  let deploy = "30분 안에 사이트에 반영돼요.";
+  if (env.GITHUB_TOKEN) {
+    try { await gh(env, "actions/workflows/deploy.yml/dispatches", { method: "POST", body: JSON.stringify({ ref: "main" }) }); deploy = "2~3분 뒤 사이트에 반영돼요."; } catch (e) { /* 다음 정기 반영 때 */ }
+  }
+  return json({ ok: true, message: (d.reset ? "원래대로 되돌렸어요. " : "저장했어요. ") + deploy, item: all.items[id] || null });
+}
+
 // ---------- 가격 ----------
 // 기준: 공급사가 입력한 "오픈마켓 판매가"(무료배송 기준)
 // 판매가 = 오픈마켓 판매가 (일괄 할인 없음 — 대량 구매는 가격 제안으로)
@@ -1049,6 +1078,9 @@ export async function handle(req, env, path) {
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
+  if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
+    return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
+  }
   if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
     if (!env.DB) return fail("상품 DB가 아직 연결되지 않았어요.", 503);
     const u = new URL(req.url).searchParams, cache = { "Cache-Control": "public, max-age=60" };
@@ -1183,6 +1215,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/delete") return await adminDelete(req, env);
       if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
+      if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
+      if (path === "/admin/product-save") return await adminProductSave(req, env);
     }
     return fail("Not found", 404);
   } catch (e) {
