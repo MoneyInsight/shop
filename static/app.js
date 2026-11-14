@@ -257,6 +257,12 @@
       <div class="p-price">${rate ? `<span class="rate">${rate}%</span>` : ""}<span>${won(p.price)}</span>${rate ? `<del>${won(p.normal_price)}</del>` : ""}</div>
       <div class="p-ship">${p.shipping_fee ? "배송비 " + won(p.shipping_fee) : "무료배송"}</div></a>`;
   }
+  // 상품 페이지 '함께 보면 좋은 상품': 카드 정보는 p/상품번호.json 에서 (페이지 용량 줄이기)
+  document.querySelectorAll("[data-rel]").forEach(async (g) => {
+    const ids = g.dataset.rel.split(",").filter(Boolean);
+    const ps = (await Promise.all(ids.map((id) => fetch(`${ROOT}p/${encodeURIComponent(id)}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)))).filter(Boolean);
+    g.innerHTML = ps.map(cardHTML).join("");
+  });
   // 카드 안 찜 버튼 (정적·동적 카드 공통)
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-wish]");

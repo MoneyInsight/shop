@@ -277,7 +277,12 @@ I_PHONE = ico('<path d="M6.5 3.500h3l1.5 4-2 1.500a11 11 0 0 0 6 6l1.5-2 4 1.500
 
 
 # ---------------- 공통 레이아웃 ----------------
-def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts="", og_img="", active=""):
+CHROME = {}
+GUIDE_TXT = {}
+GUIDE_CUT = {"g1": ("<tr><th>배송</th>", "<tr><th>교환·반품 비용</th>"), "g2": ("<tr><th>반품 방법</th>", "</table></section>")}
+
+
+def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts="", og_img="", active="", lite=False):
     desc = desc or CFG["slogan"]
     verify = ""
     if CFG.get("naver_site_verification"):
@@ -294,6 +299,34 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
     logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈"><img class="logo-mark" src="{root}favicon.svg" alt="" width="30" height="30">{name}</a>'
+    cfg_js = f"<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>"
+    top = f'''<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "전 상품 무료배송 · 회원가입 없이 바로 주문"}</span>
+<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<header class="head"><div class="wrap">{logo}
+<form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
+<div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인·가입</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
+<a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
+<a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
+</div></header>
+<nav class="gnb" aria-label="카테고리"><div class="wrap"><a class="all" href="{root}search.html">전체 상품</a>{gnb}</div></nav>
+'''
+    bot = f'''
+<footer><div class="wrap">
+<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p></div>
+<div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
+<div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
+<div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
+<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}{(" · 건강기능식품판매업신고 " + e(BIZ["health_food_no"])) if BIZ.get("health_food_no") else ""} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
+주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
+고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
+© {datetime.date.today().year} {name}. All rights reserved.</p>
+</div></footer>
+<nav class="tabbar" aria-label="하단 메뉴"><a href="{root}index.html">{I_HOME}홈</a><a href="{root}search.html">{I_MENU}전체</a><a href="{root}orders.html">{I_BOX}주문조회</a>
+<a href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a><a href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></nav>
+'''
+    if lite:  # 상품 페이지: 머리·꼬리·설정은 공용 파일(chrome.js)에서 (페이지 용량 절반)
+        CHROME.setdefault(root, (json.dumps(public_cfg, ensure_ascii=False), top.replace(' class="on"', ""), bot))
+        cfg_js, top, bot = "", f'<script src="{root}chrome.js?v={ASSET_V}"></script><script>CH.top()</script>', "<script>CH.bot()</script>"
     return f'''<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light only">
@@ -309,31 +342,9 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="{root}style.css?v={ASSET_V}">{extra_head}
-<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
+{cfg_js}
 </head><body data-root="{root}">
-<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "전 상품 무료배송 · 회원가입 없이 바로 주문"}</span>
-<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
-<header class="head"><div class="wrap">{logo}
-<form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
-<div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인·가입</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
-<a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
-<a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
-</div></header>
-<nav class="gnb" aria-label="카테고리"><div class="wrap"><a class="all" href="{root}search.html">전체 상품</a>{gnb}</div></nav>
-<main>{body}</main>
-<footer><div class="wrap">
-<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p></div>
-<div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
-<div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
-<div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
-<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}{(" · 건강기능식품판매업신고 " + e(BIZ["health_food_no"])) if BIZ.get("health_food_no") else ""} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
-주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
-고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
-© {datetime.date.today().year} {name}. All rights reserved.</p>
-</div></footer>
-<nav class="tabbar" aria-label="하단 메뉴"><a href="{root}index.html">{I_HOME}홈</a><a href="{root}search.html">{I_MENU}전체</a><a href="{root}orders.html">{I_BOX}주문조회</a>
-<a href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a><a href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></nav>
-{scripts}<script src="{root}app.js?v={ASSET_V}"></script>
+{top}<main>{body}</main>{bot}{{scripts}}<script src="{root}app.js?v={ASSET_V}"></script>
 </body></html>'''
 
 
@@ -504,7 +515,7 @@ def product_body(p, related):
 <tr><th>반품 방법</th><td>상품은 출고지에서 바로 발송됩니다. 직접 보내지 마시고 주문·배송 조회에서 신청하시면 택배 기사님이 방문해 회수합니다.</td></tr>
 <tr><th>교환·반품이 어려운 경우</th><td>고객님의 책임으로 상품이 훼손된 경우, 사용하거나 일부 소비하여 가치가 현저히 떨어진 경우, 포장을 개봉하여 재판매가 어려운 경우</td></tr>
 <tr><th>신청 방법</th><td><a href="../orders.html" style="text-decoration:underline">주문·배송 조회</a>에서 주문번호와 연락처를 입력하신 뒤 신청하실 수 있습니다.</td></tr></table></section>
-{f'<section class="section last"><div class="sec-head"><div><h2>함께 보면 좋은 상품</h2></div><a href="../category/{p["category"]}.html">{e(p["category_name"])} 더 보기</a></div><div class="grid">{"".join(card(x, "../") for x in related)}</div></section>' if related else '<div class="section last"></div>'}
+{f'<section class="section last"><div class="sec-head"><div><h2>함께 보면 좋은 상품</h2></div><a href="../category/{p["category"]}.html">{e(p["category_name"])} 더 보기</a></div><div class="grid" data-rel="{",".join(x["id"] for x in related)}"></div></section>' if related else '<div class="section last"></div>'}
 </div>'''
     return body, ld, url, img
 
@@ -518,9 +529,18 @@ def build_products(ps):
         k = sib.index(p)
         related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
         body, ld, url, img = product_body(p, related)
-        write(f'product/{p["id"]}.html', layout(seo.title(p, CFG["shop_name"]), body, "../", active=p["category"],
+        for k, (a, b) in GUIDE_CUT.items():  # 배송·교환 안내의 공통 문장은 chrome.js 에서
+            i = body.find(a); j = body.find(b, i)
+            if i >= 0 and j > i:
+                GUIDE_TXT.setdefault(k, body[i:j]); body = body[:i] + f"<script>document.write(CH.{k})</script>" + body[j:]
+        write(f'product/{p["id"]}.html', layout(seo.title(p, CFG["shop_name"]), body, "../", active=p["category"], lite=True,
               desc=seo.description(p, seo.max_deal(p), (CFG.get("member_discount") or {}).get("rate", 0)), canonical=url, og_img=abs_img(p),
               extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
+    if "../" in CHROME:
+        cfg, top, bot = CHROME["../"]
+        J = lambda x: json.dumps(x, ensure_ascii=False)
+        write("chrome.js", f"window.SHOP_CFG={cfg};window.CH={{top(){{document.write({J(top)})}},bot(){{document.write({J(bot)})}},"
+              + ",".join(f"{k}:{J(v)}" for k, v in GUIDE_TXT.items()) + "};")
     # 상품 DB용 템플릿: product/item.html?id=상품번호 → 브라우저가 서버(/catalog/item)에서 받아 채움 (100만 개도 페이지 1장)
     blank = {"id": "", "name": "상품 정보를 불러오고 있어요", "price": 0, "normal_price": 0, "image": "noimg.svg", "images": [], "summary": "",
              "brand": "", "shipping_fee": 0, "desc_lines": [], "detail_html": "", "options": [], "option_name": "옵션", "category": "",
