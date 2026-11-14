@@ -106,6 +106,7 @@ def load_products():
 
 
 EDITS_VER = "0"
+SITE = {}  # 관리자 › 사이트 설정 (공지 띠 문구 등)
 
 
 def apply_edits(ps):
@@ -119,7 +120,9 @@ def apply_edits(ps):
             data = json.loads(r.read().decode("utf-8"))
     except Exception as ex:
         print("상품 수정 내역을 못 받음(이번엔 건너뜀):", ex); return ps
+    global SITE
     EDITS_VER = str(data.get("ver", 0)); items = data.get("items") or {}
+    SITE = data.get("site") or {}
     if not items:
         return ps
     import product_import as _pi
@@ -308,7 +311,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <link rel="stylesheet" href="{root}style.css?v={ASSET_V}">{extra_head}
 <script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>
 </head><body data-root="{root}">
-<div class="util"><div class="wrap"><span>전 상품 무료배송 · 회원가입 없이 바로 주문</span>
+<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "전 상품 무료배송 · 회원가입 없이 바로 주문"}</span>
 <nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>

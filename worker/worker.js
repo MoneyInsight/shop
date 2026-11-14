@@ -65,9 +65,82 @@ async function ghPut(env, path, contentB64, message, sha) {
   return gh(env, `contents/${path}`, { method: "PUT", body: JSON.stringify({ message, content: contentB64, ...(sha ? { sha } : {}) }) });
 }
 
+// ---------- 주문 차단 연락처 · 관리자 기록 · 주문 검색 · 고객 ----------
+async function isBlocked(env, phone) {
+  const b = (await env.SHOP.get("blocklist", "json")) || {};
+  return !!b[digits(phone)];
+}
+async function adminLog(env, path, ip, note) {
+  const log = (await env.SHOP.get("adminlog", "json")) || [];
+  log.unshift({ at: new Date().toISOString(), path, ip, note: String(note || "").slice(0, 120) });
+  await env.SHOP.put("adminlog", JSON.stringify(log.slice(0, 300)));
+}
+async function adminOrderSearch(req, env) {
+  const { q } = await req.json().catch(() => ({}));
+  const v = String(q || "").trim().toLowerCase(), dv = digits(v);
+  if (v.length < 2) return fail("두 글자 이상 입력해 주세요.");
+  const hit = (o) => {
+    const c = o.customer || {};
+    if (String(o.orderId).toLowerCase().includes(v)) return true;
+    if (dv.length >= 4 && digits(c.phone).includes(dv)) return true;
+    if (String(c.name || "").toLowerCase().includes(v)) return true;
+    if (String(o.tracking || "").includes(v)) return true;
+    return (o.lines || []).some((l) => String(l.id).toLowerCase().includes(v) || String(l.source_no || "").includes(v) || String(l.name).toLowerCase().includes(v));
+  };
+  const list = (await kvList(env, "order:")).filter(hit).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 100);
+  return json({ orders: list });
+}
+async function adminCustomers(env) {
+  const by = {};
+  for (const o of await kvList(env, "order:")) {
+    const ph = digits(o.customer?.phone); if (!ph) continue;
+    const c = by[ph] || (by[ph] = { phone: ph, name: o.customer?.name || "", orders: 0, total: 0, cancels: 0, claims: 0, last: "" });
+    c.orders++; if (!["취소완료", "반품완료"].includes(o.status)) c.total += o.amount || 0;
+    if (/취소/.test(o.status)) c.cancels++; if (/반품|교환/.test(o.status)) c.claims++;
+    if (o.paidAt > c.last) { c.last = o.paidAt; c.name = o.customer?.name || c.name; }
+  }
+  const blocked = (await env.SHOP.get("blocklist", "json")) || {};
+  return json({ customers: Object.values(by).sort((a, b) => b.last.localeCompare(a.last)).slice(0, 1000), blocked });
+}
+async function adminBlock(req, env) {
+  const d = await req.json().catch(() => ({}));
+  const ph = digits(d.phone); if (ph.length < 10) return fail("연락처를 정확히 입력해 주세요.");
+  const b = (await env.SHOP.get("blocklist", "json")) || {};
+  if (d.block) b[ph] = { reason: clip(d.reason, 100), at: new Date().toISOString() }; else delete b[ph];
+  await env.SHOP.put("blocklist", JSON.stringify(b));
+  return json({ ok: true, message: d.block ? "이 연락처의 주문을 막았어요." : "차단을 풀었어요." });
+}
+async function adminSiteSave(req, env) {  // 사이트 공지 띠 문구 (빌드 때 반영)
+  const d = await req.json().catch(() => ({}));
+  const all = (await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} };
+  all.site = { notice: clip(d.notice, 120), notice_link: /^https?:\/\/|^[a-z0-9_\-./]+$/i.test(d.notice_link || "") ? String(d.notice_link).slice(0, 200) : "" };
+  all.ver = Date.now();
+  await env.SHOP.put("product_edits", JSON.stringify(all));
+  return json({ ok: true, message: "저장했어요. 30분 안에 사이트에 반영돼요." });
+}
+
 // ---------- 관리자 상품 수정 (이름·가격·카테고리·숨김·품절·소개·표시) ----------
 // KV "product_edits"에 저장 → 사이트 빌드 때 반영 (30분마다 확인, 깃허브 토큰이 있으면 바로 다시 배포)
 const EDIT_FIELDS = { name: 100, price: 0, category: 30, hidden: 0, soldout: 0, summary: 80, badge: 10 };
+async function adminProductBulk(req, env) {  // 상품코드 여러 개 한 번에: 숨김·품절·되돌리기
+  const d = await req.json().catch(() => ({}));
+  const ids = [...new Set(String(d.ids || "").split(/[\s,]+/).map((x) => x.replace(/[^0-9A-Za-z_-]/g, "")).filter(Boolean))].slice(0, 2000);
+  if (!ids.length) return fail("상품코드를 넣어 주세요.");
+  const all = (await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} };
+  for (let id of ids) {
+    if (/^\d+$/.test(id)) id = "DM" + id;  // 도매매 숫자 번호만 넣어도 됨
+    const e = all.items[id] || {};
+    if (d.action === "reset") { delete all.items[id]; continue; }
+    if (d.action === "hide") e.hidden = true;
+    if (d.action === "soldout") e.soldout = true;
+    if (d.action === "show") { delete e.hidden; delete e.soldout; }
+    e.at = new Date().toISOString();
+    if (Object.keys(e).filter((k) => k !== "at").length) all.items[id] = e; else delete all.items[id];
+  }
+  all.ver = Date.now();
+  await env.SHOP.put("product_edits", JSON.stringify(all));
+  return json({ ok: true, message: `${ids.length}개 상품에 적용했어요. 30분 안에 사이트에 반영돼요.` });
+}
 async function adminProductSave(req, env) {
   const d = await req.json().catch(() => ({}));
   const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "");
@@ -112,6 +185,9 @@ async function confirm(req, env) {
   const { paymentKey, orderId, amount, items, customer, coupon, token, src } = await req.json();
   if (!paymentKey || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
+  if (customer?.phone && (await isBlocked(env, customer.phone))) {  // 차단된 연락처: 결제 승인 안 함 (돈이 빠져나가지 않음)
+    return fail("주문이 제한된 연락처예요. 고객센터로 문의해 주세요.");
+  }
 
   // 사이트의 실제 가격으로 금액 다시 계산 (화면 금액 조작 방지)
   const map = await productMap(env, items.map((x) => x.id));
@@ -711,7 +787,7 @@ async function orderCancel(req, env) {
   const { orderId, phone, reason } = await req.json();
   const o = await findOrder(env, orderId, phone);
   if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
-  if (o.status === "결제완료") {  // 출고 준비 전: 즉시 자동 취소·환불
+  if (o.status === "결제완료" && !o.poSheetAt) {  // 출고 준비 전(도매처 주문서도 안 받음): 즉시 자동 취소·환불
     const c = await tossCancel(env, o.paymentKey, clip(reason, 100) || "고객 주문 취소");
     if (!c.ok) return fail(c.message);
     setStatus(o, "취소완료", { reason: clip(reason, 200) });
@@ -719,7 +795,7 @@ async function orderCancel(req, env) {
     await notify(env, `↩️ 주문 취소(자동 환불) ${o.orderId}`);
     return json({ message: "주문이 취소되었어요. 결제수단에 따라 환불까지 3~7영업일이 걸릴 수 있어요.", order: publicOrder(o) });
   }
-  if (o.status === "상품준비중") {
+  if (o.status === "상품준비중" || (o.status === "결제완료" && o.poSheetAt)) {  // 도매처에 주문했을 수 있음 → 관리자 확인 후 처리
     setStatus(o, "취소요청", { reason: clip(reason, 200) });
     await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
     await notify(env, `⚠️ 취소 요청 ${o.orderId} (상품 준비 중)`);
@@ -1118,9 +1194,14 @@ export async function handle(req, env, path) {
   try {
     if (["/inquiry/add", "/qna/add", "/review/add", "/seller/apply", "/seller/product", "/report-price"].includes(path) && (await overLimit(env, "w:" + ipOf(req), 20, 3600)))
       return fail("잠시 후 다시 시도해 주세요. (짧은 시간에 너무 많이 보냈어요)", 429);
+    // 장난·무차별 시도 막기 (IP당 1시간 횟수 제한)
+    const RL = { "/confirm": 30, "/stock/check": 120, "/order/lookup": 30, "/order/cancel": 15, "/order/claim": 15, "/order/confirm-receipt": 30, "/coupon/check": 30, "/offer/add": 10, "/member/quote": 120 };
+    if (RL[path] && (await overLimit(env, "rl2:" + path + ":" + ipOf(req), RL[path], 3600)))
+      return fail("짧은 시간에 너무 많이 시도했어요. 잠시 후 다시 시도해 주세요.", 429);
     if (path === "/confirm") return await confirm(req, env);
     if (path === "/stock/check") {  // 결제창 열기 전 재고 확인 (손님 화면용)
       const d = await req.json().catch(() => ({}));
+      if (d.phone && (await isBlocked(env, d.phone))) return fail("주문이 제한된 연락처예요. 고객센터로 문의해 주세요.");
       const its = Array.isArray(d.items) ? d.items.slice(0, 50) : [];
       const map = await productMap(env, its.map((x) => x.id));
       const lines = [];
@@ -1208,6 +1289,8 @@ export async function handle(req, env, path) {
       const ip = ipOf(req);
       if (await overLimit(env, "adminfail:" + ip, 5, 900, false)) return fail("비밀번호를 여러 번 틀려서 15분 동안 막았어요. 잠시 후 다시 시도해 주세요.", 429);
       if (got.trim() !== want) { await overLimit(env, "adminfail:" + ip, 5, 900); return fail("비밀번호가 틀렸어요.", 401); }
+      const READ_ONLY = ["/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
+      if (!READ_ONLY.includes(path)) await adminLog(env, path, ip, "").catch(() => {});
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
       if (path === "/admin/kakao-test") return await adminKakaoTest(env);
@@ -1232,6 +1315,13 @@ export async function handle(req, env, path) {
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
+      if (path === "/admin/product-bulk") return await adminProductBulk(req, env);
+      if (path === "/admin/order-search") return await adminOrderSearch(req, env);
+      if (path === "/admin/customers") return await adminCustomers(env);
+      if (path === "/admin/block") return await adminBlock(req, env);
+      if (path === "/admin/site-save") return await adminSiteSave(req, env);
+      if (path === "/admin/po-mark") { const d = await req.json().catch(() => ({})); let n = 0; for (const id of (d.ids || []).slice(0, 500)) { const o = await env.SHOP.get("order:" + id, "json"); if (o && !o.poSheetAt) { o.poSheetAt = new Date().toISOString(); await env.SHOP.put("order:" + id, JSON.stringify(o)); n++; } } return json({ ok: true, marked: n }); }
+      if (path === "/admin/log") return json({ log: (await env.SHOP.get("adminlog", "json")) || [] });
     }
     return fail("Not found", 404);
   } catch (e) {

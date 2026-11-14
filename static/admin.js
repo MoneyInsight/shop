@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"]];
+  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "고객·차단"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -55,15 +55,35 @@
         <li>마지막 백업 <b>${D.lastBackup ? dt(D.lastBackup) : "없음"}</b> <button class="mini-btn" data-act="backup">지금 백업 받기</button><br><span class="muted">주문·회원·리뷰·문의 전체를 파일로 받아요. 일주일에 한 번 받아 두세요. (개인정보가 들어 있으니 PC에만 보관)</span></li></ul></div>
       <div class="card"><h2>최근 주문</h2>${orderTable(D.orders.slice(0, 5))}</div>`;
     if (tab === "orders") {
-      const filters = ["전체", "결제완료", "상품준비중", "배송중", "배송완료", "구매확정"];
-      const list = D.orders.filter((o) => orderFilter === "전체" || o.status === orderFilter);
-      return `<div class="card"><h2>주문 관리 <small>${list.length}건</small></h2>
+      const filters = ["전체", "결제완료", "상품준비중", "배송중", "배송완료", "구매확정", "취소요청", "반품요청", "교환요청"];
+      const list = OSEARCH ? OSEARCH : D.orders.filter((o) => orderFilter === "전체" || o.status === orderFilter);
+      return `<div class="card"><h2>주문 관리 <small>${list.length}건${OSEARCH ? " (검색 결과)" : ""}</small></h2>
+        <div style="display:flex;gap:8px;margin-bottom:12px"><input id="o-q" placeholder="주문번호·이름·연락처·상품코드(DM…)·도매처 상품번호·상품명·송장번호" value="${esc(OQ)}" style="flex:1"><button data-act="o-search">검색</button>${OSEARCH ? `<button class="ghost" data-act="o-clear">검색 지우기</button>` : ""}</div>
         <div class="chips" style="margin-bottom:14px">${filters.map((f) => `<button class="chip${f === orderFilter ? " on" : ""}" data-filter="${f}">${f}</button>`).join("")}
         <button class="chip" data-act="export">발주용 엑셀(CSV) 받기</button><button class="chip" data-act="track-sweep">배송 단계 새로고침</button></div>
         <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
     }
     if (tab === "stats") return statsView();
     if (tab === "products") { setTimeout(prodInit, 0); return prodShell(); }
+    if (tab === "customers") {
+      if (!CUST) { call("/admin/customers").then((r) => { CUST = r; paint(); }).catch((e) => alert(e.message)); return `<p class="muted">불러오는 중…</p>`; }
+      const bl = Object.entries(CUST.blocked || {});
+      return `<div class="card form"><h2>주문 차단</h2><p class="muted">장난 주문·악성 고객의 연락처를 막으면, 그 번호로는 결제 단계로 넘어가지 못해요(돈이 빠져나가지 않아요).</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="bl-phone" placeholder="연락처 (숫자만)" style="max-width:200px"><input id="bl-reason" placeholder="사유 (예: 상습 반품)" style="flex:1"><button data-act="bl-add">차단</button></div>
+        ${bl.length ? `<table class="adm-table" style="margin-top:12px"><tr><th>연락처</th><th>사유</th><th>차단일</th><th></th></tr>${bl.map(([ph, v]) => `<tr><td>${esc(ph)}</td><td>${esc(v.reason)}</td><td class="muted">${dt(v.at)}</td><td><button class="ghost" data-act="bl-del" data-phone="${esc(ph)}">차단 풀기</button></td></tr>`).join("")}</table>` : `<p class="muted" style="margin-top:8px">차단한 연락처가 없어요.</p>`}</div>
+        <div class="card"><h2>고객 <small>${CUST.customers.length}명</small></h2><input id="c-q" placeholder="이름·연락처로 찾기" style="width:100%;margin-bottom:10px">
+        <div id="c-list">${custTable(CUST.customers)}</div></div>`;
+    }
+    if (tab === "settings") {
+      if (!ALOG) { Promise.all([call("/admin/log"), call("/admin/product-edits")]).then(([l, e]) => { ALOG = l.log || []; PEDITS = e; paint(); }).catch((e) => alert(e.message)); return `<p class="muted">불러오는 중…</p>`; }
+      const st = (PEDITS && PEDITS.site) || {};
+      return `<div class="card form"><h2>공지 띠 (사이트 맨 위 한 줄)</h2>
+        <label>문구</label><input id="st-notice" maxlength="120" value="${esc(st.notice || "")}" placeholder="비워 두면 기본 문구(전 상품 무료배송 · 회원가입 없이 바로 주문)">
+        <label>눌렀을 때 이동할 주소 (선택)</label><input id="st-link" value="${esc(st.notice_link || "")}" placeholder="예: search.html?q=겨울 또는 https://…">
+        <div style="margin-top:12px"><button data-act="st-save">저장</button></div></div>
+        <div class="card"><h2>관리자 작업 기록 <small>최근 ${ALOG.length}건</small></h2><p class="muted">관리자 화면에서 바꾼 작업이 시간·접속 위치(IP)와 함께 남아요. 모르는 기록이 보이면 관리자 비밀번호를 바꾸세요.</p>
+        ${ALOG.length ? `<table class="adm-table"><tr><th>때</th><th>작업</th><th>IP</th></tr>${ALOG.slice(0, 100).map((x) => `<tr><td class="muted">${dt(x.at)}</td><td>${esc(LOGNAME[x.path] || x.path)}</td><td class="muted">${esc(x.ip || "")}</td></tr>`).join("")}</table>` : `<p class="muted">아직 기록이 없어요.</p>`}</div>`;
+    }
     if (tab === "po") {
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
@@ -157,14 +177,20 @@
   }
 
   // ── 상품 관리: 검색 → 이름·가격·카테고리·소개·표시·품절·숨김 고치기 (서버 저장 → 사이트 빌드 때 반영) ──
-  let PIDX = null, PEDITS = null, PSEL = null;
+  let PIDX = null, PEDITS = null, PSEL = null, OSEARCH = null, OQ = "", CUST = null, ALOG = null;
   const BADGES = ["", "NEW", "BEST", "SALE", "추천", "특가"];
+  const LOGNAME = { "/admin/order-update": "주문 상태·송장 저장", "/admin/order-cancel": "주문 취소·환불", "/admin/soldout-cancel": "품절 취소", "/admin/product-save": "상품 수정", "/admin/product-bulk": "상품 여러 개 수정", "/admin/block": "주문 차단 변경", "/admin/site-save": "공지 띠 변경", "/admin/coupon-save": "쿠폰 저장", "/admin/answer": "문의 답변", "/admin/delete": "삭제", "/admin/po-done": "발주 완료", "/admin/po-mark": "도매처 주문서 받기", "/admin/tracking-import": "송장 한 번에 넣기", "/admin/offer-reply": "가격 제안 답변", "/admin/approve-seller": "공급사 승인", "/admin/approve-product": "상품 승인", "/admin/reject-product": "상품 반려" };
+  const custTable = (list) => list.length ? `<table class="adm-table"><tr><th>이름</th><th>연락처</th><th>주문</th><th>구매액</th><th>취소/반품</th><th>최근 주문</th><th></th></tr>${list.slice(0, 300).map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${c.orders}</td><td>${won(c.total)}</td><td>${c.cancels}/${c.claims}</td><td class="muted">${c.last ? dt(c.last) : ""}</td>
+    <td><button class="ghost" data-act="c-orders" data-phone="${esc(c.phone)}">주문 보기</button> ${(CUST.blocked || {})[c.phone] ? `<button class="ghost" data-act="bl-del" data-phone="${esc(c.phone)}">차단 풀기</button>` : `<button class="ghost" data-act="bl-quick" data-phone="${esc(c.phone)}">차단</button>`}</td></tr>`).join("")}</table>` : `<p class="muted">아직 고객이 없어요.</p>`;
   function prodShell() {
     return `<div class="card form"><h2>상품 찾기</h2>
       <input id="p-q" placeholder="상품명 또는 상품코드(예: DM12345678)" autocomplete="off" style="width:100%">
       <p class="muted" style="margin-top:6px">고친 내용은 서버에 저장되고, 30분 안에 사이트에 자동으로 반영돼요. 가격은 손해를 막기 위해 공급사 최저가·순마진 8% 아래로는 내려가지 않아요.</p>
       <div id="p-res" style="margin-top:10px"></div></div>
       <div class="card form" id="p-edit" style="display:none"></div>
+      <div class="card form"><h2>여러 상품 한 번에</h2>
+        <textarea id="pb-ids" rows="3" placeholder="상품코드를 띄어쓰기·쉼표·줄바꿈으로 구분해 넣어 주세요. 도매매는 숫자 번호만 넣어도 돼요. (예: DM20067843, 65114578)" style="width:100%"></textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="pb" data-a="hide">숨기기(판매 중지)</button><button data-act="pb" data-a="soldout">품절로 표시</button><button class="ghost" data-act="pb" data-a="show">다시 판매</button><button class="ghost" data-act="pb" data-a="reset">고친 내용 모두 되돌리기</button></div></div>
       <div class="card"><h2>고친 상품 <small id="p-cnt"></small></h2><div id="p-edited"><p class="muted">불러오는 중…</p></div></div>`;
   }
   async function prodInit() {
@@ -239,6 +265,8 @@
     const cols = (D.sheets || {})[src] || SHEET_DEFAULT;
     const val = (c, l) => { const v = FIELD[c] ? FIELD[c](l) : ""; return NO_COMMA[src] ? String(v ?? "").replace(/,/g, " ") : v; };
     csvDown([cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}.csv`);
+    // 주문서를 받은 주문은 손님이 '자동 즉시 환불'로 취소하지 못하게 표시 (도매처에 이미 주문했을 수 있음)
+    call("/admin/po-mark", { ids: [...new Set(g.lines.map((l) => l.orderId))] }).catch(() => {});
   }
   // 붙여넣은 표/CSV에서 주문번호·택배사·송장번호 찾기
   const COURIER_NAMES = ["CJ대한통운", "대한통운", "한진", "롯데", "우체국", "로젠", "경동", "대신", "일양", "합동", "천일", "건영"];
@@ -315,6 +343,10 @@
     a.download = "발주목록_" + new Date().toISOString().slice(0, 10) + ".csv"; a.click();
   }
 
+  document.addEventListener("input", (ev) => {
+    if (ev.target.id === "c-q" && CUST) { const v = ev.target.value.trim(), dv = v.replace(/\D/g, ""); $("#c-list").innerHTML = custTable(CUST.customers.filter((c) => c.name.includes(v) || (dv && c.phone.includes(dv)))); }
+  });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.id === "o-q") $('[data-act="o-search"]')?.click(); });
   document.addEventListener("click", async (ev) => {
     const t = ev.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; return paint(); }
     const f = ev.target.closest("[data-filter]"); if (f) { orderFilter = f.dataset.filter; return paint(); }
@@ -335,6 +367,22 @@
       if (act === "period") { period = b.dataset.p; A = null; return paint(); }
       if (act === "po-sheet") return poSheet(b.dataset.src);
       if (act === "p-pick") return prodForm(b.dataset.id);
+      if (act === "o-search") { OQ = $("#o-q").value.trim(); OSEARCH = (await call("/admin/order-search", { q: OQ })).orders; return paint(); }
+      if (act === "o-clear") { OQ = ""; OSEARCH = null; return paint(); }
+      if (act === "c-orders") { OQ = b.dataset.phone; OSEARCH = (await call("/admin/order-search", { q: OQ })).orders; tab = "orders"; return paint(); }
+      if (act === "bl-add" || act === "bl-quick" || act === "bl-del") {
+        const phone = act === "bl-add" ? $("#bl-phone").value : b.dataset.phone;
+        let reason = act === "bl-add" ? $("#bl-reason").value : "";
+        if (act === "bl-quick") { reason = prompt("차단 사유 (선택)", ""); if (reason === null) return; }
+        if (act === "bl-del" && !confirm("차단을 풀까요?")) return;
+        alert((await call("/admin/block", { phone, reason, block: act !== "bl-del" })).message); CUST = null; return paint();
+      }
+      if (act === "pb") {
+        const ids = $("#pb-ids").value; if (!ids.trim()) { alert("상품코드를 넣어 주세요."); return; }
+        if (!confirm("선택한 작업을 적용할까요?")) return;
+        alert((await call("/admin/product-bulk", { ids, action: b.dataset.a })).message); PEDITS = await call("/admin/product-edits"); prodEdited(); return;
+      }
+      if (act === "st-save") { alert((await call("/admin/site-save", { notice: $("#st-notice").value.trim(), notice_link: $("#st-link").value.trim() })).message); ALOG = null; return paint(); }
       if (act === "p-save" || act === "p-reset") {
         const pid = b.dataset.id;
         if (act === "p-reset" && !confirm("고친 내용을 지우고 원래대로 되돌릴까요?")) return;

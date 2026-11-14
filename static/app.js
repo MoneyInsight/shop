@@ -765,7 +765,7 @@
         customer: { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr: f("addr1") + " " + f("addr2"), addr1: f("addr1"), addr2: f("addr2"), memo: f("memo") } };
       store.set("pending_order", order);
       {  // 결제창 열기 전 도매처 실시간 재고 확인 (서버 연결 안 됨·미지원이면 건너뜀 — 결제 확인 때 서버가 다시 확인)
-        const sc = await api("/stock/check", { items: cart });
+        const sc = await api("/stock/check", { items: cart, phone: f("phone") });
         const m = (sc.d && sc.d.message) || "";
         if (!sc.ok && m && !/연결하지 못했|준비 중/.test(m)) { alert(m); return; }
       }
