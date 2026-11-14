@@ -240,6 +240,11 @@ def qty_prices(goods, ship, box_qty, free_over, pricing):
 def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_low=False):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
+    bad_img = set()  # 대표 사진이 깨진 상품 (tools/image_check 결과) — 올리지 않음
+    bf = Path(data_dir) / "bad_images.json"
+    if bf.exists():
+        import json as _json
+        bad_img = set(_json.loads(bf.read_text(encoding="utf-8")))
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
     cat_by_name = {c["name"]: c["slug"] for c in cats}
     for path in sorted(Path(data_dir).glob("*")):
@@ -315,6 +320,8 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             low = _num(get(r, "naver_low"))
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"
+            if code in bad_img:
+                continue
             mc = get(r, "mall_category")
             sup_cat = (get(r, "category_name") or "").replace(" ", "")
             if sup_cat.startswith("식품>건강식품") and "다이어트" not in sup_cat and "supplement" in cat_by_name.values():
