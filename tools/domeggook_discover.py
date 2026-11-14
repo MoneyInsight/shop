@@ -139,10 +139,16 @@ def main():
     cats = []
     leaves(tree, [], cats)
     cats = [c for c in cats if not skip_cat(c)]
-    # 건강식품 분류를 새로 열었으니 처음 한 번은 건강식품부터 가져옴
-    cats.sort(key=lambda c: 0 if (len(c) > 1 and c[1] == "건강식품") else 1)
-    if not state.get("supp_first"):
-        state["supp_first"] = True; state["cat"] = 0
+    # 우선순위: ① 문구·사무·학용품 (기업 거래처용) ② 건강식품 ③ 나머지 — 매일 이 순서로 돌며 새 상품을 채움
+    OFFICE = ("문구", "사무", "오피스", "학용품", "필기", "화일", "파일/바인더", "제도", "포장/배송")
+    def prio(c):
+        if any(k in n for n in c for k in OFFICE): return 0
+        if len(c) > 1 and c[1] == "건강식품": return 1
+        return 2
+    cats.sort(key=prio)
+    if not state.get("office_first"):
+        state["office_first"] = True; state["supp_first"] = True; state["cat"] = 0
+    print("우선 분류(문구·사무):", sum(1 for c in cats if prio(c) == 0), "개 / 건강식품:", sum(1 for c in cats if prio(c) == 1), "개")
     if not cats:
         sys.exit("카테고리 목록을 못 받음")
     views, added, why, errs = 0, 0, {}, 0

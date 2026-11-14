@@ -389,6 +389,9 @@ def build_home(ps):
 </ul>
 <div class="hero-btns"><a class="btn" href="search.html">전체 상품 보기</a><a class="btn btn-ghost" href="login.html">간편가입</a></div></div>
 <div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
+<section class="office-band"><div class="wrap"><div><small>OFFICE · 기업·학교 구매</small><b>사무실·학교 비품은 올채움 오피스</b>
+<span>문구·사무용품 {len(by_cat.get("office", [])):,}개 · 견적서 바로 발급 · 세금계산서 · 많이 살수록 할인</span></div>
+<div class="office-btns"><a class="btn" href="category/office.html">문구·사무 보기</a><a class="btn btn-ghost" href="bulk.html">기업 견적 문의</a></div></div></section>
 <div class="benefits"><div class="wrap">
 <div>{I_TRUCK}<p><b>전 상품 무료배송</b><span>금액과 상관없이 배송비 0원</span></p></div>
 <div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>

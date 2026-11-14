@@ -270,6 +270,8 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             sup_cat = (get(r, "category_name") or "").replace(" ", "")
             if sup_cat.startswith("식품>건강식품") and "다이어트" not in sup_cat and "supplement" in cat_by_name.values():
                 mc = mc or "건강식품"  # 도매처 분류가 건강식품이면 '건강식품' 카테고리로
+            elif re.search(r"문구|사무용품|오피스|학용품|필기구|화일|바인더", sup_cat) and "office" in cat_by_name.values():
+                mc = mc or "문구·사무"  # 도매처 분류가 문구·사무면 '문구·사무' 카테고리로
             cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else "") or cat_from_code(get(r, "category_id"), cats) or guess_category(name, cats)
             img = get(r, "image")
             detail = get(r, "detail")

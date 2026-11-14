@@ -525,3 +525,11 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .logo-mark{width:30px;height:30px;border-radius:8px;flex:none}
 @media (max-width:640px){.logo-mark{width:26px;height:26px;border-radius:7px}}
 footer .logo .logo-mark{width:24px;height:24px}
+.office-band{background:#16171a;color:#fff}
+.office-band .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 20px;flex-wrap:wrap}
+.office-band small{display:block;color:#c9a15e;letter-spacing:.12em;font-size:11px;font-weight:600}
+.office-band b{display:block;font-size:19px;margin:4px 0}
+.office-band span{color:#c9c4ba;font-size:13px}
+.office-band .office-btns{display:flex;gap:8px}
+.office-band .btn-ghost{color:#fff;border-color:#6b6b6b}
+@media (max-width:640px){.office-band b{font-size:16px}.office-band .office-btns{width:100%}.office-band .office-btns .btn{flex:1;text-align:center}}
