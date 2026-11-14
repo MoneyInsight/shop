@@ -46,8 +46,7 @@ jobs:
         name: 빌드·손해 점검
         run: |
           python3 build.py
-          python3 tools/ship_audit.py | tee audit.txt
-          if grep -q "8% 미만: [1-9]" audit.txt; then echo "손해 위험 상품 있음 - 배포 중단"; exit 1; fi
+          python3 tools/site_check.py
       - if: steps.chk.outputs.go
         name: 저장
         run: |
