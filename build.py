@@ -150,6 +150,8 @@ def load_used(path):
 def clean_catalog(ps):
     """① 건강기능식품·19세 상품 제외 ② 이름이 같은 중복 상품은 1개 살 때 가장 싼 것 하나만 남김"""
     ps = [p for p in ps if not BAN_WORDS.search(p["name"])]
+    # 식품은 팔지 않음 / 이름과 실제 상품(사진)이 다른 공급사 제외
+    ps = [p for p in ps if p.get("category") != "food" and not any(p["name"].startswith(b) for b in CFG.get("ban_name_prefix", []))]
     best = {}
     for p in ps:
         k = dedup_key(p["name"])
@@ -320,6 +322,8 @@ def build_home(ps):
 
 def build_categories(ps):
     for c in CATS:
+        if not any(p["category"] == c["slug"] for p in ps):
+            continue  # 상품 없는 카테고리(식품·성인 등)는 페이지를 만들지 않음
         if c.get("adult") and not CFG.get("adult_verified"):
             body = f'''<div class="wrap page"><div class="done-box"><div class="mark" style="font-weight:700">19</div><h2>청소년 이용불가</h2>
 <p>이 카테고리는 만 19세 이상 성인인증 후 이용하실 수 있습니다.<br>성인인증 서비스를 준비하고 있습니다.</p></div></div>'''

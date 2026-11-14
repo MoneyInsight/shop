@@ -284,5 +284,9 @@
   "hide_sources": [
     "ownerclan"
   ],
-  "_hide_sources_설명": "품절 자동 점검이 안 되는 공급처 상품은 숨김 (오너클랜 API 연결되면 빼기)"
+  "_hide_sources_설명": "품절 자동 점검이 안 되는 공급처 상품은 숨김 (오너클랜 API 연결되면 빼기)",
+  "ban_name_prefix": [
+    "루미나D"
+  ],
+  "_ban_name_prefix_설명": "상품명과 실제 사진이 다른 공급사(이름 앞부분으로 제외)"
 }
