@@ -1086,9 +1086,12 @@ export async function handle(req, env, path) {
     const at = await a.text();
     if (!a.ok) return json({ auth: a.status, body: at.slice(0, 160).replace(/[A-Za-z0-9_-]{30,}/g, "…") });
     let tok = at.trim().replace(/^"|"$/g, ""); try { if (tok.startsWith("{")) tok = JSON.parse(tok).token || tok; } catch (e) {}
-    const g = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ query: "query{allItems(first:1){edges{node{key name}}}}" }) });
-    const gt = await g.text();
-    return json({ auth: a.status, api: g.status, sample: gt.slice(0, 200) });
+    const q = async (query) => { const g = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ query }) }); return g.status + " " + (await g.text()).slice(0, 300); };
+    return json({ auth: a.status,
+      fields: await q("query{__schema{queryType{fields{name}}}}"),
+      item: await q('query{item(key:"W000000"){key name}}'),
+      orders: await q("query{allOrders(first:1){edges{node{key}}}}"),
+      items: await q("query{allItems(first:1){edges{node{key}}}}") });
   }
   if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
     return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
