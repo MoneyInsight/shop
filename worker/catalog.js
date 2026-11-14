@@ -27,7 +27,12 @@ CREATE TABLE IF NOT EXISTS products (
   origin TEXT NOT NULL DEFAULT '',
   soldout INTEGER NOT NULL DEFAULT 0,
   rank INTEGER NOT NULL DEFAULT 0,        -- 추천순 (작을수록 위)
-  updated TEXT NOT NULL DEFAULT ''
+  updated TEXT NOT NULL DEFAULT '',
+  shipping_fee INTEGER NOT NULL DEFAULT 0, -- 손님이 내는 배송비 (0 = 무료)
+  sn INTEGER NOT NULL DEFAULT 0,          -- 배송비 단위: 0 = 같은 상품 주문당 1번, N = N개마다
+  mq INTEGER NOT NULL DEFAULT 1,          -- 최소 구매 수량
+  pk INTEGER NOT NULL DEFAULT 1,          -- 1개 = 도매처 상품 pk개
+  h TEXT NOT NULL DEFAULT ''              -- 내용 지문 (바뀐 상품만 다시 올리려고)
 );
 CREATE INDEX IF NOT EXISTS idx_cat ON products(category, soldout, rank);
 CREATE INDEX IF NOT EXISTS idx_price ON products(category, price);
@@ -46,16 +51,16 @@ export function terms(text) {
   return [...out];
 }
 
-const CARD_COLS = "id, name, category, price, normal_price, image, brand, soldout, options, option_name, qt";
+const CARD_COLS = "id, name, category, price, normal_price, image, brand, soldout, options, option_name, qt, shipping_fee, sn, mq, pk";
 const SORTS = { rec: "soldout, rank, id", low: "soldout, price", high: "soldout, price DESC", new: "soldout, updated DESC", name: "soldout, name" };
 
 function card(r) {
-  return { id: r.id, name: r.name, category: r.category, price: r.price, normal_price: r.normal_price || r.price, shipping_fee: 0,
+  return { id: r.id, name: r.name, category: r.category, price: r.price, normal_price: r.normal_price || r.price, shipping_fee: r.shipping_fee || 0, sn: r.sn || 0, mq: r.mq || 1, pk: r.pk || 1,
     image: r.image, brand: r.brand, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), option_name: r.option_name, qt: JSON.parse(r.qt || "[]") };
 }
 
 // 목록·검색 (페이지 단위)
-export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size = 40 } = {}) {
+export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, free = 0 } = {}) {
   size = Math.min(100, Math.max(1, +size || 40));
   page = Math.max(1, +page || 1);
   const where = [], args = [];
@@ -68,6 +73,7 @@ export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size 
     args.push(t.map((x) => `"${x.replace(/"/g, "")}"`).join(" AND "));
   }
   if (cat) { where.push("p.category = ?"); args.push(cat); }
+  if (+free) where.push(FREE_WHERE);
   const w = where.length ? " WHERE " + where.join(" AND ") : "";
   const total = (await db.prepare(`SELECT COUNT(*) AS n FROM ${from}${w}`).bind(...args).first())?.n || 0;
   const order = (SORTS[sort] || SORTS.rec).replace(/(^|, )(?=\w)/g, "$1p.");
@@ -88,11 +94,14 @@ export async function item(db, id) {
 export async function itemsForOrder(db, ids) {
   const out = {};
   for (const id of [...new Set(ids.map(String))]) {
-    const r = await db.prepare("SELECT id, name, price, options, qt, soldout, source, source_no, supplier, cost FROM products WHERE id = ?").bind(id).first();
+    const r = await db.prepare("SELECT id, name, price, options, qt, soldout, source, source_no, supplier, cost, shipping_fee, sn, mq, pk FROM products WHERE id = ?").bind(id).first();
     if (r) out[r.id] = { ...r, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), qt: JSON.parse(r.qt || "[]") };
   }
   return out;
 }
+
+// 무료배송만 보기 등에 쓰는 목록 조건
+export const FREE_WHERE = "p.shipping_fee = 0";
 
 export async function counts(db) {
   const rows = (await db.prepare("SELECT category, COUNT(*) AS n FROM products WHERE soldout = 0 GROUP BY category").all()).results || [];
@@ -101,14 +110,16 @@ export async function counts(db) {
 
 // 상품 넣기/갱신 (도매처 동기화가 사용). 검색 색인도 함께 갱신
 export async function upsert(db, p) {
-  await db.prepare(`INSERT INTO products (id, source, source_no, supplier, name, category, price, normal_price, cost, image, images, detail_html, options, qt, option_name, brand, origin, soldout, rank, updated)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  await db.prepare(`INSERT INTO products (id, source, source_no, supplier, name, category, price, normal_price, cost, image, images, detail_html, options, qt, option_name, brand, origin, soldout, rank, updated, shipping_fee, sn, mq, pk)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET source=excluded.source, source_no=excluded.source_no, supplier=excluded.supplier, name=excluded.name, category=excluded.category,
       price=excluded.price, normal_price=excluded.normal_price, cost=excluded.cost, image=excluded.image, images=excluded.images, detail_html=excluded.detail_html,
-      options=excluded.options, qt=excluded.qt, option_name=excluded.option_name, brand=excluded.brand, origin=excluded.origin, soldout=excluded.soldout, rank=excluded.rank, updated=excluded.updated`)
+      options=excluded.options, qt=excluded.qt, option_name=excluded.option_name, brand=excluded.brand, origin=excluded.origin, soldout=excluded.soldout, rank=excluded.rank, updated=excluded.updated,
+      shipping_fee=excluded.shipping_fee, sn=excluded.sn, mq=excluded.mq, pk=excluded.pk`)
     .bind(p.id, p.source || "", p.source_no || "", p.supplier || "", p.name, p.category || "", p.price, p.normal_price || p.price, p.cost || 0,
       p.image || "", JSON.stringify(p.images || []), p.detail_html || "", JSON.stringify(p.options || []), JSON.stringify(p.qt || []), p.option_name || "",
-      p.brand || "", p.origin || "", p.soldout ? 1 : 0, p.rank || 0, p.updated || new Date().toISOString()).run();
+      p.brand || "", p.origin || "", p.soldout ? 1 : 0, p.rank || 0, p.updated || new Date().toISOString(),
+      +p.shipping_fee || 0, +p.sn || 0, +p.mq || 1, +p.pk || 1).run();
   await db.prepare("DELETE FROM products_fts WHERE id = ?").bind(p.id).run();
   await db.prepare("INSERT INTO products_fts (id, terms) VALUES (?, ?)").bind(p.id, terms(`${p.name} ${p.brand || ""}`).join(" ")).run();
 }

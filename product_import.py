@@ -95,6 +95,9 @@ def _read_rows(path):
         rows = [[("" if c is None else str(c)) for c in r] for r in ws.iter_rows(values_only=True)]
     else:
         raw = path.read_bytes()
+        if path.suffix.lower() == ".gz":  # 상품 창고(warehouse/*.csv.gz)
+            import gzip
+            raw = gzip.decompress(raw)
         for enc in ("utf-8-sig", "cp949"):
             try:
                 text = raw.decode(enc); break
@@ -173,6 +176,14 @@ def price_from_cost(cost, pricing):
     return math.ceil((cost * 10 / 11 + ops + net) / (1 - card - 1 / 11) / 10) * 10
 
 
+def price1(goods, cship, pricing):
+    """1개 판매가: 공급가 12% 마진 + 배송비 카드수수료, 1개 주문도 배송비 포함 원가 대비 순마진 8% 이상 (도매가가 바뀌었을 때 재계산용)"""
+    card, ops, fm = pricing.get("card_fee", 0.034), pricing.get("ops_cost_won", 0), pricing.get("qty_price", {}).get("min_net_margin", 0.08)
+    shipx = math.ceil(cship * card / (1 - card - 1 / 11) / 10) * 10 if cship else 0
+    need1 = (fm * (goods + cship) + cship * card + goods * 10 / 11 + ops) / (1 - card - 1 / 11)
+    return max(price_from_cost(goods, pricing) + shipx, math.ceil(need1 / 10) * 10)
+
+
 def code_raw(get):
     return get("code") or get("product_no") or ""
 
@@ -237,7 +248,7 @@ def qty_prices(goods, ship, box_qty, free_over, pricing):
     return out if len(out) > 1 and out[1] < out[0] else []
 
 
-def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_low=False):
+def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_low=False, extra=()):
     """data_dir 안의 상품등록 엑셀 파일들을 읽어 상품 목록과 경고 메시지를 돌려줌"""
     products, warns = [], []
     bad_img = set()  # 대표 사진이 깨진 상품 (tools/image_check 결과) — 올리지 않음
@@ -247,8 +258,8 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
         bad_img = set(_json.loads(bf.read_text(encoding="utf-8")))
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품
     cat_by_name = {c["name"]: c["slug"] for c in cats}
-    for path in sorted(Path(data_dir).glob("*")):
-        if path.name in ("products.csv", "올채움_상품등록양식.xlsx") or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv"):
+    for path in sorted(Path(data_dir).glob("*")) + [Path(x) for x in extra]:  # extra = 상품 창고 파일 (DB용, 정적 사이트엔 안 씀)
+        if path.name in ("products.csv", "올채움_상품등록양식.xlsx") or path.suffix.lower() not in (".xlsx", ".xlsm", ".csv", ".gz"):
             continue
         rows = _read_rows(path)
         h, col = _find_header(rows)

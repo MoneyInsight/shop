@@ -38,7 +38,8 @@ def placeholder_svg(p):
 def load_products():
     import product_import
     rows = list(csv.DictReader((ROOT / "data/products.csv").open(encoding="utf-8-sig")))
-    ss_rows, warns, excluded = product_import.load(Path(os.environ.get("DATA_DIR") or ROOT / "data"), CATS, CFG.get("customer_discount", 0), CFG.get("pricing"), CFG.get("require_detail", True))
+    ss_rows, warns, excluded = product_import.load(Path(os.environ.get("DATA_DIR") or ROOT / "data"), CATS, CFG.get("customer_discount", 0), CFG.get("pricing"), CFG.get("require_detail", True),
+                                                     extra=sorted((ROOT / "warehouse").glob("*.csv.gz")) if os.environ.get("WITH_WAREHOUSE") else ())  # 상품 DB용만 창고 포함
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
     # KC 인증이 필요한 품목인데 인증번호가 없는 상품 (관리자 대시보드에서 확인)
     write("kc_check.json", json.dumps([{"id": p["id"], "name": p["name"], "kind": notice.kind_of(p)} for p in ss_rows if notice.needs_kc(p) and not p.get("kc")], ensure_ascii=False))
@@ -91,7 +92,8 @@ def load_products():
         st = (stock.get("items") or {}).get(p["id"]) or {}
         p["soldout"] = bool(st.get("soldout"))
         if st.get("cost") and p.get("cost") and int(st["cost"]) != int(p["cost"]) and CFG.get("pricing"):
-            new = _pi.price_from_cost(int(st["cost"]), CFG["pricing"])
+            pk_ = int(p.get("pk") or 1)  # 배송비 카드수수료·배송비 포함 8% 보장·공급사 최저가까지 (원래 가격 계산과 같게)
+            new = max(_pi.price1(int(st["cost"]) * pk_, int(p.get("shipping_fee") or 0), CFG["pricing"]), int(p.get("mp") or 0))
             p["price"] = new; p["normal_price"] = new
             p["qt"] = []  # 도매가가 바뀌면 수량 할인은 다음 상품 가져오기 때 다시 계산
         if st.get("opts_soldout") and p["options"]:

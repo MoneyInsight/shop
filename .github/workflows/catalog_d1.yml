@@ -1,0 +1,51 @@
+name: 상품 DB(D1) 매일 채우기 — 무료 한도 안에서
+on:
+  schedule:
+    - cron: "23 1 * * *"   # 한국 시간 오전 10시 23분 (D1 하루 한도는 오전 9시에 초기화, 도매매 새 상품 찾기(새벽 3시) 이후)
+  workflow_dispatch:
+  push:  # 이 작업의 코드가 바뀌면 바로 한 번 실행
+    branches: [main]
+    paths: [".github/workflows/catalog_d1.yml", "tools/d1_push.py", "tools/catalog_build.py", "worker/catalog.js"]
+concurrency: { group: catalog-d1, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_STATE: dist/d1_state.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: pip install openpyxl
+      - name: 지난번 상태 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: dist/d1_state.json
+          key: d1-state-${{ github.run_id }}
+          restore-keys: d1-state-
+      - name: DB 준비 (없으면 만들기 + 표 구조)
+        run: python3 tools/d1_push.py prepare
+      - name: 바뀐 상품·새 상품 골라내기 (사이트와 같은 규칙 + 손해 검사)
+        run: python3 tools/catalog_build.py --state dist/d1_state.json --budget 600000
+      - name: DB에 올리기 (하루 쓰기 한도 안에서)
+        run: python3 tools/d1_push.py push
+      - name: 상태 저장
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: dist/d1_state.json
+          key: d1-state-${{ github.run_id }}
+      - name: 결과 기록
+        if: always()
+        run: |
+          [ -f data/d1_status.json ] || exit 0
+          git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data/d1_status.json
+          git commit -m "상품 DB 채우기 결과 $(date -u +%F)" || exit 0
+          for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done

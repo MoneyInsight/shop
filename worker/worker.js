@@ -1214,7 +1214,7 @@ export async function handle(req, env, path) {
     if (!env.DB) return fail("상품 DB가 아직 연결되지 않았어요.", 503);
     const u = new URL(req.url).searchParams, cache = { "Cache-Control": "public, max-age=60" };
     try {
-      if (path === "/catalog/list") return json(await catalog.list(env.DB, { q: u.get("q") || "", cat: u.get("cat") || "", sort: u.get("sort") || "rec", page: u.get("page"), size: u.get("size") }), 200, cache);
+      if (path === "/catalog/list") return json(await catalog.list(env.DB, { q: u.get("q") || "", cat: u.get("cat") || "", sort: u.get("sort") || "rec", page: u.get("page"), size: u.get("size"), free: u.get("free") || 0 }), 200, cache);
       if (path === "/catalog/item") { const it = await catalog.item(env.DB, u.get("id")); return it ? json(it, 200, cache) : fail("상품을 찾을 수 없어요.", 404); }
       if (path === "/catalog/counts") return json(await catalog.counts(env.DB), 200, cache);
     } catch (e) { return fail("상품 조회 중 오류가 났어요.", 500); }

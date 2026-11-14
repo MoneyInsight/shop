@@ -15,11 +15,13 @@ from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
 NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "10000"))
-MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "98000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
+MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "96000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
 OUT = ROOT / "data" / "도매매API상품.csv"
 STATE = ROOT / "data" / "domeme_discover_state.json"
 KWF = ROOT / "data" / "domeme_keywords.json"
+WH = ROOT / "warehouse"  # 상품 창고: 사이트 한도(MAX_TOTAL)를 넘는 상품은 여기로 → 상품 DB(D1)에만 올림
+WH_MAX = int(os.environ.get("WH_MAX", "1000000"))
 EXISTING = [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "도매매API상품.csv")]
 SKIP_CAT = ("식품", "건강", "의료", "성인", "의약", "다이어트", "담배", "주류")
 
@@ -136,6 +138,14 @@ def main():
         if p.exists():
             have |= {r["상품코드"][2:] for r in csv.DictReader(open(p, encoding="utf-8-sig"))}
     rows = list(csv.DictReader(open(OUT, encoding="utf-8-sig"))) if OUT.exists() else []
+    import gzip, io, datetime
+    WH.mkdir(exist_ok=True)
+    wh_have = 0
+    for p in WH.glob("dm_*.csv.gz"):
+        for r in csv.DictReader(io.StringIO(gzip.decompress(p.read_bytes()).decode("utf-8-sig"))):
+            have.add(r["상품코드"][2:]); wh_have += 1
+    wh_rows = []
+    pgs = state.setdefault("pg", {})
     kwmap = json.loads(KWF.read_text(encoding="utf-8")) if KWF.exists() else {}
     tree = (api({"ver": "1.0", "mode": "getCategoryList"}).get("domeggook") or {}).get("items") or {}
     cats = []
@@ -161,18 +171,20 @@ def main():
     total += len(rows)
     ci = state.get("cat", 0) % len(cats)
     loops = 0
-    while views < NEW_LIMIT and loops < len(cats) and total + added < MAX_TOTAL and errs < 20:
+    while views < NEW_LIMIT and loops < len(cats) * 30 and wh_have + len(wh_rows) < WH_MAX and errs < 20:
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
-        d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": "1"}).get("domeggook") or {})
+        pg = int(pgs.get(kw, 1))
+        d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": str(pg)}).get("domeggook") or {})
         items = (d.get("list") or {}).get("item") or []
         if isinstance(items, dict):
             items = [items]
+        pgs[kw] = pg + 1 if len(items) >= 100 and pg < 500 else 1  # 다음 방문 땐 다음 쪽 (끝까지 가면 처음부터)
         for it in items:
             no = str(it.get("no", ""))
             if not no or no in have or no in seen or it.get("adultOnly") == "true" or num((it.get("deli") or {}).get("fee")) > MAX_SHIP:
                 continue
-            if views >= NEW_LIMIT or total + added >= MAX_TOTAL or errs >= 20:
+            if views >= NEW_LIMIT or errs >= 20:
                 break
             v = (api({"ver": "4.5", "mode": "getItemView", "no": no}).get("domeggook") or {})
             views += 1
@@ -189,15 +201,25 @@ def main():
                 seen[no] = info
                 why[info] = why.get(info, 0) + 1
                 continue
-            rows.append(row); have.add(no); added += 1
+            if total + added < MAX_TOTAL:
+                rows.append(row); added += 1  # 정적 사이트 (1GB 한도 안)
+            else:
+                wh_rows.append(row)  # 상품 창고 → 상품 DB
+            have.add(no)
             if info:
                 kwmap["DM" + no] = info[:12]
         time.sleep(0.3)
     state["cat"] = ci
     with open(OUT, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS); w.writeheader(); w.writerows(rows)
+    if wh_rows:
+        day = WH / f"dm_{datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))):%Y%m%d}.csv.gz"
+        old = list(csv.DictReader(io.StringIO(gzip.decompress(day.read_bytes()).decode("utf-8-sig")))) if day.exists() else []
+        buf = io.StringIO(); w = csv.DictWriter(buf, fieldnames=FIELDS); w.writeheader(); w.writerows(old + wh_rows)
+        day.write_bytes(gzip.compress(buf.getvalue().encode("utf-8-sig"), 9))
     STATE.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     KWF.write_text(json.dumps(kwmap, ensure_ascii=False), encoding="utf-8")
+    print(f"상품 창고: 새 {len(wh_rows)}개 / 창고 누적 {wh_have + len(wh_rows)}개")
     print(f"[전체 {total + added}개] 새 상품 {added}개 추가 (상품정보 조회 {views}회, 카테고리 {loops}개 검색) / 누적 {len(rows)}개 / 제외 사유 {why}")
 
 
