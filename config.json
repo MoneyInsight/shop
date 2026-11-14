@@ -11,6 +11,7 @@
     "ceo": "손기범",
     "biz_no": "477-06-02501",
     "mail_order_no": "제2022-수원권선-0031호",
+    "health_food_no": "제2026-0377991호",
     "address": "경기도 수원시 권선구 금호로 77-16, 401호",
     "phone": "031-291-1004",
     "email": "scream0506@gmail.com",
@@ -47,6 +48,11 @@
       "slug": "health",
       "name": "건강·안마",
       "emoji": "💆"
+    },
+    {
+      "slug": "supplement",
+      "name": "건강식품",
+      "emoji": "💊"
     },
     {
       "slug": "tools",

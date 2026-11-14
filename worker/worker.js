@@ -113,7 +113,7 @@ async function confirm(req, env) {
     const listUnit = (qt.length ? Number(qt[0]) : Number(p.price)) + (optName ? p.options[Number(it.opt)].add : 0);
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
+    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
@@ -125,13 +125,14 @@ async function confirm(req, env) {
   shipping += remote.fee;
   let discount = 0, couponCode = "";
   if (coupon) {
+    if (lines.some((l) => l.mp)) return fail("공급사가 최저 판매가를 정한 상품이 있어 쿠폰을 쓸 수 없어요. 쿠폰을 빼고 다시 주문해 주세요.");
     const c = await checkCoupon(env, coupon, subtotal);
     if (!c.ok) return fail(c.message);
     discount = c.discount; couponCode = c.code;
   }
   let memberDisc = 0;  // 로그인 회원 추가 즉시 할인
   if (token && (await auth.userFromToken(env, token))) {
-    memberDisc = memberDiscount(lines.map((l) => ({ unit: l.price, list: l.list_unit, qty: l.qty })), { ...MEMBER_DEFAULT, rate: +(env.MEMBER_DISCOUNT ?? MEMBER_DEFAULT.rate) });
+    memberDisc = memberDiscount(lines.map((l) => ({ unit: l.price, list: l.list_unit, qty: l.qty, mp: l.mp })), { ...MEMBER_DEFAULT, rate: +(env.MEMBER_DISCOUNT ?? MEMBER_DEFAULT.rate) });
     discount += memberDisc;
   }
   if (subtotal - discount + shipping !== Number(amount)) return fail("결제 금액이 상품 금액과 달라요. 다시 주문해 주세요.");
@@ -283,6 +284,7 @@ async function offerAdd(req, env) {
   const price = parseInt(d.price) || 0, floor = offerFloor(unit);
   if (price >= unit) return fail("제안 가격은 판매가보다 낮아야 해요.");
   if (price < floor) return fail(`개당 ${floor.toLocaleString()}원(최대 3% 할인)까지 제안할 수 있어요.`);
+  if (Number(p.mp) && price < Number(p.mp)) return fail(`이 상품은 공급사가 정한 최저 판매가(개당 ${Number(p.mp).toLocaleString()}원)가 있어 더 낮게 제안할 수 없어요.`);
   const name = clip(d.name, 20), phone = digits(d.phone);
   if (!name || phone.length < 10) return fail("이름과 연락처를 정확히 입력해 주세요.");
   // 같은 연락처로 같은 상품에 대기 중인 제안이 있으면 막기
@@ -1098,7 +1100,7 @@ export async function handle(req, env, path) {
         const qt = Array.isArray(p.qt) ? p.qt : typeof p.qt === "string" ? JSON.parse(p.qt || "[]") : [];
         const add = it.opt != null && it.opt !== "" ? (p.options?.[Number(it.opt)]?.add || 0) : 0;
         const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
-        lines.push({ unit: (qt.length ? Number(qt[Math.min(qn[it.id], qt.length) - 1]) : Number(p.price)) + add, list: (qt.length ? Number(qt[0]) : Number(p.price)) + add, qty });
+        lines.push({ unit: (qt.length ? Number(qt[Math.min(qn[it.id], qt.length) - 1]) : Number(p.price)) + add, list: (qt.length ? Number(qt[0]) : Number(p.price)) + add, qty, mp: Number(p.mp) || 0 });
       }
       return json({ discount: memberDiscount(lines, { ...MEMBER_DEFAULT, rate: +(env.MEMBER_DISCOUNT ?? MEMBER_DEFAULT.rate) }) });
     }

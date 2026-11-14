@@ -22,9 +22,17 @@ STATE = ROOT / "data" / "domeme_discover_state.json"
 KWF = ROOT / "data" / "domeme_keywords.json"
 EXISTING = [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "도매매API상품.csv")]
 SKIP_CAT = ("식품", "건강", "의료", "성인", "의약", "다이어트", "담배", "주류")
+
+
+def skip_cat(names):
+    """건강기능식품(식품>건강식품)은 판매업 신고가 있어 가져오고, 다이어트식품·일반 식품·의료·성인은 제외"""
+    names = [n for n in names if n]
+    if len(names) >= 2 and names[0] == "식품" and names[1] == "건강식품" and not any("다이어트" in n for n in names):
+        return False
+    return any(k in n for n in names for k in SKIP_CAT)
 MAX_RANK, MAX_SHIP, BUNDLE_BOX = 8, 3500, 10
 FIELDS = ["상품코드", "상품명", "카테고리명", "공급가", "공급 배송비", "묶음배송수량", "반품배송비", "교환배송비",
-          "대표 이미지 주소", "브랜드", "제조사", "상세 설명", "재고", "옵션명", "옵션", "공급사등급"]
+          "대표 이미지 주소", "브랜드", "제조사", "상세 설명", "재고", "옵션명", "옵션", "공급사등급", "공급사최저판매가"]
 
 
 def api(params):
@@ -67,7 +75,7 @@ def build_row(no, v):
         return None, "착불"
     cat = v.get("category") or {}
     names = [e.get("name", "") for e in ((cat.get("parents") or {}).get("elem") or [])] + [(cat.get("current") or {}).get("name", "")]
-    if any(k in n for n in names for k in SKIP_CAT):
+    if skip_cat(names):
         return None, "식품·건강·성인 분류"
     desc = v.get("desc") or {}
     if (desc.get("license") or {}).get("usable") != "true":
@@ -112,7 +120,8 @@ def build_row(no, v):
     return {"상품코드": "DM" + str(no), "상품명": b.get("title", "").strip(), "카테고리명": ">".join(n for n in names if n),
             "공급가": price, "공급 배송비": ship, "묶음배송수량": box, "반품배송비": ret, "교환배송비": ret * 2,
             "대표 이미지 주소": thumb.split("?")[0], "브랜드": "", "제조사": detail.get("manufacturer", ""), "상세 설명": html,
-            "재고": inv, "옵션명": oname if opts else "", "옵션": "|".join(opts), "공급사등급": rank}, (kw if isinstance(kw, list) else [kw])
+            "재고": inv, "옵션명": oname if opts else "", "옵션": "|".join(opts), "공급사등급": rank,
+            "공급사최저판매가": num(((v.get("price") or {}).get("resale") or {}).get("minimum") if isinstance((v.get("price") or {}).get("resale"), dict) else 0) or ""}, (kw if isinstance(kw, list) else [kw])
 
 
 def main():
@@ -129,7 +138,7 @@ def main():
     tree = (api({"ver": "1.0", "mode": "getCategoryList"}).get("domeggook") or {}).get("items") or {}
     cats = []
     leaves(tree, [], cats)
-    cats = [c for c in cats if not any(k in n for n in c for k in SKIP_CAT)]
+    cats = [c for c in cats if not skip_cat(c)]
     if not cats:
         sys.exit("카테고리 목록을 못 받음")
     views, added, why, errs = 0, 0, {}, 0

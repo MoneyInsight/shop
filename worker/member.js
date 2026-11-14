@@ -13,7 +13,7 @@ export function memberDiscount(lines, P = DEFAULT) {
   let d = 0;
   for (const l of lines) {
     const cost = costFromPrice(l.list, P);
-    const floor = (cost * 10 / 11 + cost * P.min_net_margin) / (1 - P.card_fee - 1 / 11);
+    const floor = Math.max((cost * 10 / 11 + cost * P.min_net_margin) / (1 - P.card_fee - 1 / 11), l.mp || 0);  // 공급사 최저 판매가 아래로 할인 안 함
     d += Math.max(0, Math.min(l.unit * P.rate, l.unit - floor)) * l.qty;
   }
   return Math.floor(d / 10) * 10;

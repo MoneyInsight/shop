@@ -129,8 +129,18 @@ def mark_new(ps):
 
 
 # 건강기능식품·성인용품은 등록하지 않음 (도매처 분류가 틀려도 이름으로 한 번 더 거름)
-BAN_WORDS = re.compile(r"건강기능식품|영양제|비타민|유산균|프로바이오틱|오메가\s?3|홍삼|녹용|콜라겐|루테인|밀크씨슬|글루코사민|코엔자임|"
-                       r"다이어트\s?보조|체지방\s?감소|성인용품|19금|성인\s?전용|콘돔|러브젤|딜도|바이브레이터|자위")
+ADULT_WORDS = re.compile(r"성인용품|19금|성인\s?전용|콘돔|러브젤|딜도|바이브레이터|자위")
+# 건강식품 분류가 아닌 곳에 섞인 건강기능식품(분류 오류)은 빼고, 건강식품은 '건강식품' 분류로만 판매
+SUPP_WORDS = re.compile(r"건강기능식품|영양제|비타민|유산균|프로바이오틱|오메가\s?3|홍삼|녹용|콜라겐|루테인|밀크씨슬|글루코사민|코엔자임|다이어트\s?보조|체지방\s?감소")
+# 건강식품에 쓰면 안 되는 질병·과장 표현 (식약처 기준: 질병 예방·치료 효능 표시 금지)
+CLAIM_WORDS = re.compile(r"치료|완치|특효|항암|암\s?예방|당뇨|고혈압|혈압\s?강하|만병|기적|의약품|약효|부작용\s?없|100%\s?효과|살\s?빠지|살빠짐|체중\s?감량\s?보장")
+def BAN(p):
+    n = p["name"]
+    if ADULT_WORDS.search(n):
+        return True
+    if p.get("category") == "supplement":
+        return bool(CLAIM_WORDS.search(n))
+    return bool(SUPP_WORDS.search(n))
 
 
 def dedup_key(name):
@@ -174,7 +184,7 @@ def load_used(path):
 
 def clean_catalog(ps):
     """① 건강기능식품·19세 상품 제외 ② 이름이 같은 중복 상품은 1개 살 때 가장 싼 것 하나만 남김"""
-    ps = [p for p in ps if not BAN_WORDS.search(p["name"])]
+    ps = [p for p in ps if not BAN(p)]
     # 식품은 팔지 않음 / 이름과 실제 상품(사진)이 다른 공급사 제외
     ps = [p for p in ps if p.get("category") != "food" and not any(p["name"].startswith(b) for b in CFG.get("ban_name_prefix", []))]
     best = {}
@@ -267,7 +277,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
-<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
+<p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}{(" · 건강기능식품판매업신고 " + e(BIZ["health_food_no"])) if BIZ.get("health_food_no") else ""} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
 주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
 고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
 © {datetime.date.today().year} {name}. All rights reserved.</p>
@@ -681,7 +691,7 @@ def build_feeds(ps):
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
-                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) for p in ps]
+                              "image", "brand", "badge", "event", "summary", "supplier", "options", "option_name", "soldout")} | ({"qt": p["qt"]} if p.get("qt") else {}) | ({"sm": p["sm"]} if p.get("sm") else {}) | ({"mp": p["mp"]} if p.get("mp") else {}) for p in ps]
     write("products.json", json.dumps(pub, ensure_ascii=False))  # 서버 가격 확인용 예비 파일 (손님 화면은 안 씀)
     # 손님 화면용: 목록·검색은 가벼운 색인 하나, 장바구니·결제는 상품별 작은 파일 (상품 2만 개 이상에서도 빠르게)
     cat_idx = {c["slug"]: i for i, c in enumerate(CATS)}

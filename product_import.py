@@ -35,6 +35,7 @@ ALIASES = {
     "naver_low": ["네이버 최저가", "네이버최저가", "최저가"],
     "cost": ["공급가", "공급가격", "도매가", "매입가", "원가", "판매가(공급가)", "오너클랜판매가", "도매매가"],
     "cost_ship": ["공급 배송비", "공급배송비", "배송비(공급)", "택배비", "배송비"],
+    "min_price": ["공급사최저판매가"],
     "box_qty": ["묶음배송수량", "묶음배송 수량", "수량별부과-수량"],
     "free_over": ["무료배송기준금액", "조건부무료-상품판매가합계"],
     "opt_name": ["옵션명"],
@@ -246,6 +247,10 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                 sm = "선불" if cship else "무료"  # 도매처 발주서의 배송방식
                 if qt:
                     qt[0] = price
+                minp = _num(get(r, "min_price"))
+                if minp:  # 공급사가 정한 최저 판매가 아래로는 팔지 않음 (수량 할인 포함)
+                    price = max(price, minp)
+                    qt = [max(x, minp) for x in qt]
             if name.startswith("필수"):
                 continue  # 양식 안내 줄
             if not name or not price:
@@ -262,13 +267,16 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             code = get(r, "code") or get(r, "product_no") or f"SS{len(products)+1:05d}"
             code = re.sub(r"[^0-9A-Za-z_-]", "", code) or f"SS{len(products)+1:05d}"
             mc = get(r, "mall_category")
+            sup_cat = (get(r, "category_name") or "").replace(" ", "")
+            if sup_cat.startswith("식품>건강식품") and "다이어트" not in sup_cat and "supplement" in cat_by_name.values():
+                mc = mc or "건강식품"  # 도매처 분류가 건강식품이면 '건강식품' 카테고리로
             cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else "") or cat_from_code(get(r, "category_id"), cats) or guess_category(name, cats)
             img = get(r, "image")
             detail = get(r, "detail")
             if require_detail and not detail.strip():
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
-                "id": code, "name": name[:100], "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) if (cost and pricing) else 0, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": "0", "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or "무료배송", "badge": "", "summary": get(r, "summary"),

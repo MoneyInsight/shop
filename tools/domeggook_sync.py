@@ -41,7 +41,9 @@ def summarize(v):
     if isinstance(kw, str):
         kw = [kw]
     price = (v.get("price") or {}).get("supply")
-    return {"status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
+    resale = (v.get("price") or {}).get("resale") or {}
+    minp = resale.get("minimum") if isinstance(resale, dict) else ""
+    return {"minp": minp or "", "status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
             "ship_type": sup.get("type", ""), "ship_fee": sup.get("fee", ""), "ship_raw": json.dumps(sup, ensure_ascii=False)[:300],
             "pay": deli.get("pay", ""), "merge": (deli.get("merge") or {}).get("enable", ""),
             "price": price, "inv": (v.get("qty") or {}).get("inventory", ""), "kw": kw[:12]}
@@ -90,6 +92,8 @@ def main():
                 soldout.append(c); continue
             if num(info.get("price")) and num(info.get("price")) != num(r.get("공급가")):
                 r["공급가"] = str(num(info.get("price"))); repriced += 1
+            if "minp" in info and str(num(info.get("minp")) or "") != str(r.get("공급사최저판매가") or ""):
+                r["공급사최저판매가"] = str(num(info.get("minp")) or ""); repriced += 1
             ship = num(r.get("공급 배송비"))
             if ship and num(info.get("ship_fee")) and num(info.get("ship_fee")) != ship:
                 r["공급 배송비"] = str(num(info.get("ship_fee"))); ship = num(info.get("ship_fee")); repriced += 1
@@ -99,7 +103,8 @@ def main():
                 if r.get("묶음배송수량") != box:
                     r["묶음배송수량"] = box; changed += 1
         with open(p, "w", encoding="utf-8-sig", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+            keys = list(rows[0].keys()) + (["공급사최저판매가"] if any("공급사최저판매가" in r for r in rows) and "공급사최저판매가" not in rows[0] else [])
+            w = csv.DictWriter(f, fieldnames=keys, restval=""); w.writeheader(); w.writerows(rows)
     res = ROOT / "data" / "_domeme_stock_result.json"
     res.write_text(json.dumps({"source": "domeme", "checked": checked, "soldout": soldout}, ensure_ascii=False), encoding="utf-8")
 
