@@ -13,8 +13,9 @@ from pathlib import Path
 import openpyxl
 
 MARGIN = 1.01
-src = Path(sys.argv[1])
-strict = json.loads(Path(sys.argv[2]).read_text()) if len(sys.argv) > 2 else {}
+args = [a for a in sys.argv[1:] if not a.startswith('--')]
+src = Path(args[0])
+strict = json.loads(Path(args[1]).read_text()) if len(args) > 1 else {}
 out = Path(__file__).resolve().parent.parent / "data" / "온채널상품.csv"
 
 COLS = ["상품코드", "상품명", "카테고리코드", "카테고리명", "공급가", "공급 배송비", "공급사최저판매가", "반품배송비", "교환배송비",
@@ -72,8 +73,16 @@ for f in sorted(src.glob("*.xlsx")):
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
                      "옵션" if opts else "", "|".join(opts)])
 
+old, prev = 0, []
+seen_ok = {r[0] for r in rows}
+if out.exists():
+    with out.open(encoding="utf-8-sig") as fp:
+        prev = [r[0] for r in list(csv.reader(fp))[1:]]
+old = len(prev)
+if old and len(rows) < old * 0.7 and "--force" not in sys.argv:
+    sys.exit(f"중단: 새로 받은 상품 {len(rows)}개가 기존 {old}개의 70%보다 적어요 (엑셀 일부가 빠졌을 수 있음). 확인 후 --force")
 with out.open("w", newline="", encoding="utf-8-sig") as fp:
     w = csv.writer(fp)
     w.writerow(COLS)
     w.writerows(rows)
-print(f"{out.name}: {len(rows)}개 저장 / 제외 {stat}")
+print(f"{out.name}: {len(rows)}개 저장 (이전 {old}개, 빠짐={len(set(prev) - seen_ok)} 새로={len(seen_ok - set(prev))}) / 제외 {stat}")
