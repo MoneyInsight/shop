@@ -540,7 +540,7 @@ footer .logo .logo-mark{width:24px;height:24px}
 .mbanner{padding:18px 0 6px;background:#fff}
 .mb-box{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px rgba(80,60,30,.10)}
 .mb-track{display:flex;transition:transform .55s cubic-bezier(.4,.1,.2,1);will-change:transform;touch-action:pan-y}
-.mb-slide{flex:0 0 100%;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:24px;min-height:340px;padding:40px 56px;color:var(--ink);text-decoration:none}
+.mb-slide{flex:0 0 100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:40px;height:330px;padding:0 64px;color:var(--ink);text-decoration:none;overflow:hidden}
 .mb-brand{background:linear-gradient(120deg,#fdf8ef,#f3e6cf)}
 .mb-winter{background:linear-gradient(120deg,#e9f3fb,#cfe3f5);}
 .mb-office{background:linear-gradient(120deg,#eef4ec,#d6e6d0)}
@@ -548,12 +548,14 @@ footer .logo .logo-mark{width:24px;height:24px}
 .mb-member{background:linear-gradient(120deg,#f4effb,#e1d5f3)}
 .mb-bulk{background:linear-gradient(120deg,#f2f2f2,#dedede)}
 .mb-tag{display:inline-block;border:1.5px solid currentColor;border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700}
-.mb-txt h2{font-size:40px;line-height:1.28;letter-spacing:-.04em;margin:16px 0 12px;font-weight:800}
+.mb-txt h2{font-size:42px;line-height:1.28;letter-spacing:-.04em;margin:16px 0 12px;font-weight:800}
 .mb-txt p{color:var(--ink2);font-size:16px;margin:0}
 .mb-btn{display:inline-block;margin-top:22px;background:var(--ink);color:#fff;border-radius:999px;padding:11px 22px;font-size:15px;font-weight:700}
-.mb-art{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mb-art img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.10)}
-.mb-art img:first-child{grid-row:span 2;aspect-ratio:auto;height:100%}
+.mb-art{display:flex;gap:14px;align-items:center}
+.mb-art img{width:200px;height:250px;object-fit:cover;border-radius:16px;background:#fff;box-shadow:0 10px 24px rgba(0,0,0,.12)}
+.mb-art img:nth-child(2){height:280px}
+@media (max-width:1180px){.mb-art img:nth-child(3){display:none}}
+@media (max-width:960px){.mb-art img{width:170px;height:220px}.mb-art img:nth-child(2){height:240px}}
 .mb-ctrl{position:absolute;right:20px;bottom:18px;display:flex;gap:6px;align-items:center}
 .mb-ctrl>*{background:rgba(40,40,40,.62);color:#fff;border:0;height:40px;border-radius:20px;font-size:15px}
 .mb-count{display:inline-flex;align-items:center;padding:0 16px}
@@ -565,7 +567,7 @@ footer .logo .logo-mark{width:24px;height:24px}
 .mb-dots button.on{width:20px;border-radius:4px;background:var(--ink)}
 @media (max-width:768px){
   .mbanner{padding:10px 0 4px}
-  .mb-slide{grid-template-columns:1fr;min-height:250px;padding:26px 22px 44px;gap:0}
+  .mb-slide{grid-template-columns:1fr;height:auto;min-height:250px;padding:26px 22px 44px;gap:0}
   .mb-art{display:none}
   .mb-txt h2{font-size:26px;margin:12px 0 8px}
   .mb-txt p{font-size:13.5px}
