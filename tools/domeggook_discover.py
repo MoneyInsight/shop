@@ -15,7 +15,7 @@ from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
 NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "10000"))
-MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "40000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
+MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "98000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
 OUT = ROOT / "data" / "도매매API상품.csv"
 STATE = ROOT / "data" / "domeme_discover_state.json"
@@ -152,8 +152,11 @@ def main():
     if not cats:
         sys.exit("카테고리 목록을 못 받음")
     views, added, why, errs = 0, 0, {}, 0
-    total = sum(1 for p in [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "오너클랜DB상품.csv", "오너클랜상품.csv")] if p.exists()
-                for _ in csv.DictReader(open(p, encoding="utf-8-sig"))) + len(rows)
+    total = 0  # 사이트 전체 상품 줄 수 (온채널 포함) — 1GB 한도 안전선
+    for p in (ROOT / "data").glob("*.csv"):
+        if p.name not in ("products.csv", "도매매API상품.csv"):
+            total += sum(1 for _ in csv.reader(open(p, encoding="utf-8-sig"))) - 1
+    total += len(rows)
     ci = state.get("cat", 0) % len(cats)
     loops = 0
     while views < NEW_LIMIT and loops < len(cats) and total + added < MAX_TOTAL and errs < 20:
