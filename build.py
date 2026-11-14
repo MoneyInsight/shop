@@ -175,6 +175,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈">{name}<i></i></a>'
     return f'''<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
 <title>{e(title)}</title><meta name="description" content="{e(desc)}">
 {f'<link rel="canonical" href="{canonical}">' if canonical else ""}
 <meta property="og:type" content="website"><meta property="og:title" content="{e(title)}">

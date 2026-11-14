@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       limit: { description: "점검할 기존 상품 수", default: "4000" }
-      new_limit: { description: "새 상품 찾기 조회 수", default: "30000" }
+      new_limit: { description: "새 상품 찾기 조회 수", default: "10000" }
 permissions:
   contents: write
   pages: write
@@ -33,7 +33,7 @@ jobs:
         run: python3 tools/domeggook_discover.py
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
-          NEW_LIMIT: ${{ github.event.inputs.new_limit || '30000' }}
+          NEW_LIMIT: ${{ github.event.inputs.new_limit || '10000' }}
       - name: 빌드·손해 점검
         run: |
           python3 build.py
@@ -42,7 +42,7 @@ jobs:
       - name: 저장
         run: |
           git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data && git commit -m "새 상품 찾기 (도매꾹 API)" && git pull --rebase && git push || echo "변경 없음"
+          git add data && git commit -m "새 상품 찾기 (도매꾹 API)" && git pull --rebase -X theirs && git push || echo "변경 없음"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }

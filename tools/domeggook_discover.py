@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
-NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "30000"))
+NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "10000"))
 MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "40000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
 OUT = ROOT / "data" / "도매매API상품.csv"
@@ -154,6 +154,8 @@ def main():
             views += 1
             time.sleep(0.25)
             if not v or "basis" not in v:
+                if not why.get("조회 실패"):
+                    print("첫 조회 실패 응답:", str(v)[:300])
                 why["조회 실패"] = why.get("조회 실패", 0) + 1
                 errs += 1  # 연속 실패가 쌓이면(하루 호출 한도 등) 멈추고 내일 이어서
                 continue
