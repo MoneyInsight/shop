@@ -46,6 +46,7 @@ def load_products():
         print("⚠️", w)
     seen = {r["id"] for r in rows}
     rows += [r for r in ss_rows if r["id"] not in seen]
+    rows += load_used(Path(os.environ.get("DATA_DIR") or ROOT / "data") / "중고상품.csv")
     out = []
     (OUT / "img").mkdir(parents=True, exist_ok=True)
     for r in rows:
@@ -112,13 +113,43 @@ def dedup_key(name):
     return n
 
 
+USED_GRADE = {"S": "S급 · 거의 새것 (사용감 없음)", "A": "A급 · 사용감 적음 (잔기스 약간)", "B": "B급 · 사용감 있음 (생활기스·변색 일부)", "C": "C급 · 기능 정상, 외관 하자 있음"}
+
+
+def load_used(path):
+    """중고 상품: data/중고상품.csv 한 줄 = 상품 1개 (보통 수량 1). 상태등급 S/A/B/C, 하자·구성품을 상세 맨 위에 표로 보여줌"""
+    if not path.exists():
+        return []
+    out = []
+    for r in csv.DictReader(path.open(encoding="utf-8-sig")):
+        name, price = (r.get("상품명") or "").strip(), re.sub(r"[^0-9]", "", r.get("판매가") or "")
+        if not name or not price or not (r.get("대표이미지") or "").strip():
+            continue
+        code = (r.get("상품코드") or "").strip() or ("UD" + hashlib.md5(name.encode()).hexdigest()[:8])
+        g = (r.get("상태등급") or "").strip().upper()[:1]
+        esc = lambda t: (t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        rows = [("상품 상태", USED_GRADE.get(g, esc(r.get("상태등급")) or "중고")), ("상태 설명", esc(r.get("상태설명"))),
+                ("하자", esc(r.get("하자")) or "없음"), ("구성품", esc(r.get("구성품"))), ("사용 기간", esc(r.get("사용기간")))]
+        table = "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows if v)
+        imgs = "".join(f'<img src="{u.strip()}" alt="{esc(name)}" loading="lazy">' for u in (r.get("추가이미지") or "").split("|") if u.strip())
+        desc = (f'<div class="used-box"><h3>중고 상품 안내</h3><table class="used-tbl">{table}</table>'
+                f'<p class="used-note">실제 상품 사진입니다. 위에 적힌 하자는 반품 사유가 되지 않으며, 그 밖의 반품·교환은 받은 날부터 7일 안에 가능합니다(단순 변심은 왕복 배송비 고객 부담).</p></div>'
+                + (r.get("상세설명") or "") + imgs)
+        stock = re.sub(r"[^0-9]", "", r.get("재고") or "1") or "1"
+        out.append({"id": code if code.startswith("UD") else "UD" + code, "name": f"[중고 {g}급] {name}" if g in USED_GRADE else f"[중고] {name}",
+                    "category": "used", "price": price, "normal_price": price, "shipping_fee": "0", "image": r["대표이미지"].strip(),
+                    "brand": "", "maker": "", "origin": "", "event": "무료배송", "badge": "중고", "summary": (r.get("상태설명") or "")[:60],
+                    "description": "", "detail_html": desc, "supplier": "직영", "status": (r.get("판매상태") or "판매중").strip() if stock != "0" else "품절", "naver_low": "", "used": True})
+    return out
+
+
 def clean_catalog(ps):
     """① 건강기능식품·19세 상품 제외 ② 이름이 같은 중복 상품은 1개 살 때 가장 싼 것 하나만 남김"""
     ps = [p for p in ps if not BAN_WORDS.search(p["name"])]
     best = {}
     for p in ps:
         k = dedup_key(p["name"])
-        if len(k) < 6:  # 너무 짧은 이름(예: '원통목걸이')은 다른 상품일 수 있어 합치지 않음
+        if len(k) < 6 or p.get("category") == "used":  # 중고는 한 점 한 점이 다른 상품이라 합치지 않음  # 너무 짧은 이름(예: '원통목걸이')은 다른 상품일 수 있어 합치지 않음
             best[("id", p["id"])] = p; continue
         cur = best.get(k)
         if cur is None or (p.get("soldout"), int(p["price"])) < (cur.get("soldout"), int(cur["price"])):

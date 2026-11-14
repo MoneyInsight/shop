@@ -507,3 +507,4 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .find-order summary{cursor:pointer;color:var(--ink2);text-decoration:underline}
 .link-btn{background:none;border:0;color:#999;text-decoration:underline;cursor:pointer;font-size:13px}
 .p-tags{margin-top:40px}.p-tags h3{font-size:15px;margin-bottom:10px}.p-tags a{display:inline-block;margin:0 6px 8px 0;padding:5px 11px;border:1px solid #e6dccb;border-radius:999px;font-size:13px;color:#7a6650;background:#fffaf2}.p-tags a:hover{border-color:#9b7b50;color:#5b4528}
+.used-box{border:1px solid #e6dccb;background:#fffaf2;border-radius:12px;padding:18px 20px;margin:0 0 24px}.used-box h3{font-size:16px;margin:0 0 10px}.used-tbl{width:100%;border-collapse:collapse;font-size:14px}.used-tbl th{width:110px;text-align:left;color:#7a6650;padding:7px 0;vertical-align:top}.used-tbl td{padding:7px 0}.used-note{font-size:12.5px;color:#8a7a66;margin:10px 0 0}

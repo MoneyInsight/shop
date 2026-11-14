@@ -109,6 +109,10 @@
       "emoji": "🌱"
     },
     {
+      "slug": "used",
+      "name": "중고"
+    },
+    {
       "slug": "food",
       "name": "식품",
       "emoji": "🍱"
