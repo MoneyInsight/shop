@@ -40,3 +40,21 @@ window.ONCH = async (step) => {
       expected: Math.ceil(JSON.parse(LS.__oc).length / 500) };
   }
 };
+
+// 한 번에 전부: await ONCH("all") → 바로 "started" 를 돌려주고 페이지 안에서 계속 진행
+//   (모으기 → 요청 → 완성 대기 → 파일 이름을 서버에 전달 → 깃허브가 13:07에 내려받아 반영)
+//   진행 상황: localStorage.__onchlog  (탭을 닫거나 다른 페이지로 옮기면 멈춤)
+window.ONCH_ALL = async () => {
+  const log = (m) => { localStorage.__onchlog = new Date().toISOString().slice(11, 19) + " " + m; };
+  try {
+    log("collect " + JSON.stringify(await ONCH("collect")));
+    for (let i = 0; i < 30; i++) { const r = await ONCH("request"); if (r.error) return log("error " + r.error); log("request left " + r.left); if (!r.left) break; }
+    let u;
+    for (let i = 0; i < 30; i++) { await new Promise((ok) => setTimeout(ok, 15000)); u = await ONCH("urls"); log(`urls ${u.ok.length}/${u.expected} wait ${u.waiting} fail ${u.failed}`); if (!u.waiting && u.ok.length + u.failed >= u.expected) break; }
+    const r = await fetch("https://shop-api.scream0506.workers.dev/onch/files", { method: "POST", headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ key: localStorage.__onchkey, files: u.ok, expected: u.expected }) });
+    log("sent " + (await r.text()));
+  } catch (e) { log("error " + e); }
+};
+const _ONCH = window.ONCH;
+window.ONCH = async (step) => step === "all" ? (ONCH_ALL(), "started") : _ONCH(step);

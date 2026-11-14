@@ -1,0 +1,59 @@
+name: 온채널 품절·가격 반영 (매일)
+on:
+  schedule:
+    - cron: "7 4 * * *"    # 한국 시간 오후 1시 7분 (12:47 브라우저 점검이 만든 엑셀을 가져옴)
+    - cron: "37 5 * * *"   # 늦게 끝난 날을 위한 한 번 더 (2:37)
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency: { group: daily-sync, cancel-in-progress: false }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: { name: github-pages }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 새 엑셀이 있는지 확인
+        id: chk
+        run: |
+          curl -sSf https://shop-api.scream0506.workers.dev/onch/files -o f.json
+          python3 - <<'P'
+          import json, time, os, pathlib
+          d = json.load(open("f.json")); last = pathlib.Path("data/onch_last.txt")
+          at = d.get("at", 0); done = last.read_text().strip() if last.exists() else ""
+          fresh = at and time.time() * 1000 - at < 6 * 3600e3 and str(at) != done
+          if fresh and len(d["files"]) < d.get("expected", 0):
+              print(f"엑셀 {len(d['files'])}/{d['expected']}개만 성공 → 이번엔 반영 안 함"); fresh = False
+          open(os.environ["GITHUB_OUTPUT"], "a").write(f"go={'1' if fresh else ''}\nat={at}\n")
+          open("files.txt", "w").write(" ".join(d.get("files", [])))
+          print("새 엑셀:", fresh, len(d.get("files", [])))
+          P
+      - if: steps.chk.outputs.go
+        run: pip install openpyxl
+      - if: steps.chk.outputs.go
+        name: 내려받기·변환
+        run: NO_GIT=1 bash tools/onch_apply.sh $(cat files.txt)
+      - if: steps.chk.outputs.go
+        name: 빌드·손해 점검
+        run: |
+          python3 build.py
+          python3 tools/ship_audit.py | tee audit.txt
+          if grep -q "8% 미만: [1-9]" audit.txt; then echo "손해 위험 상품 있음 - 배포 중단"; exit 1; fi
+      - if: steps.chk.outputs.go
+        name: 저장
+        run: |
+          echo "${{ steps.chk.outputs.at }}" > data/onch_last.txt
+          git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data && git commit -m "온채널 품절·가격 반영 (매일)" && git pull --rebase -X theirs && git push || echo "변경 없음"
+      - if: steps.chk.outputs.go
+        uses: actions/configure-pages@v5
+      - if: steps.chk.outputs.go
+        uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - if: steps.chk.outputs.go
+        uses: actions/deploy-pages@v4

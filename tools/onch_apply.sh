@@ -10,6 +10,7 @@ for f in "$@"; do
 done
 echo "받음: $(ls "$D" | wc -l)개"
 python3 -I tools/onch_convert.py "$D" data/onch_strict.json
+[ -n "$NO_GIT" ] && exit 0
 git add data/온채널상품.csv
 if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
 git commit -qm "온채널 품절·가격 점검 (매일)

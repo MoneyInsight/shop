@@ -1173,6 +1173,19 @@ export async function handle(req, env, path) {
       orders: await q("query{allOrders(first:1){edges{node{key}}}}"),
       items: await q("query{allItems(first:1){edges{node{key}}}}") });
   }
+  if (path === "/onch/files") {  // 온채널 매일 점검: 브라우저가 만든 엑셀 파일 이름을 받아 두면 깃허브가 가져가 반영
+    if (req.method === "GET") return json((await env.SHOP.get("onch_files", "json")) || {});
+    if (req.method === "POST") {
+      const d = await req.json().catch(() => ({}));
+      const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(d.key || ""))))].map((b) => b.toString(16).padStart(2, "0")).join("");
+      if (hash !== "f2855deba60152be96a93c35e81902bd8a5f36e3cf79ce13a91ed659d4b54ed8") return fail("권한 없음", 403);
+      const files = (Array.isArray(d.files) ? d.files : []).map((f) => String(f).split("/").pop()).filter((f) => /^product_smartstore_\d{14}_[0-9a-f]{10,20}\.xlsx$/.test(f));
+      if (!files.length || files.length > 100) return fail("파일 목록이 이상해요.");
+      const rec = { at: Date.now(), files, expected: Number(d.expected) || files.length };
+      await env.SHOP.put("onch_files", JSON.stringify(rec));
+      return json({ ok: true, n: files.length });
+    }
+  }
   if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
     return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
   }
