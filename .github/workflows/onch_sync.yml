@@ -27,13 +27,13 @@ jobs:
           d = json.load(open("f.json")); last = pathlib.Path("data/onch_last.txt")
           at = d.get("at", 0); done = last.read_text().strip() if last.exists() else ""
           fresh = at and time.time() * 1000 - at < 6 * 3600e3 and str(at) != done
-          OUT = {"office": ("온채널상품.csv", ""), "winter": ("온채널겨울상품.csv", "겨울용품")}
+          OUT = {"office": ("온채널상품.csv", "", ""), "winter": ("온채널겨울상품.csv", "겨울용품", "PICK=핫팩,손난로,전기요,전기매트,전기장판,온수매트,히터,난로,난방,보온물주머니,수면양말,털슬리퍼,털실내화,무릎담요,귀마개,귀도리,넥워머,목도리,털모자,바라클라바,털장갑,스키장갑,방풍,단열,뽁뽁이,내복,발열,롱패딩,방한,패딩 MAX=10000")}
           with open("jobs.sh", "w") as f:
               for g, v in (d.get("groups") or {}).items():
                   if g not in OUT: continue
                   if len(v["files"]) < v.get("expected", 0):
                       print(f"{g}: 엑셀 {len(v['files'])}/{v['expected']}개만 성공 → 이 그룹은 반영 안 함"); continue
-                  f.write(f"OUT={OUT[g][0]} CAT={OUT[g][1]} NO_GIT=1 bash tools/onch_apply.sh {' '.join(v['files'])}\n")
+                  f.write(f"OUT={OUT[g][0]} CAT={OUT[g][1]} {OUT[g][2]} NO_GIT=1 bash tools/onch_apply.sh {' '.join(v['files'])}\n")
           open(os.environ["GITHUB_OUTPUT"], "a").write(f"go={'1' if fresh and os.path.getsize('jobs.sh') else ''}\nat={at}\n")
           print("새 엑셀:", fresh)
           P

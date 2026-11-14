@@ -11,6 +11,9 @@
 import csv, json, math, sys
 from pathlib import Path
 import openpyxl
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from product_import import cat_from_code
+CATS = json.loads((Path(__file__).resolve().parent.parent / "config.json").read_text())["categories"]
 
 MARGIN = 1.01
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -51,6 +54,8 @@ for f in sorted(src.glob("*.xlsx")):
             stat["금칙어"] += 1; continue
         if g(r, "미성년자 구매").upper() == "N":
             stat["성인"] += 1; continue
+        if cat_from_code(g(r, "카테고리코드"), CATS) in ("food", "adult"):
+            stat["식품·성인"] = stat.get("식품·성인", 0) + 1; continue
         if n(g(r, "재고수량")) <= 0:
             stat["재고0"] += 1; continue
         sale = n(g(r, "판매가"))
@@ -75,12 +80,24 @@ for f in sorted(src.glob("*.xlsx")):
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
                      "옵션" if opts else "", "|".join(opts), MALL_CAT])
 
+PICK = [k for k in opt.get("pick", "").split(",") if k]  # 상품명에 이 단어가 있는 것만, 앞 단어일수록 먼저
+MAX = int(opt.get("max", 0) or 0)
 old, prev = 0, []
 seen_ok = {r[0] for r in rows}
 if out.exists():
     with out.open(encoding="utf-8-sig") as fp:
         prev = [r[0] for r in list(csv.reader(fp))[1:]]
 old = len(prev)
+if PICK:
+    pos = lambda name: next((i for i, k in enumerate(PICK) if k in name), None)
+    keep = [r for r in rows if pos(r[1]) is not None]
+    stat["키워드밖"] = len(rows) - len(keep)
+    had = set(prev)
+    keep.sort(key=lambda r: (r[0] not in had, pos(r[1]), r[4]))  # 이미 올린 상품 → 키워드 순 → 싼 순
+    if MAX and len(keep) > MAX:
+        stat["한도초과"] = len(keep) - MAX; keep = keep[:MAX]
+    rows = keep
+    seen_ok = {r[0] for r in rows}
 if old and len(rows) < old * 0.7 and "--force" not in sys.argv:
     sys.exit(f"중단: 새로 받은 상품 {len(rows)}개가 기존 {old}개의 70%보다 적어요 (엑셀 일부가 빠졌을 수 있음). 확인 후 --force")
 with out.open("w", newline="", encoding="utf-8-sig") as fp:
