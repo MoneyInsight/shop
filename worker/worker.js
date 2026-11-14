@@ -1078,6 +1078,18 @@ export async function handle(req, env, path) {
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
+  if (req.method === "GET" && path === "/oc/ping") {  // 오너클랜 API가 우리 서버에서 열리는지 확인 (아이디·토큰은 보여주지 않음, 1분 1회)
+    if (await env.SHOP.get("ocping")) return json({ message: "1분 뒤에 다시 시도해 주세요." });
+    await env.SHOP.put("ocping", "1", { expirationTtl: 60 });
+    if (!env.OWNERCLAN_ID || !env.OWNERCLAN_PW) return json({ auth: "아이디·비밀번호 없음" });
+    const a = await fetch("https://auth.ownerclan.com/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "ownerclan", userType: "seller", username: env.OWNERCLAN_ID, password: env.OWNERCLAN_PW }) });
+    const at = await a.text();
+    if (!a.ok) return json({ auth: a.status, body: at.slice(0, 160).replace(/[A-Za-z0-9_-]{30,}/g, "…") });
+    let tok = at.trim().replace(/^"|"$/g, ""); try { if (tok.startsWith("{")) tok = JSON.parse(tok).token || tok; } catch (e) {}
+    const g = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ query: "query{allItems(first:1){edges{node{key name}}}}" }) });
+    const gt = await g.text();
+    return json({ auth: a.status, api: g.status, sample: gt.slice(0, 200) });
+  }
   if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
     return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
   }

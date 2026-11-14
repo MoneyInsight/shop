@@ -14,6 +14,8 @@ jobs:
       TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
       NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
       DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
+      OWNERCLAN_ID: ${{ secrets.OWNERCLAN_ID }}
+      OWNERCLAN_PW: ${{ secrets.OWNERCLAN_PW }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -78,4 +80,9 @@ jobs:
           printf '%s' "${TOSS_SECRET_KEY:-test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}" | npx -y wrangler@4 secret put TOSS_SECRET_KEY
           [ -n "$NOTIFY_WEBHOOK" ] && printf '%s' "$NOTIFY_WEBHOOK" | npx -y wrangler@4 secret put NOTIFY_WEBHOOK
           [ -n "$DOMEGGOOK_API_KEY" ] && printf '%s' "$DOMEGGOOK_API_KEY" | npx -y wrangler@4 secret put DOMEGGOOK_API_KEY  # 결제 직전 실시간 재고 확인
+          [ -n "$OWNERCLAN_ID" ] && printf '%s' "$OWNERCLAN_ID" | npx -y wrangler@4 secret put OWNERCLAN_ID
+          [ -n "$OWNERCLAN_PW" ] && printf '%s' "$OWNERCLAN_PW" | npx -y wrangler@4 secret put OWNERCLAN_PW
           true
+      - name: 오너클랜 연결 시험 (서버에서)
+        if: steps.chk.outputs.skip != '1'
+        run: sleep 10; curl -s https://shop-api.scream0506.workers.dev/oc/ping; echo
