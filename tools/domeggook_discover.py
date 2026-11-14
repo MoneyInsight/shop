@@ -139,6 +139,10 @@ def main():
     cats = []
     leaves(tree, [], cats)
     cats = [c for c in cats if not skip_cat(c)]
+    # 건강식품 분류를 새로 열었으니 처음 한 번은 건강식품부터 가져옴
+    cats.sort(key=lambda c: 0 if (len(c) > 1 and c[1] == "건강식품") else 1)
+    if not state.get("supp_first"):
+        state["supp_first"] = True; state["cat"] = 0
     if not cats:
         sys.exit("카테고리 목록을 못 받음")
     views, added, why, errs = 0, 0, {}, 0
