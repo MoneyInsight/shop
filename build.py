@@ -99,8 +99,33 @@ def load_products():
         before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
         print(f"오너클랜 상품 {before - len(out)}개 숨김 (품절 자동 점검 연결 전)")
     out = clean_catalog(out)
+    mark_new(out)
     out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
     return out
+
+
+def mark_new(ps):
+    """처음 올라온 날을 data/first_seen.json에 기록하고, new_days(기본 7일) 안에 들어온 상품 사진에 NEW 표시"""
+    import datetime
+    path = os.path.join(ROOT, "data", "first_seen.json")
+    today = datetime.date.today()
+    first_run = not os.path.exists(path)
+    seen = {} if first_run else json.load(open(path, encoding="utf-8"))
+    base = (today - datetime.timedelta(days=365)).isoformat()  # 처음 켤 때 이미 있던 상품은 NEW 아님
+    days = int(CFG.get("new_days", 7))
+    n = 0
+    for p in ps:
+        d = seen.get(p["id"])
+        if not d:
+            d = seen[p["id"]] = base if first_run else today.isoformat()
+        p["first_seen"] = d
+        if not p.get("badge") and (today - datetime.date.fromisoformat(d)).days < days:
+            p["badge"] = "NEW"; n += 1
+    keep = {p["id"] for p in ps}
+    seen = {k: v for k, v in seen.items() if k in keep}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(seen, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    print(f"새 상품(NEW 표시): {n}개")
 
 
 # 건강기능식품·성인용품은 등록하지 않음 (도매처 분류가 틀려도 이름으로 한 번 더 거름)
