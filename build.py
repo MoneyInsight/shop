@@ -42,6 +42,12 @@ def load_products():
     write("price_check.json", json.dumps(excluded, ensure_ascii=False))
     # KC 인증이 필요한 품목인데 인증번호가 없는 상품 (관리자 대시보드에서 확인)
     write("kc_check.json", json.dumps([{"id": p["id"], "name": p["name"], "kind": notice.kind_of(p)} for p in ss_rows if notice.needs_kc(p) and not p.get("kc")], ensure_ascii=False))
+    kw = CFG.get("hide_no_kc_words") or []
+    if kw:  # 전기 난방용품인데 KC 인증번호가 없으면 판매하지 않음
+        n0 = len(ss_rows)
+        ss_rows = [p for p in ss_rows if p.get("kc") or not any(k in p["name"] for k in kw)]
+        if n0 != len(ss_rows):
+            print(f"KC 인증번호 없는 전기 난방용품 {n0 - len(ss_rows)}개 숨김")
     for w in warns:
         print("⚠️", w)
     seen = {r["id"] for r in rows}
