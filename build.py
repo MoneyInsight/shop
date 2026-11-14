@@ -344,7 +344,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <link rel="stylesheet" href="{root}style.css?v={ASSET_V}">{extra_head}
 {cfg_js}
 </head><body data-root="{root}">
-{top}<main>{body}</main>{bot}{{scripts}}<script src="{root}app.js?v={ASSET_V}"></script>
+{top}<main>{body}</main>{bot}{scripts}<script src="{root}app.js?v={ASSET_V}"></script>
 </body></html>'''
 
 
