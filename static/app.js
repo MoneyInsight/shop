@@ -263,6 +263,32 @@
     const ps = (await Promise.all(ids.map((id) => fetch(`${ROOT}p/${encodeURIComponent(id)}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)))).filter(Boolean);
     g.innerHTML = ps.map(cardHTML).join("");
   });
+  // 메인 움직이는 배너: 4.5초마다 넘김, 화살표·멈춤·점·밀어서 넘기기
+  (() => {
+    const box = document.querySelector(".mb-box"); if (!box) return;
+    const track = box.querySelector(".mb-track"), slides = [...track.children], n = slides.length;
+    const cnt = box.querySelector(".mb-count b"), dots = [...box.querySelectorAll(".mb-dots button")], play = box.querySelector(".mb-play");
+    let i = 0, timer = null, paused = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const go = (k) => {
+      i = (k + n) % n; track.style.transform = `translateX(-${i * 100}%)`;
+      slides.forEach((s, j) => { s.toggleAttribute("aria-hidden", j !== i); s.tabIndex = j === i ? 0 : -1; });
+      if (cnt) cnt.textContent = i + 1; dots.forEach((d, j) => d.classList.toggle("on", j === i));
+    };
+    const start = () => { clearInterval(timer); if (!paused && n > 1) timer = setInterval(() => go(i + 1), 4500); };
+    box.querySelector(".mb-prev")?.addEventListener("click", () => { go(i - 1); start(); });
+    box.querySelector(".mb-next")?.addEventListener("click", () => { go(i + 1); start(); });
+    dots.forEach((d, j) => d.addEventListener("click", () => { go(j); start(); }));
+    play?.addEventListener("click", () => { paused = !paused; play.innerHTML = paused ? "&#9654;" : "&#10074;&#10074;"; play.setAttribute("aria-label", paused ? "자동 넘김 시작" : "자동 넘김 멈춤"); start(); });
+    box.addEventListener("mouseenter", () => clearInterval(timer)); box.addEventListener("mouseleave", start);
+    let x0 = null, moved = false;
+    track.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; moved = false; clearInterval(timer); }, { passive: true });
+    track.addEventListener("touchmove", (e) => { if (x0 !== null && Math.abs(e.touches[0].clientX - x0) > 10) moved = true; }, { passive: true });
+    track.addEventListener("touchend", (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); x0 = null; start(); });
+    track.addEventListener("click", (e) => { if (moved) { e.preventDefault(); moved = false; } });
+    document.addEventListener("visibilitychange", () => (document.hidden ? clearInterval(timer) : start()));
+    if (paused && play) play.innerHTML = "&#9654;";
+    start();
+  })();
   // 카드 안 찜 버튼 (정적·동적 카드 공통)
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-wish]");

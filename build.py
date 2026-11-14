@@ -390,16 +390,30 @@ def build_home(ps):
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
     sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in by_cat[c["slug"]][:4])}</div></div></section>''' for c in top)
-    body = f'''<section class="hero"><div class="wrap"><div><small>THE HONEST PRICE</small>
-<h1>좋은 물건을,<br>군더더기 없는 가격으로.</h1>
-<p>유통 수수료를 덜어낸 정직한 가격, 모든 상품 무료배송.</p>
-<ul class="hero-perks">
-<li><b>즉시 할인</b><span>적립금 말고 바로</span></li>
-{f'<li><b>회원 {round(CFG["member_discount"]["rate"] * 100)}% 더 할인</b><span>3초 간편가입</span></li>' if (CFG.get("member_discount") or {}).get("rate") else ''}
-{'<li><b>담을수록 할인</b><span>같은 상품 2개부터</span></li>' if max_deal >= 2 else ''}
-</ul>
-<div class="hero-btns"><a class="btn" href="search.html">전체 상품 보기</a><a class="btn btn-ghost" href="login.html">간편가입</a></div></div>
-<div class="hero-art">{"".join(f'<a href="product/{p["id"]}.html"><img src="{e(p["image"])}" alt="{e(p["name"])}"></a>' for p in art)}</div></div></section>
+    def pics(cat, n=3):
+        pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
+        step = max(1, len(pool) // (n * 7))
+        return "".join(f'<img src="{e(p["image"])}" alt="" loading="lazy">' for p in pool[::step][:n])
+    rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
+    slides = [
+        ("brand", "올채움", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 전부 무료배송", "search.html", "전체 상품 보기", pics("living")),
+        ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·전기요·목도리·방한용품 {len(by_cat.get('winter', [])):,}개 · 무료배송", "category/winter.html", "겨울용품 보기", pics("winter")),
+        ("office", "기업·학교 구매", "사무실·학교 비품은<br>올채움 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서·세금계산서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
+    ]
+    if max_deal >= 2:
+        slides.append(("deal", "담을수록 할인", f"같은 상품 2개부터<br>자동으로 최대 {max_deal}% 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
+    if rate_m:
+        slides.append(("member", "회원 혜택", f"3초 간편가입하면<br>회원 {rate_m}% 더 할인", "가입 없이도 주문할 수 있지만, 회원이면 매번 더 싸게", "login.html", "3초 간편가입", pics("fashion")))
+    slides.append(("bulk", "대량 구매", "10개 이상이면<br>견적으로 더 싸게", "단체·행사·회사 구매 · 로고 인쇄·포장 · 여러 곳 배송", "bulk.html", "견적 요청하기", pics("tools")))
+    def slide(i, k, tag, h, sub, href, btn, art_):
+        hid = "" if i == 0 else ' aria-hidden="true" tabindex="-1"'
+        return (f'<a class="mb-slide mb-{k}" href="{href}"{hid}><div class="mb-txt"><span class="mb-tag">{e(tag)}</span><h2>{h}</h2>'
+                f'<p>{e(sub)}</p><span class="mb-btn">{e(btn)} &rsaquo;</span></div><div class="mb-art">{art_}</div></a>')
+    banner = "".join(slide(i, *x) for i, x in enumerate(slides))
+    dots = "".join(f'<button aria-label="{i + 1}번 배너"{" class=on" if i == 0 else ""}></button>' for i in range(len(slides)))
+    body = f'''<section class="mbanner" aria-roledescription="carousel" aria-label="이벤트 배너"><div class="wrap"><div class="mb-box"><div class="mb-track">{banner}</div>
+<div class="mb-ctrl"><span class="mb-count"><b>1</b> / {len(slides)}</span><button class="mb-prev" aria-label="이전 배너">&lsaquo;</button><button class="mb-next" aria-label="다음 배너">&rsaquo;</button><button class="mb-play" aria-label="자동 넘김 멈춤">&#10074;&#10074;</button></div>
+<div class="mb-dots">{dots}</div></div></div></section>
 <section class="office-band"><div class="wrap"><div><small>OFFICE · 기업·학교 구매</small><b>사무실·학교 비품은 올채움 오피스</b>
 <span>문구·사무용품 {len(by_cat.get("office", [])):,}개 · 견적서 바로 발급 · 세금계산서 · 많이 살수록 할인</span></div>
 <div class="office-btns"><a class="btn" href="category/office.html">문구·사무 보기</a><a class="btn btn-ghost" href="bulk.html">기업 견적 문의</a></div></div></section>
