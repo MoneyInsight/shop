@@ -119,8 +119,8 @@ def main():
             stop = f"{f} 실패: {err[-300:]}"; break
         done.append(f); cum += n
         w2 = written_24h()
-        if w is not None and w2 is not None and n and w2 > w:
-            per = max(per or 0, (w2 - w) / n)
+        if w0 is not None and w2 is not None and w2 > w0:
+            per = max(3, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
         subprocess.run([sys.executable, str(ROOT / "tools/d1_state.py"), str(STATE), f], check=True)  # 파일마다 바로 저장
     st = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     summ = json.loads((D / "summary.json").read_text(encoding="utf-8"))
