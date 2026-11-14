@@ -401,7 +401,7 @@ def build_home(ps):
         ("office", "기업·학교 구매", "사무실·학교 비품은<br>올채움 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서·세금계산서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
     ]
     if max_deal >= 2:
-        slides.append(("deal", "담을수록 할인", f"같은 상품 2개부터<br>자동으로 최대 {max_deal}% 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
+        slides.append(("deal", "담을수록 할인", "같은 상품 2개부터<br>자동으로 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
     if rate_m:
         slides.append(("member", "회원 혜택", f"3초 간편가입하면<br>회원 {rate_m}% 더 할인", "가입 없이도 주문할 수 있지만, 회원이면 매번 더 싸게", "login.html", "3초 간편가입", pics("fashion")))
     slides.append(("bulk", "대량 구매", "10개 이상이면<br>견적으로 더 싸게", "단체·행사·회사 구매 · 로고 인쇄·포장 · 여러 곳 배송", "bulk.html", "견적 요청하기", pics("tools")))
