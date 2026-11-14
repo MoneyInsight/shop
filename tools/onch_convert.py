@@ -13,7 +13,9 @@ from pathlib import Path
 import openpyxl
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from product_import import cat_from_code
-CATS = json.loads((Path(__file__).resolve().parent.parent / "config.json").read_text())["categories"]
+_CFG = json.loads((Path(__file__).resolve().parent.parent / "config.json").read_text())
+CATS = _CFG["categories"]
+SHIP_RATIO = (_CFG.get("pricing") or {}).get("max_ship_ratio") or 0
 
 MARGIN = 1.01
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -69,6 +71,8 @@ for f in sorted(src.glob("*.xlsx")):
         if cost <= 0:
             stat["가격없음"] += 1; continue
         ship = 0 if "무료" in g(r, "배송비유형") else n(g(r, "기본배송비"))
+        if SHIP_RATIO and ship > cost * SHIP_RATIO:
+            stat["저가낱개"] = stat.get("저가낱개", 0) + 1; continue
         vals = [v.strip() for v in g(r, "옵션값").split(",")]
         adds = [n(a) for a in g(r, "옵션가").split(",")]
         stocks = [n(s) for s in g(r, "옵션 재고수량").split(",")] if g(r, "옵션 재고수량") else []

@@ -233,7 +233,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             warns.append(f"{path.name}: '상품명' 열을 찾지 못해 건너뜀 (올채움 상품등록 양식의 열 이름이 있어야 해요)")
             continue
         get = lambda r, k: (r[col[k]].strip() if k in col and col[k] < len(r) and r[col[k]] else "")
-        skipped = no_detail = 0
+        skipped = no_detail = cheap = 0
         for r in rows[h + 1:]:
             name = get(r, "name")
             price = _num(get(r, "price"))
@@ -241,6 +241,8 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             qt, sm = [], ""
             if cost and pricing:  # 공급가가 있으면 원가 기반 가격 (배송비 포함, 무료배송)
                 goods, cship = cost, _num(get(r, "cost_ship"))
+                if pricing.get("max_ship_ratio") and cship > goods * pricing["max_ship_ratio"]:
+                    cheap += 1; continue  # 배송비가 상품값보다 비싼 낱개 저가품 (1개 가격이 너무 비싸짐)
                 cost = goods + cship
                 price = price_from_cost(cost, pricing)
                 qt = qty_prices(goods, cship, _num(get(r, "box_qty")), _num(get(r, "free_over")), pricing)
@@ -290,6 +292,8 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             })
         if skipped:
             warns.append(f"{path.name}: 상품명 또는 판매가가 없는 {skipped}줄은 건너뜀")
+        if cheap:
+            warns.append(f"{path.name}: 배송비가 상품값보다 비싼 낱개 저가품 {cheap}개는 올리지 않음")
         if no_detail:
             warns.append(f"{path.name}: 상세페이지가 없는 {no_detail}개는 올리지 않음")
     keep = []
