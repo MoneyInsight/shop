@@ -521,3 +521,7 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 }
 .hero-perks b{white-space:nowrap}
 @media (max-width:380px){.hero-perks b{font-size:13px}.hero-perks span{font-size:11px}}
+.logo{align-items:center;gap:8px}
+.logo-mark{width:30px;height:30px;border-radius:8px;flex:none}
+@media (max-width:640px){.logo-mark{width:26px;height:26px;border-radius:7px}}
+footer .logo .logo-mark{width:24px;height:24px}

@@ -244,7 +244,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     name = e(CFG["shop_name"])
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
-    logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈">{name}<i></i></a>'
+    logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈"><img class="logo-mark" src="{root}favicon.svg" alt="" width="30" height="30">{name}</a>'
     return f'''<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light only">
@@ -578,7 +578,7 @@ def build_shop_pages():
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
-    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#16171a"/><text x="32" y="44" font-size="34" font-weight="700" text-anchor="middle" fill="#fff" font-family="serif">올</text><circle cx="52" cy="50" r="4" fill="#9a7b4f"/></svg>')
+    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#16171a"/><defs><clipPath id="b"><path d="M17.5 22h29l4 30.5a3 3 0 0 1-3 3.5h-31a3 3 0 0 1-3-3.5z"/></clipPath></defs><path d="M24.5 28v-8.5a7.5 7.5 0 0 1 15 0V28" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><g clip-path="url(#b)"><rect x="10" y="22" width="44" height="36" fill="#fff"/><path d="M10 39c5.5-3.4 10.5-3.4 16 0s10.5 3.4 16 0 10.5-3.4 16 0V60H10z" fill="#b8925a"/></g><circle cx="24.5" cy="28" r="2.1" fill="#16171a"/><circle cx="39.5" cy="28" r="2.1" fill="#16171a"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
           "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#fdf8ef",
           "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
