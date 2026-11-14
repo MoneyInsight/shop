@@ -653,7 +653,7 @@
         <div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a>
           ${l.optName ? `<div class="muted">옵션: ${esc(l.optName)}</div>` : ""}
           <div class="muted">${won(l.price)} · ${l.shipping_fee ? "배송비 " + won(l.shipping_fee) : "무료배송"}</div>
-          <div class="qty" style="margin-top:10px"><button data-a="-" data-k="${l.ci}" aria-label="빼기">−</button><input value="${l.qty}" readonly aria-label="수량"><button data-a="+" data-k="${l.ci}" aria-label="더하기">+</button></div>
+          <div class="qty" style="margin-top:10px"><button data-a="-" data-k="${l.ci}" aria-label="빼기">−</button><input value="${l.qty}" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-k="${l.ci}" class="cart-qty" aria-label="수량"><button data-a="+" data-k="${l.ci}" aria-label="더하기">+</button></div>
           <button class="x" data-a="x" data-k="${l.ci}">삭제</button></div>
         <strong>${won(l.price * l.qty)}</strong></div>`).join("");
       $("#cart-sum").innerHTML = `<h2>결제 예정 금액</h2><div class="sum"><div><span>상품 금액</span><span>${won(subtotal)}</span></div>
@@ -673,6 +673,17 @@
       if (b.dataset.a === "x") c = c.filter((_, j) => j !== k);
       setCart(c); render();
     });
+    // 수량 직접 입력 (1~99): 입력을 마치거나 엔터를 누르면 반영
+    const setQty = (inp) => {
+      const c = getCart(), it = c[Number(inp.dataset.k)];
+      if (!it) return;
+      const v = Math.max(1, Math.min(99, parseInt(String(inp.value).replace(/\D/g, "")) || 1));
+      if (v !== it.qty) { it.qty = v; setCart(c); render(); } else inp.value = v;
+    };
+    box.addEventListener("input", (e) => { if (e.target.classList.contains("cart-qty")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 2); });
+    box.addEventListener("change", (e) => { if (e.target.classList.contains("cart-qty")) setQty(e.target); });
+    box.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.classList.contains("cart-qty")) { e.preventDefault(); e.target.blur(); } });
+    box.addEventListener("focusin", (e) => { if (e.target.classList.contains("cart-qty")) e.target.select(); });
     render();
   }
 
