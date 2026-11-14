@@ -219,7 +219,7 @@ async function confirm(req, env) {
     subtotal += unit * qty; shipping += p.shipping_fee || 0;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
     lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
-      source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
+      source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
   const lv = await live.check(env, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price, option: l.option })), PRICING(env));
@@ -937,10 +937,10 @@ const PRICING = (env) => ({ net_margin: +(env.NET_MARGIN || 0.12), min_margin_wo
 
 // ---------- 발주 (도매매·오너클랜 등에 주문 넣기) ----------
 // 결제완료 주문을 도매처별로 모아 주문서로 만들고, '발주 완료'를 누르면 상품준비중으로. 도매처 송장 파일을 올리면 송장 자동 입력
-const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜" };
+const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜", onchannel: "온채널" };
 // 도매처 대량주문 양식 열 (관리자에게만 보냄)
-const ORDER_SHEETS = {"domeme": ["상품번호", "옵션", "수량", "수령자명", "휴대전화", "추가연락처", "우편번호", "배송지주소", "배송상세주소", "쇼핑몰명", "전달사항", "배송요청사항"], "ownerclan": ["오너클랜 상품코드", "수량", "배송방식", "받는사람 이름", "받는사람 전화번호", "받는사람 휴대폰", "우편번호", "받는사람 주소", "옵션1", "옵션2", "배송시 요청사항", "판매사 주문관리 메모", "원장주문코드", "개인통관부호", "구매자 생년월일", "마켓 정산가(배송비 포함)"]};
-const srcOf = (l) => l.source || (String(l.id).startsWith("DM") ? "domeme" : /^W/.test(l.id) ? "ownerclan" : "");
+const ORDER_SHEETS = {"domeme": ["상품번호", "옵션", "수량", "수령자명", "휴대전화", "추가연락처", "우편번호", "배송지주소", "배송상세주소", "쇼핑몰명", "전달사항", "배송요청사항"], "ownerclan": ["오너클랜 상품코드", "수량", "배송방식", "받는사람 이름", "받는사람 전화번호", "받는사람 휴대폰", "우편번호", "받는사람 주소", "옵션1", "옵션2", "배송시 요청사항", "판매사 주문관리 메모", "원장주문코드", "개인통관부호", "구매자 생년월일", "마켓 정산가(배송비 포함)"], "onchannel": ["온채널 상품코드", "주문코드", "주문 옵션", "옵션 주문 수량", "배송비 결제 유형", "받는사람", "전화번호", "비상연락처", "우편번호", "주소", "배송 메시지", "통관고유부호", "(국제)배송방식"]};
+const srcOf = (l) => l.source || (String(l.id).startsWith("DM") ? "domeme" : /^W/.test(l.id) ? "ownerclan" : /^CH\d/.test(l.id) ? "onchannel" : "");
 async function adminPo(env) {
   const groups = {};
   for (const o of await kvList(env, "order:")) {

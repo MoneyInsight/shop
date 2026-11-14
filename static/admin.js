@@ -88,7 +88,8 @@
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
       return `<div class="card"><h2>발주 대기 <small>${total}건</small></h2>
-        <p class="muted" style="margin-bottom:12px"><b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
+        <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
+        <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
         <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
         나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣으면 우리 주문번호로 찾아 송장이 자동으로 들어가요.</p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
@@ -247,7 +248,7 @@
   // 도매처 주문서: 열 이름은 config.json 의 order_sheets 로 바꿀 수 있음 (도매처 대량주문 양식에 맞추기)
   const SHEET_DEFAULT = ["상품번호", "옵션", "수량", "수령자명", "수령자 연락처", "우편번호", "주소", "배송메시지", "주문번호"];
   const memoWithId = (l) => `${l.memo ? l.memo + " " : ""}(${l.orderId})`;
-  const FIELD = { 상품번호: (l) => l.product_no, 상품코드: (l) => l.product_no, "오너클랜 상품코드": (l) => l.product_no, 옵션: (l) => l.option, 옵션명: (l) => l.option, 옵션1: (l) => l.option, 옵션2: () => "",
+  const FIELD = { 상품번호: (l) => l.product_no, 상품코드: (l) => l.product_no, "오너클랜 상품코드": (l) => l.product_no, "온채널 상품코드": (l) => l.product_no, 주문코드: (l) => l.orderId, "주문 옵션": (l) => l.option || "단일상품", "옵션 주문 수량": (l) => l.qty, "배송비 결제 유형": () => "선불", 받는사람: (l) => l.receiver, 전화번호: (l) => l.phone, 비상연락처: () => "", "배송 메시지": (l) => l.memo, 통관고유부호: () => "", "(국제)배송방식": () => "", 옵션: (l) => l.option, 옵션명: (l) => l.option, 옵션1: (l) => l.option, 옵션2: () => "",
     수량: (l) => l.qty, 상품명: (l) => l.name.replace(/ \[.*\]$/, ""), 배송방식: (l) => l.ship_mode || "무료",
     수령자명: (l) => l.receiver, 수령자: (l) => l.receiver, 받는분: (l) => l.receiver, "받는사람 이름": (l) => l.receiver,
     "수령자 연락처": (l) => l.phone, 연락처: (l) => l.phone, 휴대폰: (l) => l.phone, 휴대전화: (l) => l.phone, "받는사람 휴대폰": (l) => l.phone, "받는사람 전화번호": (l) => l.phone, 추가연락처: () => "",
@@ -260,11 +261,41 @@
     const csv = "\ufeff" + rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = name; a.click();
   };
+  // 간단한 .xlsx 만들기 (압축 없는 zip) — 온채널 대량주문은 엑셀 파일만 받음
+  const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = (b) => { let c = 0xffffffff; for (const x of b) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  function zip(files) {
+    const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+    const u16 = (v) => [v & 255, (v >> 8) & 255], u32 = (v) => [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255];
+    for (const [name, text] of files) {
+      const nb = enc.encode(name), db = enc.encode(text), c = crc32(db);
+      const h = [...u32(0x04034b50), ...u16(20), 0, 8, 0, 0, 0, 0, 0, 0, ...u32(c), ...u32(db.length), ...u32(db.length), ...u16(nb.length), 0, 0];
+      parts.push(new Uint8Array(h), nb, db);
+      cen.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), 0, 8, 0, 0, 0, 0, 0, 0, ...u32(c), ...u32(db.length), ...u32(db.length), ...u16(nb.length), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...u32(off)]), nb);
+      off += h.length + nb.length + db.length;
+    }
+    const cl = cen.reduce((a, b) => a + b.length, 0);
+    return new Blob([...parts, ...cen, new Uint8Array([...u32(0x06054b50), 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(cl), ...u32(off), 0, 0])], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+  const xesc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "");
+  const colName = (i) => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : "") + String.fromCharCode(65 + (i % 26));
+  const xlsxDown = (rows, name) => {
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => `<c r="${colName(ci)}${ri + 1}" t="inlineStr"><is><t>${xesc(v)}</t></is></c>`).join("")}</row>`).join("")}</sheetData></worksheet>`;
+    const blob = zip([
+      ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`],
+      ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+      ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+      ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`],
+      ["xl/worksheets/sheet1.xml", sheet]]);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  };
+  const XLSX_ONLY = { onchannel: true };
   function poSheet(src) {
     const g = (D.po || []).find((x) => x.source === src); if (!g) return;
     const cols = (D.sheets || {})[src] || SHEET_DEFAULT;
     const val = (c, l) => { const v = FIELD[c] ? FIELD[c](l) : ""; return NO_COMMA[src] ? String(v ?? "").replace(/,/g, " ") : v; };
-    csvDown([cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}.csv`);
+    const rows = [cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], fn = `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}`;
+    XLSX_ONLY[src] ? xlsxDown(rows, fn + ".xlsx") : csvDown(rows, fn + ".csv");
     // 주문서를 받은 주문은 손님이 '자동 즉시 환불'로 취소하지 못하게 표시 (도매처에 이미 주문했을 수 있음)
     call("/admin/po-mark", { ids: [...new Set(g.lines.map((l) => l.orderId))] }).catch(() => {});
   }
