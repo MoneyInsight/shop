@@ -51,7 +51,7 @@ jobs:
           git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
           git add data/d1_status.json
           git commit -m "상품 DB 채우기 결과 $(date -u +%F)" || exit 0
-          for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done
+          for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 15; done
       - name: 사이트를 상품 DB 모드로 자동 전환 (점검 모두 통과할 때 한 번만)
         id: sw
         run: python3 tools/d1_switch.py
@@ -62,7 +62,7 @@ jobs:
           python3 tools/site_check.py
           git add config.json
           git commit -m "사이트를 상품 DB 모드로 전환 (자동 점검 통과: DB 연결·검색·가격 표본 일치)"
-          for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done
+          for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 15; done
       - if: steps.sw.outputs.switched == '1'
         uses: actions/configure-pages@v5
       - if: steps.sw.outputs.switched == '1'

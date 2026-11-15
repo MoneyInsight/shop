@@ -20,17 +20,18 @@ jobs:
       - run: pip install openpyxl
       - name: 대표 사진 전부 받아보기
         run: python3 tools/image_check.py
-      - name: 빌드·손해 점검
-        run: |
-          git pull --rebase -X theirs || true
-          python3 build.py
-          python3 tools/site_check.py
-      - name: 저장
+      - name: 결과 저장 (먼저 저장해서 빌드가 실패해도 남게)
         run: |
           git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          git status --short | head -20
           git add data/image_fix.json
-          git commit -m "사진 점검 반영 $(date -u +%F)" || exit 0
-          for i in 1 2 3 4 5; do git pull --rebase -X theirs && git push && break; sleep 15; done
+          git commit -m "사진 점검 반영 $(date -u +%F)"
+          ok=0; for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && ok=1 && break; sleep 15; done
+          [ "$ok" = 1 ] || { echo "저장 실패"; exit 1; }
+      - name: 빌드·손해 점검
+        run: |
+          python3 build.py
+          python3 tools/site_check.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
