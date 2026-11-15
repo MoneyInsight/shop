@@ -14,5 +14,9 @@ for so in ["", "rd", "ha", "hd", "da", "aa", "ad", "sa", "sd", "ra", "pop", "sal
         items = [items]
     out[so or "기본"] = {"header": g.get("header"), "err": None if g else str(r)[:300],
                         "first": [{k: it.get(k) for k in it} for it in items[:3]], "nos": [it.get("no") for it in items[:20]]}
+# 상품 상세 원본에서 판매량·리뷰 같은 인기 지표가 있는지
+nos = next((v["nos"] for v in out.values() if v["nos"]), [])[:2]
+for no in nos:
+    out["view_" + str(no)] = d.api({"ver": "4.5", "mode": "getItemView", "no": no})
 Path("data/dm_list_probe.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 print(json.dumps({k: v["nos"][:5] for k, v in out.items()}, ensure_ascii=False))

@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
     paths: [".github/workflows/dm_probe.yml", "tools/dm_list_probe.py"]
+  schedule:
+    - cron: "23 15 * * *"   # 한국 시간 밤 12시 23분 (도매꾹 하루 호출량 초기화 뒤)
+    - cron: "23 0 * * *"    # 오전 9시 23분 (초기화 시각이 다를 경우 대비)
   workflow_dispatch:
 permissions: { contents: write }
 jobs:
@@ -17,5 +20,5 @@ jobs:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
       - run: |
           git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data/dm_list_probe.json && git commit -m "도매꾹 목록 정렬 확인 결과"
+          git add data/dm_list_probe.json && git commit -m "도매꾹 목록 정렬 확인 결과" || exit 0
           for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 10; done
