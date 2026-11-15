@@ -4,7 +4,7 @@
 생성물: 메인·카테고리·상품상세·검색·장바구니·주문결제·완료/실패·약관·공급사·관리자 페이지,
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
-import os, re, csv, json, html, shutil, datetime, hashlib
+import os, re, csv, json, html, shutil, datetime, hashlib, urllib.parse
 import notice, seo
 from pathlib import Path
 
@@ -33,6 +33,41 @@ def placeholder_svg(p):
 <rect width="600" height="600" fill="url(#g)"/><text x="300" y="300" font-size="180" text-anchor="middle">{cat["emoji"]}</text>
 <text x="300" y="440" font-size="34" font-weight="700" text-anchor="middle" fill="#333" font-family="sans-serif">{name}</text>
 <text x="300" y="490" font-size="22" text-anchor="middle" fill="#666" font-family="sans-serif">상품 사진 준비중</text></svg>'''
+
+
+def fix_images(ps):
+    """사진 점검 결과(data/image_fix.json, tools/image_check.py) 반영: https로 바꾸기 / 서버가 대신 받기 / 다른 사진으로 교체 / 사진 없으면 내림
+    상세 설명의 http 사진은 https 사이트에서 막히므로 서버가 대신 받게 함"""
+    f = ROOT / "data/image_fix.json"
+    if os.environ.get("NO_IMGFIX") or not f.exists():
+        return ps
+    fx = json.loads(f.read_text(encoding="utf-8"))
+    mp, alt = fx.get("map", {}), fx.get("alt", {})
+    W = str(CFG.get("worker_url") or "").rstrip("/")
+    def conv(u, st):
+        if st == "https":
+            return "https://" + u[7:]
+        if st == "proxy" and W:
+            return W + "/img?u=" + urllib.parse.quote(u, safe="")
+        return u
+    out, dropped = [], 0
+    for p in ps:
+        u = p.get("image") or ""
+        st = mp.get(u)
+        if st == "dead":
+            if p["id"] in alt:
+                a, ast = alt[p["id"]]
+                p["image"] = conv(a, ast)
+            else:
+                dropped += 1; continue
+        elif st:
+            p["image"] = conv(u, st)
+        p["images"] = [conv(x, mp.get(x) or ("proxy" if x.startswith("http://") else "")) for x in (p.get("images") or []) if mp.get(x) != "dead"]
+        if W and "http://" in (p.get("detail_html") or ""):
+            p["detail_html"] = re.sub(r'(<img[^>]+src=["\'])(http://[^"\']+)', lambda m: m.group(1) + W + "/img?u=" + urllib.parse.quote(m.group(2), safe=""), p["detail_html"])
+        out.append(p)
+    print(f"사진 점검 반영 ({fx.get('at')}): 사진 없어 내림 {dropped}개, 교체 {sum(1 for p in out if p['id'] in alt)}개")
+    return out
 
 
 def load_products():
@@ -109,6 +144,7 @@ def load_products():
     if "ownerclan" in hide:  # 품절 자동 점검이 안 되는 오너클랜 상품은 점검이 붙을 때까지 숨김
         before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
         print(f"오너클랜 상품 {before - len(out)}개 숨김 (품절 자동 점검 연결 전)")
+    out = fix_images(out)
     out = apply_edits(out)
     out = clean_catalog(out)
     mark_new(out)

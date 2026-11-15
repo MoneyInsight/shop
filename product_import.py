@@ -6,7 +6,7 @@ data/ 폴더의 .xlsx / .csv 를 읽어 쇼핑몰 상품으로 바꿉니다.
   쇼핑몰 판매가 = 오픈마켓 판매가(무료배송 기준) [또는 판매가 − 즉시할인 + 기본배송비]
   공급가가 있으면 원가 기반 얇은 마진 가격
 """
-import csv, math, re
+import csv, math, os, re
 from pathlib import Path
 
 # 엑셀 열 이름 → 내부 이름 (여러 표기를 모두 받음)
@@ -253,7 +253,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
     products, warns = [], []
     bad_img = set()  # 대표 사진이 깨진 상품 (tools/image_check 결과) — 올리지 않음
     bf = Path(data_dir) / "bad_images.json"
-    if bf.exists():
+    if bf.exists() and not (os.environ.get("NO_IMGFIX") or (Path(data_dir) / "image_fix.json").exists()):  # 사진 점검 결과가 있으면 그걸로 (다른 사진 교체까지)
         import json as _json
         bad_img = set(_json.loads(bf.read_text(encoding="utf-8")))
     excluded = []  # 네이버 최저가보다 싸지 않아 등록하지 않은 상품

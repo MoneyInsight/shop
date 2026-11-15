@@ -1160,10 +1160,29 @@ async function overLimit(env, key, max, windowSec, bump = true) {
   return false;
 }
 
+// 사진 대신 받아주기: 도매처 사진 중 http 전용이거나 다른 사이트에서 못 보게 막아둔 것(이미지 점검이 고른 것만)을 서버가 받아서 보여줌
+async function imgProxy(req) {
+  const u = new URL(req.url).searchParams.get("u") || "";
+  let t;
+  try { t = new URL(u); } catch (e) { return new Response("bad", { status: 400 }); }
+  if (!/^https?:$/.test(t.protocol) || /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(t.hostname)) return new Response("bad", { status: 400 });
+  const cache = caches.default, key = new Request("https://img-cache/" + encodeURIComponent(u));
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  let r;
+  try { r = await fetch(t.toString(), { headers: { "User-Agent": "Mozilla/5.0", Accept: "image/*" }, cf: { cacheTtl: 604800, cacheEverything: true } }); } catch (e) { return new Response("fail", { status: 502 }); }
+  const ct = r.headers.get("content-type") || "";
+  if (!r.ok || !ct.startsWith("image/")) return new Response("fail", { status: 502 });
+  const out = new Response(r.body, { headers: { "Content-Type": ct, "Cache-Control": "public, max-age=604800", "Access-Control-Allow-Origin": "*" } });
+  try { await cache.put(key, out.clone()); } catch (e) {}
+  return out;
+}
+
 /** 공통 처리기: Cloudflare·Netlify 둘 다 사용 */
 export async function handle(req, env, path) {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   path = path || new URL(req.url).pathname;
+  if (path === "/img") return imgProxy(req);
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
