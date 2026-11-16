@@ -15,7 +15,7 @@ D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
 STATUS = ROOT / "data/d1_status.json"
 LOG = ROOT / "data/d1_log.json"  # 최근 올린 기록 [시각, 상품 수] — 쓰기 집계가 늦게 잡혀도 한도를 넘지 않게 직접 셈
-PER = 4.5  # 상품 1개당 쓰기 줄 수 (실측 3.3~4.1, 여유 포함)
+PER = float(os.environ.get("D1_PER", "4.5"))  # 상품 1개당 쓰기 줄 수 (실측 3.3~4.1, 여유 포함)
 
 
 def wr(*args, check=True, timeout=900):
@@ -127,7 +127,7 @@ def main():
         LOG.write_text(json.dumps(log + [[now, cum]]), encoding="utf-8")
         w2 = written_24h()
         if w0 is not None and w2 is not None and w2 > w0:
-            per = max(4.5, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
+            per = max(PER, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
         subprocess.run([sys.executable, str(ROOT / "tools/d1_state.py"), str(STATE), f], check=True)  # 파일마다 바로 저장
     st = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     summ = json.loads((D / "summary.json").read_text(encoding="utf-8"))
