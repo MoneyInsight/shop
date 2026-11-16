@@ -231,7 +231,7 @@ async function confirm(req, env) {
   for (const [pid, u] of Object.entries(shipUnits)) { shipBy[pid] = shipFor(shipProd[pid], u); shipping += shipBy[pid]; }
   // 결제 확정 전 도매처 실시간 재고·가격 확인 (품절·손해 주문 차단 — 확정 전이라 손님 돈은 빠져나가지 않음)
   const firstLine = {};
-  const lv = await live.check(env, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, pk: l.pk, price: l.price, option: l.option,
+  const lv = await live.check({ ...env, __ocToken: () => ocToken(env) }, lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, pk: l.pk, price: l.price, option: l.option,
     ship: firstLine[l.id] ? 0 : ((firstLine[l.id] = 1), shipBy[l.id] || 0), ship_fee: Number(shipProd[l.id]?.shipping_fee) || 0 })), PRICING(env));
   if (!lv.ok) return fail(lv.message);
   const free = Number(env.FREE_SHIPPING_OVER || 0);
@@ -1188,6 +1188,18 @@ export async function handle(req, env, path) {
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
+  if (req.method === "POST" && path === "/oc/items") {  // 오너클랜 재고·가격 조회 (깃허브 매일 점검용 — 깃허브는 오너클랜이 막아서 서버가 대신 조회)
+    const pw = String(env.ADMIN_PASSWORD || "").trim(), got = String(req.headers.get("x-admin-pass") || "").trim();
+    if (!pw || got.length !== pw.length || !crypto.subtle.timingSafeEqual(new TextEncoder().encode(got), new TextEncoder().encode(pw))) return fail("권한 없음", 403);
+    const d = await req.json().catch(() => ({}));
+    const keys = (Array.isArray(d.keys) ? d.keys : []).map(String).filter((k) => /^W[0-9A-Z]{6}$/.test(k)).slice(0, 100);
+    const tok = await ocToken(env);
+    if (!tok) return fail("오너클랜 로그인 실패", 502);
+    const r = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      body: JSON.stringify({ query: `query{itemsByKeys(keys:${JSON.stringify(keys)}){key status price shippingFee shippingType boxQuantity options{quantity status price optionAttributes{name value}}}}` }) });
+    const j = await r.json().catch(() => ({}));
+    return json({ items: ((j.data || {}).itemsByKeys || []).filter(Boolean), errors: (j.errors || []).map((e) => String(e.message).slice(0, 120)) });
+  }
   if (req.method === "GET" && path === "/oc/schema") {  // 오너클랜 API 구조 (상품·주문 형식) — 1분 1회, 토큰 노출 없음
     if (await env.SHOP.get("ocschema")) return json({ message: "1분 뒤에 다시 시도해 주세요." });
     await env.SHOP.put("ocschema", "1", { expirationTtl: 60 });
@@ -1280,7 +1292,7 @@ export async function handle(req, env, path) {
         const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
         lines.push({ id: p.id, name: p.name, qty, option: o ? o.v : "", price: (qt.length ? Number(qt[Math.min(qty, qt.length) - 1]) : Number(p.price)) + (o ? o.add : 0) });
       }
-      const r = await live.check(env, lines, PRICING(env));
+      const r = await live.check({ ...env, __ocToken: () => ocToken(env) }, lines, PRICING(env));
       return r.ok ? json({ ok: true }) : fail(r.message);
     }
     if (path === "/member/quote") {  // 로그인 회원 추가 할인 금액 (결제 화면 표시용, 계산은 결제 확인과 같음)
