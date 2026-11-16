@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths: [".github/workflows/image_check.yml", "tools/image_check.py"]
-concurrency: { group: daily-sync, cancel-in-progress: false }
+concurrency: { group: image-check, cancel-in-progress: false }
 permissions: { contents: write, pages: write, id-token: write }
 jobs:
   check:

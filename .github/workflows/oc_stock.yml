@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths: [".github/workflows/oc_stock.yml", "tools/oc_stock.py"]
-concurrency: { group: daily-sync, cancel-in-progress: false }
+concurrency: { group: oc-stock, cancel-in-progress: false }
 permissions: { contents: write }
 jobs:
   check:
