@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME = os.environ.get("D1_NAME", "allchaeum")
-LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "90000"))
+LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "85000"))  # 무료 10만 줄 — 집계가 몇 분 늦게 잡혀 여유를 둠
 STATE = Path(os.environ.get("D1_STATE", ROOT / "dist/d1_state.json"))
 D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
@@ -120,7 +120,7 @@ def main():
         done.append(f); cum += n
         w2 = written_24h()
         if w0 is not None and w2 is not None and w2 > w0:
-            per = max(3, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
+            per = max(4.5, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
         subprocess.run([sys.executable, str(ROOT / "tools/d1_state.py"), str(STATE), f], check=True)  # 파일마다 바로 저장
     st = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     summ = json.loads((D / "summary.json").read_text(encoding="utf-8"))
