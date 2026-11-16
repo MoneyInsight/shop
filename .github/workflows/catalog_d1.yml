@@ -1,7 +1,7 @@
 name: 상품 DB(D1) 매일 채우기 — 무료 한도 안에서
 on:
   schedule:
-    - cron: "23 1 * * *"   # 한국 시간 오전 10시 23분 (D1 하루 한도는 오전 9시에 초기화)
+    - cron: "23 0 * * *"   # 한국 시간 오전 9시 23분 (D1 하루 한도는 오전 9시에 초기화) — 이때 하루 몫을 거의 다 올림
     - cron: "53 6 * * *"   # 오후 3시 53분 — 오후 품절·가격 점검 반영 (바뀐 상품부터, 최근 24시간 쓰기 한도 안에서)
     - cron: "53 19 * * *"  # 새벽 4시 53분 — 새벽 점검 반영
   workflow_dispatch:
@@ -49,7 +49,7 @@ jobs:
         run: |
           [ -f data/d1_status.json ] || exit 0
           git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data/d1_status.json
+          git add data/d1_status.json data/d1_log.json 2>/dev/null; git add data/d1_status.json
           git commit -m "상품 DB 채우기 결과 $(date -u +%F)" || exit 0
           for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 15; done
       - name: 사이트를 상품 DB 모드로 자동 전환 (점검 모두 통과할 때 한 번만)

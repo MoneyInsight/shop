@@ -14,6 +14,8 @@ STATE = Path(os.environ.get("D1_STATE", ROOT / "dist/d1_state.json"))
 D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
 STATUS = ROOT / "data/d1_status.json"
+LOG = ROOT / "data/d1_log.json"  # 최근 올린 기록 [시각, 상품 수] — 쓰기 집계가 늦게 잡혀도 한도를 넘지 않게 직접 셈
+PER = 4.5  # 상품 1개당 쓰기 줄 수 (실측 3.3~4.1, 여유 포함)
 
 
 def wr(*args, check=True, timeout=900):
@@ -106,10 +108,14 @@ def main():
     w0 = written_24h()
     per = None  # 상품 1개당 실제 쓰기 줄 수 (첫 파일로 측정)
     done, stop, cum = [], "", 0
+    now = time.time()
+    day0 = now - now % 86400  # D1 하루 한도는 UTC 0시(한국 오전 9시)에 초기화
+    log = [x for x in (json.loads(LOG.read_text()) if LOG.exists() else []) if x[0] >= day0]
+    mine = sum(x[1] for x in log) * PER  # 오늘(UTC) 우리가 쓴 양 (직접 셈)
     for f in files:
         n = len(plan[f])
-        w = written_24h()
-        est = n * (per or 8)
+        w = mine + cum * PER  # 직접 센 오늘 쓰기량 (Cloudflare 집계는 최근 24시간 기준·지연이 있어 쓰지 않음)
+        est = n * max(PER, per or 0)
         if w is not None and w + est > LIMIT:
             stop = f"최근 24시간 쓰기 {w:,}줄 + 다음 파일 예상 {est:,}줄 > 한도 {LIMIT:,}"; break
         if w is None and (cum + n) * 8 > LIMIT:  # 쓰기량을 못 읽으면 보수적으로 (상품 1개 = 8줄)
@@ -118,6 +124,7 @@ def main():
         if not ok:
             stop = f"{f} 실패: {err[-300:]}"; break
         done.append(f); cum += n
+        LOG.write_text(json.dumps(log + [[now, cum]]), encoding="utf-8")
         w2 = written_24h()
         if w0 is not None and w2 is not None and w2 > w0:
             per = max(4.5, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
