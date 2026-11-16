@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from product_import import price_from_cost
 
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 NEW_LIMIT = int(os.environ.get("NEW_LIMIT", "10000"))
 MAX_TOTAL = int(os.environ.get("MAX_TOTAL", "96000"))  # 정적 사이트(GitHub Pages 1GB) 한도 안전선 — 넘으면 상품 DB 모드로 전환 필요
 PRICING = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
@@ -102,11 +103,12 @@ def build_row(no, v):
     sup = deli.get("supply") or {}  # 도매매(위탁) 배송정보만 씀 — 도매꾹(도매·최소구매수량) 배송정보로 대신하면 배송비 0원으로 잘못 잡힘
     if not sup:
         return None, "도매매 배송정보 없음"
-    stype = sup.get("type", "")
-    ship = 0 if "무료" in stype else num(sup.get("fee"))
+    import dm_ship
+    ship, box = dm_ship.parse(sup)  # 고정배송비 = 주문당 1번(빈칸), 수량별비례 = N개마다, 차등 = 첫 구간마다
     if ship > MAX_SHIP:
         return None, "배송비 큼"
-    box = ("" if stype == "고정배송비" else 1) if ship else ""  # 고정배송비 = 주문당 1번(빈칸), 수량별 = 1개마다(N 모름)
+    if not ship and "무료" not in str(sup.get("type") or ""):
+        return None, "배송비 확인 불가"  # 배송비를 못 읽었는데 무료로 올리면 손해
     base = price_from_cost(price + ship, PRICING)
     opts, oname = [], ""
     so = v.get("selectOpt")
