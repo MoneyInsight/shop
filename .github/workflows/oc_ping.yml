@@ -1,4 +1,4 @@
-name: 오너클랜 API 권한 확인 (수동)
+name: 오너클랜 API 권한 확인 (수동) # 1794799710
 on:
   push:
     branches: [main]
