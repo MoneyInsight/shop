@@ -1,0 +1,17 @@
+name: 오너클랜 API 권한 확인 (수동)
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/oc_ping.yml"]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          curl -s -m 60 https://shop-api.scream0506.workers.dev/oc/ping > data/oc_ping.json; cat data/oc_ping.json
+          git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          git add data/oc_ping.json && git commit -m "오너클랜 API 권한 확인 결과" || exit 0
+          for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 10; done
