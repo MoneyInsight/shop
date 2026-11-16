@@ -1,4 +1,4 @@
-name: 오너클랜 API 권한 확인 (수동) # 1794799710
+name: 오너클랜 API 권한·구조 확인 (수동)
 on:
   push:
     branches: [main]
@@ -11,7 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
-          curl -s -m 60 https://shop-api.scream0506.workers.dev/oc/ping > data/oc_ping.json; cat data/oc_ping.json
+          sleep 240   # 서버 배포 기다림
+          curl -s -m 60 https://shop-api.scream0506.workers.dev/oc/schema > data/oc_schema.json; head -c 300 data/oc_schema.json
           git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data/oc_ping.json && git commit -m "오너클랜 API 권한 확인 결과" || exit 0
+          git add data/oc_schema.json && git commit -m "오너클랜 API 구조 확인 결과" || exit 0
           for i in 1 2 3 4 5; do git pull --rebase --autostash -X theirs && git push && break; sleep 10; done

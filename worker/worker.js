@@ -1188,6 +1188,20 @@ export async function handle(req, env, path) {
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
+  if (req.method === "GET" && path === "/oc/schema") {  // 오너클랜 API 구조 (상품·주문 형식) — 1분 1회, 토큰 노출 없음
+    if (await env.SHOP.get("ocschema")) return json({ message: "1분 뒤에 다시 시도해 주세요." });
+    await env.SHOP.put("ocschema", "1", { expirationTtl: 60 });
+    const tok = await ocToken(env);
+    if (!tok) return json({ auth: "실패" });
+    const g = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      body: JSON.stringify({ query: "query{__schema{queryType{fields{name args{name type{name kind ofType{name kind}}} type{name kind ofType{name}}}} types{name kind fields{name args{name} type{name kind ofType{name kind ofType{name}}}} inputFields{name type{name kind ofType{name}}} enumValues{name}}}}" }) });
+    const d = await g.json().catch(() => ({}));
+    const sc = (d.data || {}).__schema || {};
+    const types = (sc.types || []).filter((t) => /^(Item|Order|Shipping|Product|Option)/.test(t.name || ""));
+    const sample = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      body: JSON.stringify({ query: "query{allItems(first:1){edges{node{key}}}}" }) }).then((r) => r.json()).catch(() => ({}));
+    return json({ query: ((sc.queryType || {}).fields || []).map((f) => ({ n: f.name, a: (f.args || []).map((x) => x.name + ":" + ((x.type || {}).name || ((x.type || {}).ofType || {}).name)) })), types, sample });
+  }
   if (req.method === "GET" && path === "/oc/ping") {  // 오너클랜 API가 우리 서버에서 열리는지 확인 (아이디·토큰은 보여주지 않음, 1분 1회)
     if (await env.SHOP.get("ocping")) return json({ message: "1분 뒤에 다시 시도해 주세요." });
     await env.SHOP.put("ocping", "1", { expirationTtl: 60 });
@@ -1380,6 +1394,20 @@ export async function handle(req, env, path) {
   } catch (e) {
     return fail("서버 오류: " + e.message, 500);
   }
+}
+
+// 오너클랜 판매사 API 토큰 (서버에서만, 50분 보관)
+async function ocToken(env) {
+  if (!env.OWNERCLAN_ID || !env.OWNERCLAN_PW) return "";
+  const c = await env.SHOP.get("oc_tok");
+  if (c) return c;
+  const a = await fetch("https://auth.ownerclan.com/auth", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ service: "ownerclan", userType: "seller", username: env.OWNERCLAN_ID, password: env.OWNERCLAN_PW }) });
+  if (!a.ok) return "";
+  let tok = (await a.text()).trim().replace(/^"|"$/g, "");
+  try { if (tok.startsWith("{")) tok = JSON.parse(tok).token || tok; } catch (e) {}
+  await env.SHOP.put("oc_tok", tok, { expirationTtl: 3000 });
+  return tok;
 }
 
 export default { fetch: (req, env) => handle(req, env), scheduled: (ev, env, ctx) => ctx.waitUntil(trackSweep(env)) };  // 정기 실행: 배송 단계 확인
