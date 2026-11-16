@@ -23,7 +23,8 @@ KWF = ROOT / "data" / "domeme_keywords.json"
 WH = ROOT / "warehouse"  # 상품 창고: 사이트 한도(MAX_TOTAL)를 넘는 상품은 여기로 → 상품 DB(D1)에만 올림
 WH_MAX = int(os.environ.get("WH_MAX", "1000000"))
 ADD_TARGET = int(os.environ.get("ADD_TARGET", "27000"))  # 하루 새 상품 목표 (도매꾹 하루 호출 한도에 먼저 닿으면 거기서 멈춤)
-MAX_MIN = float(os.environ.get("MAX_MIN", "290"))  # 실행 시간 상한(분) — GitHub 작업 6시간 제한 안에서 저장까지
+MAX_MIN = float(os.environ.get("MAX_MIN", "290"))
+TOP_PAGES = int(os.environ.get("TOP_PAGES", "5"))  # 분류마다 도매꾹 랭킹순(인기순) 상위 5쪽(500개)까지만 — 인기 없는 상품은 안 가져옴  # 실행 시간 상한(분) — GitHub 작업 6시간 제한 안에서 저장까지
 EXISTING = [ROOT / "data" / f for f in ("도매매묶음상품.csv", "도매매상품.csv", "도매매API상품.csv")]
 SKIP_CAT = ("식품", "건강", "의료", "성인", "의약", "다이어트", "담배", "주류")
 
@@ -73,6 +74,11 @@ def build_row(no, v):
     rank = num(sel.get("rank")) or 99
     if rank > MAX_RANK:
         return None, "공급사 등급"
+    sc = sel.get("score") or {}
+    if num(sc.get("cnt")) >= 5 and num(str(sc.get("avg", "")).rstrip("%")) < 90:
+        return None, "공급사 평점 90% 미만"  # 구매자 평가가 나쁜 공급사 제외
+    if num(deli.get("sendAvg")) > 3:
+        return None, "평균 발송 3일 초과"
     if deli.get("fromOversea") == "true":
         return None, "해외배송"
     if "선결제" not in (deli.get("pay") or "") and "선불" not in (deli.get("pay") or ""):
@@ -181,11 +187,11 @@ def main():
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
         pg = int(pgs.get(kw, 1))
-        d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": str(pg)}).get("domeggook") or {})
+        d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": str(pg), "so": "rd"}).get("domeggook") or {})
         items = (d.get("list") or {}).get("item") or []
         if isinstance(items, dict):
             items = [items]
-        pgs[kw] = pg + 1 if len(items) >= 100 and pg < 500 else 1  # 다음 방문 땐 다음 쪽 (끝까지 가면 처음부터)
+        pgs[kw] = pg + 1 if len(items) >= 100 and pg < TOP_PAGES else 1  # 다음 방문 땐 다음 쪽 (끝까지 가면 처음부터)
         for it in items:
             no = str(it.get("no", ""))
             if not no or no in have or no in seen or it.get("adultOnly") == "true" or num((it.get("deli") or {}).get("fee")) > MAX_SHIP:

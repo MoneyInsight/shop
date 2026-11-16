@@ -34,7 +34,7 @@ jobs:
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
           NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
-          ADD_TARGET: "0"   # 인기순으로 가져오도록 바꾸기 전까지 새 상품 찾기 잠시 멈춤 (아무거나 가져오지 않게)
+          ADD_TARGET: "27000"   # 도매꾹 랭킹순(인기순) 분류별 상위 500개 안에서만
           MAX_MIN: "270"
       - name: 빌드·손해 점검
         run: |
