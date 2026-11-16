@@ -19,8 +19,6 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       D1_STATE: dist/d1_state.json
-      D1_WRITE_LIMIT: "97000"   # 오늘만: 대기 상품 최대한 (실측 상품당 3.33줄)
-      D1_PER: "3.4"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
