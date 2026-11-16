@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.environ["NO_IMGFIX"] = "1"  # 원래 주소로 점검
+os.environ["WITH_WAREHOUSE"] = "1"  # 상품 DB에만 있는 상품(오너클랜·창고)도 함께
 import build
 
 SITE = "https://moneyinsight.github.io/"

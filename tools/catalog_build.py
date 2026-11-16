@@ -105,7 +105,7 @@ def main():
     for f in (ROOT / "warehouse").glob("*.csv.gz"):
         whids |= {r["상품코드"] for r in csv.DictReader(io.StringIO(gzip.decompress(f.read_bytes()).decode("utf-8-sig")))}
     (ROOT / "dist").mkdir(exist_ok=True)
-    (ROOT / "dist/site_ids.json").write_text(json.dumps([p["id"] for p in ps if p["id"] not in whids]), encoding="utf-8")  # 자동 전환 점검용
+    (ROOT / "dist/site_ids.json").write_text(json.dumps([p["id"] for p in ps if p["id"] not in whids and not re.match(r"^W[0-9A-Z]{6}$", p["id"])]), encoding="utf-8")  # 자동 전환 점검용
     stp = Path(a.state)
     state = json.loads(stp.read_text(encoding="utf-8")) if stp.exists() else {}
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")

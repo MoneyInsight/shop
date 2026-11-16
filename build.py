@@ -141,9 +141,11 @@ def load_products():
     if CFG.get("show_naver", True):
         out.sort(key=lambda p: -(p["save"] / p["naver_low"]) if p["save"] else 1)
     hide = set(CFG.get("hide_sources") or [])
-    if "ownerclan" in hide:  # 품절 자동 점검이 안 되는 오너클랜 상품은 점검이 붙을 때까지 숨김
+    if not os.environ.get("WITH_WAREHOUSE"):  # 정적 사이트(1GB 한도)에는 빼고 상품 DB에만 올리는 공급처
+        hide |= set(CFG.get("db_only_sources") or [])
+    if "ownerclan" in hide:  # 오너클랜: 정적 사이트 용량이 꽉 차서 상품 DB에만 (또는 숨김 설정 시 전부 숨김)
         before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
-        print(f"오너클랜 상품 {before - len(out)}개 숨김 (품절 자동 점검 연결 전)")
+        print(f"오너클랜 상품 {before - len(out)}개 정적 사이트에서 제외")
     out = fix_images(out)
     out = apply_edits(out)
     out = clean_catalog(out)
