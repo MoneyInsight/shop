@@ -598,7 +598,17 @@ def build_products(ps):
     by_cat = {}
     for p in ps:
         by_cat.setdefault(p["category"], []).append(p)
-    for p in ps:
+    if CFG.get("catalog_api"):  # 상품 DB 모드: 상품 페이지는 DB에서 불러오는 item.html 한 장 + 예전 주소는 작은 이동 페이지만 (용량 확보)
+        for p in ps:
+            pid = html.escape(str(p["id"]), quote=True); q = urllib.parse.quote(str(p["id"]), safe="")
+            write(f'product/{p["id"]}.html', f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>{e(p["name"])}</title>'
+                  f'<link rel="canonical" href="{BASE}/product/item.html?id={q}"><meta http-equiv="refresh" content="0;url=item.html?id={q}">'
+                  f'<script>location.replace("item.html?id={q}"+location.search.replace("?","&")+location.hash)</script></head>'
+                  f'<body><a href="item.html?id={q}">{e(p["name"])}</a></body></html>')
+        ps_pages = []
+    else:
+        ps_pages = ps
+    for p in ps_pages:
         sib = by_cat[p["category"]]
         k = sib.index(p)
         related = [x for x in (sib[k + 1:k + 5] + sib[:4]) if x is not p][:4]
@@ -857,6 +867,8 @@ def build_feeds(ps):
         if by.get(i):
             write(f'idx/{c["slug"]}.json', json.dumps(head | {"items": by[i]}, ensure_ascii=False, separators=(",", ":")))
     write("idx/list.json", json.dumps([c["slug"] for i, c in enumerate(CATS) if by.get(i)]))
+    if CFG.get("catalog_api"):  # 상품 DB 모드: 카드 정보도 DB에서 (p/*.json 안 만듦)
+        return
     (OUT / "p").mkdir(exist_ok=True)
     for p in pub:
         (OUT / "p" / f'{p["id"]}.json').write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

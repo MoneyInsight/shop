@@ -42,7 +42,11 @@ for page, keys in NEED.items():
 
 # 3) 공용 파일
 ch = SITE / "chrome.js"
-if not ch.exists():
+_it0 = SITE / "product" / "item.html"
+_db0 = _it0.exists() and '"catalog_api":true' in _it0.read_text(encoding="utf-8").replace(" ", "")
+if _db0:
+    pass  # 상품 DB 모드: 상품 페이지를 따로 만들지 않아 chrome.js 필요 없음
+elif not ch.exists():
     err("chrome.js 없음")
 else:
     t = ch.read_text(encoding="utf-8")
@@ -103,11 +107,22 @@ if L.exists() and IDX_N != len(ps):
 need_prod = ["chrome.js", "CH.top()", "CH.bot()", "data-qt=", 'id="buy"', "app.js", "application/ld+json"]
 prod_dir = SITE / "product"
 miss_page = miss_json = 0
+_it = SITE / "product" / "item.html"
+DBMODE = '"catalog_api":true' in _it.read_text(encoding="utf-8").replace(" ", "") if _it.exists() else False
+if DBMODE:  # 상품 DB 모드: 상품 화면 = item.html 한 장 (DB에서 불러옴), 예전 주소는 이동 페이지
+    t = (prod_dir / "item.html").read_text(encoding="utf-8") if (prod_dir / "item.html").exists() else ""
+    bad = [k for k in ['id="item-tpl"', 'id="buy"', "app.js", "data-qt="] if k not in t]
+    if bad:
+        err(f"product/item.html 빠짐 {bad}")
 for p in ps:
     f = prod_dir / f'{p["id"]}.html'
     if not f.exists():
         miss_page += 1; continue
     t = f.read_text(encoding="utf-8")
+    if DBMODE:
+        if "item.html?id=" not in t:
+            err(f'product/{p["id"]}.html: 상품 DB 이동 페이지 아님')
+        continue
     bad = [k for k in need_prod if k not in t]
     m = LEFT.search(t)
     if bad or m:
