@@ -43,7 +43,10 @@ jobs:
       - name: 저장
         run: |
           git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data warehouse && git commit -m "새 상품 찾기 (도매꾹 API)" && git pull --rebase -X theirs && git push || echo "변경 없음"
+          mkdir -p warehouse; git add data warehouse
+          git commit -m "새 상품 찾기 (도매꾹 API)" || { echo "변경 없음"; exit 0; }
+          ok=0; for i in 1 2 3 4 5 6; do git pull --rebase --autostash -X theirs && git push && ok=1 && break; sleep 20; done
+          [ "$ok" = 1 ] || { echo "새 상품 저장 실패"; exit 1; }
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
