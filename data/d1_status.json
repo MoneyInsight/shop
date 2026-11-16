@@ -1,10 +1,10 @@
 {
- "at": "2026-11-16 04:12 UTC",
+ "at": "2026-11-16 11:51 UTC",
  "db": "allchaeum",
  "in_db": 74143,
  "site_and_warehouse_total": 89891,
  "uploaded_today": 0,
- "left": 15790,
+ "left": 15798,
  "files_ok": 0,
  "files_planned": 8,
  "rows_written_24h_before": 263335,
@@ -12,5 +12,5 @@
  "writes_per_product": null,
  "unsafe_skipped": 0,
  "warehouse_files": 0,
- "stopped": "최근 24시간 쓰기 128,250.0줄 + 다음 파일 예상 16,371.0줄 > 한도 85,000"
+ "stopped": "최근 24시간 쓰기 128,250.0줄 + 다음 파일 예상 11,430.0줄 > 한도 85,000"
 }
