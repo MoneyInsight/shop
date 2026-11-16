@@ -67,15 +67,15 @@ export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size 
   let from = "products p";
   const t = terms(q).filter((x) => x.length > 1 || /[0-9a-z]/.test(x)).slice(0, 12);
   if (q && !t.length) return { total: 0, items: [], page, size };
-  if (t.length) {
-    from = "products_fts f JOIN products p ON p.id = f.id";
-    where.push("products_fts MATCH ?");
+  if (t.length) {  // 검색 색인에 같은 상품이 두 줄 있어도(이름 변경) 한 번만 — IN 으로 중복 제거
+    where.push("p.id IN (SELECT id FROM products_fts WHERE products_fts MATCH ?)");
     args.push(t.map((x) => `"${x.replace(/"/g, "")}"`).join(" AND "));
   }
   if (cat) { where.push("p.category = ?"); args.push(cat); }
   if (+free) where.push(FREE_WHERE);
   const w = where.length ? " WHERE " + where.join(" AND ") : "";
-  const total = (await db.prepare(`SELECT COUNT(*) AS n FROM ${from}${w}`).bind(...args).first())?.n || 0;
+  // 전체 개수: 무료 DB 하루 읽기 한도를 아끼려고 최대 2,000개까지만 셈 (2,000 이상이면 "2,000+")
+  const total = (await db.prepare(`SELECT COUNT(*) AS n FROM (SELECT 1 FROM ${from}${w} LIMIT 2000)`).bind(...args).first())?.n || 0;
   const order = (SORTS[sort] || SORTS.rec).replace(/(^|, )(?=\w)/g, "$1p.");
   const rows = (await db.prepare(`SELECT ${CARD_COLS.split(", ").map((c) => "p." + c).join(", ")} FROM ${from}${w} ORDER BY ${order} LIMIT ? OFFSET ?`)
     .bind(...args, size, (page - 1) * size).all()).results || [];
@@ -120,7 +120,7 @@ export async function upsert(db, p) {
       p.image || "", JSON.stringify(p.images || []), p.detail_html || "", JSON.stringify(p.options || []), JSON.stringify(p.qt || []), p.option_name || "",
       p.brand || "", p.origin || "", p.soldout ? 1 : 0, p.rank || 0, p.updated || new Date().toISOString(),
       +p.shipping_fee || 0, +p.sn || 0, +p.mq || 1, +p.pk || 1).run();
-  await db.prepare("DELETE FROM products_fts WHERE id = ?").bind(p.id).run();
+  // 검색 색인은 id로 지우면 색인 전체를 훑어(읽기 한도 소모) 지우지 않고 추가만 — 목록은 IN 으로 중복 제거
   await db.prepare("INSERT INTO products_fts (id, terms) VALUES (?, ?)").bind(p.id, terms(`${p.name} ${p.brand || ""}`).join(" ")).run();
 }
 

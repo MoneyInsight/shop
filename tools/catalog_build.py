@@ -83,7 +83,9 @@ def products():
         if not safe(p, P):
             unsafe += 1; continue  # 손해 가능 상품은 DB에 올리지 않음
         body = json.dumps({k: v for k, v in p.items() if k != "rank"}, ensure_ascii=False, sort_keys=True)
-        p["h"] = hashlib.sha1(body.encode()).hexdigest()[:16]
+        tt = " ".join(terms(p["name"] + " " + p["brand"]))
+        p["terms"] = tt
+        p["h"] = hashlib.sha1(body.encode()).hexdigest()[:16] + ":" + hashlib.sha1(tt.encode()).hexdigest()[:6]  # 내용:검색어
         out.append(p)
     return out, unsafe, nwh
 
@@ -112,7 +114,8 @@ def main():
     cur = {p["id"]: p for p in ps}
     gone = [i for i in state if i not in cur]  # 사이트·창고에서 빠진 상품 (도매처 판매중지·필터) → DB에서도 지움
     # 새 상품보다 '바뀐 상품'(가격·품절)을 먼저 — 손님에게 틀린 정보가 오래 남지 않게
-    changed = [p for p in ps if p["id"] in state and state[p["id"]] != p["h"]]
+    same = lambda a, b: (a or "").split(":")[0] == b.split(":")[0]
+    changed = [p for p in ps if p["id"] in state and not same(state[p["id"]], p["h"])]
     new = [p for p in ps if p["id"] not in state]
     out = Path(ROOT / "dist/d1"); out.mkdir(parents=True, exist_ok=True)
     for f in out.glob("*.sql"):
@@ -125,7 +128,7 @@ def main():
     for i in gone:
         if used + W_DEL > a.budget:
             break
-        lines += [f"DELETE FROM products WHERE id = {lit(i)};", f"DELETE FROM products_fts WHERE id = {lit(i)};"]
+        lines += [f"DELETE FROM products WHERE id = {lit(i)};"]  # 검색 색인 줄은 남겨 둠 (id로 지우면 색인 전체를 훑어 읽기 한도 소모, 목록에서 자동 제외)
         used += W_DEL; done[i] = part[i] = None
         if len(lines) >= PER_FILE * 3:
             flush()
@@ -134,8 +137,10 @@ def main():
             break
         p = dict(p, updated=now)
         lines.append(f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p[c]) for c in COLS)});")
-        lines.append(f"DELETE FROM products_fts WHERE id = {lit(p['id'])};")
-        lines.append(f"INSERT INTO products_fts (id, terms) VALUES ({lit(p['id'])}, {lit(' '.join(terms(p['name'] + ' ' + p['brand'])))});")
+        old_h = state.get(p["id"])
+        old_t = old_h.split(":")[1] if old_h and ":" in old_h else (None if old_h is None else "?")
+        if old_t is None or (old_t != "?" and old_t != p["h"].split(":")[1]):  # 새 상품이거나 상품명이 바뀐 경우만 검색 색인 추가
+            lines.append(f"INSERT INTO products_fts (id, terms) VALUES ({lit(p['id'])}, {lit(p['terms'])});")
         used += W_NEW; done[p["id"]] = part[p["id"]] = p["h"]
         if len(lines) >= PER_FILE * 3:
             flush()

@@ -49,7 +49,7 @@ for i in range(0, len(keys), 100):
         if it.get("shippingType") == "uponArrival" or fee > int(p.get("shipping_fee") or 0):
             res["soldout"].append(k); why["배송비 인상"] += 1; continue
         price = int(float(it.get("price") or 0))
-        if price and price != int(p.get("cost") or 0):
+        if price and price > int(p.get("cost") or 0):  # 오를 때만 반영 (내려간 건 옵션별 가격 차이일 수 있어 그대로)
             res["cost"][k] = price; why["가격 변동"] += 1
         ours = [o["v"] for o in (p.get("options") or [])]
         if ours and it.get("options"):

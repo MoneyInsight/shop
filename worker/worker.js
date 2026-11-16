@@ -1253,10 +1253,19 @@ export async function handle(req, env, path) {
   if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
     if (!env.DB) return fail("상품 DB가 아직 연결되지 않았어요.", 503);
     const u = new URL(req.url).searchParams, cache = { "Cache-Control": "public, max-age=60" };
+    // 무료 DB 하루 읽기 한도(500만 줄)를 아끼려고 같은 요청은 서버 캐시에서 (목록 5분, 개수 1시간, 상품 2분)
+    const ttl = path === "/catalog/counts" ? 3600 : path === "/catalog/list" ? 300 : 120;
+    const ck = new Request("https://catalog-cache" + path + "?" + [...u.entries()].filter(([k]) => k !== "x").sort().map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&"));
+    const hit = await caches.default.match(ck).catch(() => null);
+    if (hit) { const r = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors)) r.headers.set(k, v); return r; }
+    const keep = async (res) => {
+      if (res.status === 200) { const c = res.clone(); const h = new Headers(c.headers); h.set("Cache-Control", "public, max-age=" + ttl); await caches.default.put(ck, new Response(c.body, { status: 200, headers: h })).catch(() => {}); }
+      return res;
+    };
     try {
-      if (path === "/catalog/list") return json(await catalog.list(env.DB, { q: u.get("q") || "", cat: u.get("cat") || "", sort: u.get("sort") || "rec", page: u.get("page"), size: u.get("size"), free: u.get("free") || 0 }), 200, cache);
-      if (path === "/catalog/item") { const it = await catalog.item(env.DB, u.get("id")); return it ? json(it, 200, cache) : fail("상품을 찾을 수 없어요.", 404); }
-      if (path === "/catalog/counts") return json(await catalog.counts(env.DB), 200, cache);
+      if (path === "/catalog/list") return keep(json(await catalog.list(env.DB, { q: u.get("q") || "", cat: u.get("cat") || "", sort: u.get("sort") || "rec", page: u.get("page"), size: u.get("size"), free: u.get("free") || 0 }), 200, cache));
+      if (path === "/catalog/item") { const it = await catalog.item(env.DB, u.get("id")); return it ? keep(json(it, 200, cache)) : fail("상품을 찾을 수 없어요.", 404); }
+      if (path === "/catalog/counts") return keep(json(await catalog.counts(env.DB), 200, cache));
     } catch (e) { return fail("상품 조회 중 오류가 났어요. (" + String(e && e.message || e).slice(0, 160) + ")", 500); }
     return fail("Not found", 404);
   }

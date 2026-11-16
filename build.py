@@ -126,10 +126,11 @@ def load_products():
     for p in out:
         st = (stock.get("items") or {}).get(p["id"]) or {}
         p["soldout"] = bool(st.get("soldout"))
-        if st.get("cost") and p.get("cost") and int(st["cost"]) != int(p["cost"]) and CFG.get("pricing"):
+        oc_down = re.match(r"^W[0-9A-Z]{6}$", str(p["id"])) and st.get("cost") and p.get("cost") and int(st["cost"]) < int(p["cost"])
+        if st.get("cost") and p.get("cost") and int(st["cost"]) != int(p["cost"]) and CFG.get("pricing") and not oc_down:  # 오너클랜은 오를 때만 (내려간 건 옵션별 가격 차이일 수 있어 그대로 둠)
             pk_ = int(p.get("pk") or 1)  # 배송비 카드수수료·배송비 포함 8% 보장·공급사 최저가까지 (원래 가격 계산과 같게)
             new = max(_pi.price1(int(st["cost"]) * pk_, int(p.get("shipping_fee") or 0), CFG["pricing"]), int(p.get("mp") or 0))
-            p["price"] = new; p["normal_price"] = new
+            p["price"] = new; p["normal_price"] = new; p["cost"] = int(st["cost"])
             p["qt"] = []  # 도매가가 바뀌면 수량 할인은 다음 상품 가져오기 때 다시 계산
         if st.get("opts_soldout") and p["options"]:
             gone = set(st["opts_soldout"])  # 순서(번호)는 유지하고 표시만 (장바구니의 옵션 번호가 어긋나지 않게)
