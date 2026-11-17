@@ -220,7 +220,7 @@ async function confirm(req, env) {
     subtotal += unit * qty;
     shipUnits[p.id] = (shipUnits[p.id] || 0) + qty * (Number(p.pk) || 1); shipProd[p.id] = p;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
+    lines.push({ opt_add: optName ? Number(p.options[Number(it.opt)].add) || 0 : 0, id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const shipBy = {};
@@ -251,6 +251,18 @@ async function confirm(req, env) {
     discount += memberDisc;
   }
   if (subtotal - discount + shipping !== Number(amount)) return fail("결제 금액이 상품 금액과 달라요. 다시 주문해 주세요.");
+  // 최종 적자 방지: 모든 도매처 공통, 주문 전체로 원가+배송비+카드수수료+부가세+운영비를 빼고 0원 미만이면 결제 승인 전에 막음
+  {
+    const pr = PRICING(env), paid = subtotal - discount + shipping;
+    let supCost = 0;
+    for (const l of lines) supCost += ((Number(l.cost) || 0) * (l.pk || 1) + (l.opt_add || 0)) * l.qty;  // 옵션 추가금은 전부 원가로 (보수적)
+    const supShip = Object.values(shipBy).reduce((a, b) => a + b, 0) + remote.fee;  // 도매처에 내는 배송비 = 손님에게 받는 배송비 규칙과 같음
+    const net = paid - paid * pr.card_fee - Math.max(0, paid - supCost - supShip) / 11 - supCost - supShip - pr.ops_cost_won;
+    if (!(supCost > 0) || net < 0) {
+      await notify(env, `⚠️ 적자 주문 차단: ${lines.map((l) => l.name + "×" + l.qty).join(", ")} · 결제 ${paid}원 · 원가 ${supCost}원 · 배송비 ${supShip}원 · 순이익 ${Math.round(net)}원`).catch(() => {});
+      return fail("지금은 이 상품을 주문할 수 없어요. 가격을 확인한 뒤 다시 열어 드릴게요.");
+    }
+  }
 
   const r = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
     method: "POST",
