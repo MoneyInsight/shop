@@ -15,7 +15,7 @@ os.environ["NO_IMGFIX"] = "1"  # 원래 주소로 점검
 os.environ["WITH_WAREHOUSE"] = "1"  # 상품 DB에만 있는 상품(오너클랜·창고)도 함께
 import build
 
-SITE = "https://moneyinsight.github.io/"
+SITE = "https://damgosago.com/"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 
 

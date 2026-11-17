@@ -15,7 +15,7 @@ id = "여기에_KV_ID"
 
 [vars]
 GITHUB_REPO = "MoneyInsight/shop"
-SITE_URL = "https://moneyinsight.github.io/shop"
+SITE_URL = "https://damgosago.com"
 MARGIN_RATE = "0.03"
 CARD_FEE = "0.034"
 SUPPLIER_MARGIN = "0.10"

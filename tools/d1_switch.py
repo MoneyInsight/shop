@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 W = cfg["worker_url"].rstrip("/")
-SITE = "https://moneyinsight.github.io/shop"
+SITE = "https://damgosago.com"
 
 
 def get(url):

@@ -15,9 +15,9 @@ const ONCH_BULK_GROUP = { codes: "onch_codes_bulk.json", lists: ["datalab", "ord
 window.ONCH = async (step, group = "office") => {
   const LS = localStorage, now = Date.now(), G = ONCH_GROUPS[group] || (group === "bulk" ? ONCH_BULK_GROUP : null), K = (x) => `__oc_${group}_${x}`;
   if (step === "collect") {
-    const mine = await (await fetch("https://moneyinsight.github.io/shop/" + G.codes + "?" + now)).json().catch(() => []);
+    const mine = await (await fetch("https://damgosago.com/" + G.codes + "?" + now)).json().catch(() => []);
     const S = new Set(mine), other = new Set();
-    for (const [g, o] of Object.entries(ONCH_GROUPS)) if (g !== group) (await (await fetch("https://moneyinsight.github.io/shop/" + o.codes + "?" + now)).json().catch(() => [])).forEach((c) => other.add(c));
+    for (const [g, o] of Object.entries(ONCH_GROUPS)) if (g !== group) (await (await fetch("https://damgosago.com/" + o.codes + "?" + now)).json().catch(() => [])).forEach((c) => other.add(c));
     for (const q of G.lists) {
       const url = (k) => q === "datalab" ? `/dbcenter_renewal/onch_datalab.html?page=${k + 1}` : `/dbcenter_renewal/index.php?${q}&page=${k + 1}`;
       const pages = q === "datalab" ? 40 : G.pages;
