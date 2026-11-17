@@ -507,7 +507,14 @@
     if (sdd) sdd.innerHTML = shipInfo(p.shipping_fee || 0, p.sn || 0, p.price, p.mq || 1);
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
     const qd = $("#qty-deal");
-    if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
+    const fee = +p.shipping_fee || 0, sn = +p.sn || 0;
+    if (qd && fee && sn !== 1 && p.price < fee && !p.soldout) {  // 배송비보다 싼 상품: 묶음 수량 옵션 (배송비는 묶음당 한 번)
+      const unit = (n) => (p.qt || []).length ? +p.qt[Math.min(n, p.qt.length) - 1] : +p.price;
+      const ship = (n) => fee * (sn > 1 ? Math.ceil(n / sn) : 1);
+      qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; }
+      qd.innerHTML = `<p><b>묶음으로 사면 배송비 부담이 줄어요</b> <span class="muted">배송비 ${won(fee)}${sn > 1 ? ` (${sn}개마다)` : "는 한 번만"} · 수량을 골라 보세요</span></p><div class="qty-cells">` +
+        [1, 10, 20, 50].map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>합계 ${won(unit(n) * n + ship(n))}</span><em>개당 ${won(Math.round((unit(n) * n + ship(n)) / n))}</em></button>`).join("") + `</div>`;
+    } else if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; };
       qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +
         [1, 2, 3, 5].filter((n) => n <= p.qt.length && !(n === 5 && p.qt[4] >= p.qt[2])).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;

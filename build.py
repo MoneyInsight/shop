@@ -87,6 +87,17 @@ def load_products():
         ss_rows = [p for p in ss_rows if p.get("kc") or not kc_risk(p["name"])]
         if n0 != len(ss_rows):
             print(f"KC 인증번호 없는 전기 난방용품 {n0 - len(ss_rows)}개 숨김")
+    # 도매매API상품.csv 중 배송비 0원인데 도매처 확인이 안 된 상품은 확인될 때까지 숨김 (무료배송으로 잘못 보이지 않게)
+    api_csv, cache_p = ROOT / "data/도매매API상품.csv", ROOT / "data/domeme_api_cache.json"
+    if api_csv.exists():
+        cache = json.loads(cache_p.read_text(encoding="utf-8")) if cache_p.exists() else {}
+        unsure = {"DM" + r["상품코드"][2:] for r in csv.DictReader(api_csv.open(encoding="utf-8-sig"))
+                  if r["상품코드"].startswith("DM") and str(r.get("공급 배송비") or "0").strip() in ("", "0")
+                  and "무료" not in str((cache.get(r["상품코드"][2:]) or {}).get("ship_type", ""))}
+        n0 = len(ss_rows)
+        ss_rows = [p for p in ss_rows if p["id"] not in unsure]
+        if n0 != len(ss_rows):
+            print(f"배송비 확인 전 도매매 상품 {n0 - len(ss_rows)}개 숨김 (매일 점검 후 다시 올라감)")
     for w in warns:
         print("⚠️", w)
     seen = {r["id"] for r in rows}
