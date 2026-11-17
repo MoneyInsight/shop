@@ -1,5 +1,6 @@
 {
   "shop_name": "담Go사Go",
+  "shop_name_alt": ["담고사고", "담고 사고", "damgosago"],
   "slogan": "좋은 물건을, 군더더기 없는 가격으로",
   "base_url": "https://moneyinsight.github.io/shop",
   "free_shipping_over": 0,

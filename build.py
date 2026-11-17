@@ -448,7 +448,7 @@ def listing(title, mode, items, root, cat="", count=None):
 def build_home(ps):
     # 수량 할인 최대 비율 (상품 중 가장 많이 내려가는 값, 내림)
     max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
-    ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "url": BASE + "/",
+    ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "alternateName": CFG.get("shop_name_alt") or [], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     by_cat = {c["slug"]: [p for p in ps if p["category"] == c["slug"]] for c in SHOW_CATS}
     art = [p for p in ps if p["image"].startswith("http")][:4] or ps[:4]
@@ -494,7 +494,9 @@ def build_home(ps):
 {sections}
 <section class="section" id="recent-box" style="display:none"><div class="wrap"><div class="sec-head"><div><h2>최근 본 상품</h2></div></div><div class="grid" id="recent-grid"></div></div></section>
 <div class="section last"></div>'''
-    write("index.html", layout(f'{CFG["shop_name"]} — {CFG["slogan"]}', body, "./", canonical=BASE + "/",
+    alt = (CFG.get("shop_name_alt") or [""])[0]
+    write("index.html", layout(f'{CFG["shop_name"]}({alt}) — {CFG["slogan"]}' if alt else f'{CFG["shop_name"]} — {CFG["slogan"]}', body, "./", canonical=BASE + "/",
+          desc=f'{CFG["shop_name"]}({alt}) 온라인 쇼핑몰 — 생활용품·주방·문구·겨울용품을 담고, 사고. {CFG["slogan"]}',
           extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
 
 
