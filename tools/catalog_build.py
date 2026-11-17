@@ -123,6 +123,18 @@ def main():
     ap.add_argument("--budget", type=int, default=85000)  # 하루 무료 한도 10만 줄 중 오늘 쓸 몫
     a = ap.parse_args()
     ps, unsafe, nwh = products()
+    # 정적 사이트(창고 없이)에는 있는데 상품 DB에는 안 올라가는 상품(창고의 더 싼 같은 상품에 밀림 등) → 사이트에서도 빼야 '없는 상품' 링크가 안 생김
+    try:
+        import os, build
+        os.environ.pop("WITH_WAREHOUSE", None)
+        site = {str(p["id"]) for p in build.load_products()}
+        os.environ["WITH_WAREHOUSE"] = "1"
+        dbids = {p["id"] for p in ps}
+        skip = sorted(site - dbids)
+        (ROOT / "data/db_skip.json").write_text(json.dumps(skip), encoding="utf-8")
+        print(f"사이트에만 있고 DB에는 없는 상품 {len(skip)}개 → 사이트에서도 뺌")
+    except Exception as e:
+        print("사이트·DB 비교 실패:", e)
     import csv, gzip, io
     whids = set()
     for f in (ROOT / "warehouse").glob("*.csv.gz"):

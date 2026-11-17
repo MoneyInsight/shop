@@ -158,6 +158,11 @@ def load_products():
     if "ownerclan" in hide:  # 오너클랜: 정적 사이트 용량이 꽉 차서 상품 DB에만 (또는 숨김 설정 시 전부 숨김)
         before = len(out); out = [p for p in out if not re.match(r"^W[0-9A-Z]{6}$", p["id"])]
         print(f"오너클랜 상품 {before - len(out)}개 정적 사이트에서 제외")
+    if not os.environ.get("WITH_WAREHOUSE") and CFG.get("catalog_api") and (ROOT / "data/db_skip.json").exists():  # 상품 DB에 없는 상품은 사이트에서도 뺌 (없는 상품 링크 방지)
+        skip = set(json.loads((ROOT / "data/db_skip.json").read_text(encoding="utf-8")))
+        before = len(out); out = [p for p in out if str(p["id"]) not in skip]
+        if before - len(out):
+            print(f"상품 DB에 없는 상품 {before - len(out)}개 정적 사이트에서 제외")
     out = fix_images(out)
     out = apply_edits(out)
     out = clean_catalog(out)
