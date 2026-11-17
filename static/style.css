@@ -350,7 +350,7 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
   .track div{font-size:12px}
 }
 /* 사진을 못 불러왔을 때 글자가 깨져 보이지 않게 */
-.p-thumb img,.hero-art img,.main-img img,.thumbs img,.c-row img{font-size:0;color:transparent}
+.p-thumb img,.hero-art img,.main-img img,.thumbs img,.c-row img{font-size:0;color:transparent;text-shadow:none;filter:drop-shadow(.5px 1px 0 #B8320A) drop-shadow(.5px 1px 0 #A82E08) drop-shadow(1px 3px 3px rgba(0,0,0,.25))}
 
 /* ── 대량 구매 가격 제안 ── */
 .offer-box{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--accent-soft)}
@@ -522,7 +522,7 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .hero-perks b{white-space:nowrap}
 @media (max-width:380px){.hero-perks b{font-size:13px}.hero-perks span{font-size:11px}}
 .logo{align-items:center;gap:8px}
-.logo-mark{width:30px;height:30px;border-radius:8px;flex:none;box-shadow:0 2px 6px rgba(226,64,14,.28)}
+.logo-mark{width:30px;height:30px;border-radius:8px;flex:none;box-shadow:0 3px 0 #B8320A,0 6px 12px rgba(150,40,0,.35)}
 @media (max-width:640px){.logo-mark{width:26px;height:26px;border-radius:7px}}
 footer .logo .logo-mark{width:24px;height:24px}
 .office-band{background:#16171a;color:#fff}
@@ -580,5 +580,5 @@ footer .logo .logo-mark{width:24px;height:24px}
 }
 
 /* 담Go사Go 로고 (2026-11-17) */
-.logo-word{font-family:var(--sans);font-weight:800;letter-spacing:-.045em;color:#1C1C1E}
+.logo-word{font-family:var(--sans);font-weight:800;letter-spacing:-.045em;color:#1C1C1E;text-shadow:.5px 1px 0 #C2C2C8,1px 2px 0 #ADADB4,1.5px 3px 0 #9A9AA1,2px 5px 6px rgba(0,0,0,.22)}
 .logo-word .go{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:700;font-size:.66em;vertical-align:.62em;line-height:0;margin:0 .14em 0 .02em;letter-spacing:0;background:linear-gradient(180deg,#FF7A3D,#E2400E);-webkit-background-clip:text;background-clip:text;color:transparent}
