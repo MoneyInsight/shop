@@ -87,6 +87,22 @@ def row(it):
             "상세 설명": it.get("content") or "", "인증정보": cert(meta), "옵션명": names, "옵션": "|".join(vals), "공급사등급": gnum}
 
 
+def push_now(total):
+    """모인 만큼 바로 깃허브에 저장 → 1시간마다 도는 상품 DB 반영이 바로 사이트에 올림 (실패해도 수집은 계속)"""
+    import subprocess
+    if not os.environ.get("GITHUB_ACTIONS"):
+        return
+    sh = lambda c: subprocess.run(c, shell=True, cwd=ROOT, capture_output=True, text=True)
+    sh('git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"')
+    sh("git add warehouse data/oc_collect_state.json")
+    if sh(f'git commit -m "오너클랜 상품 수집 중간 저장 (창고 {total:,}개)"').returncode:
+        return
+    for _ in range(5):
+        if sh("git pull --rebase --autostash -X theirs && git push").returncode == 0:
+            print(f"중간 저장: 창고 {total:,}개"); return
+        time.sleep(15)
+
+
 def main():
     WH.mkdir(exist_ok=True)
     have = set()
@@ -134,6 +150,7 @@ def main():
         if len(kept) >= PER_FILE:
             total += len(kept); flush()
             STATE.write_text(json.dumps(st), encoding="utf-8")
+            push_now(total)
     total += len(kept); flush()
     st["warehouse_total"] = total; st["at"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
     STATE.write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")

@@ -1,7 +1,7 @@
 name: 상품 DB(D1) 매일 채우기 — 무료 한도 안에서
 on:
   schedule:
-    - cron: "23 */3 * * *"   # 3시간마다 — 모인 상품·바뀐 가격/품절을 바로 DB로 (유료 플랜)
+    - cron: "23 * * * *"   # 매시간 — 모인 상품·바뀐 가격/품절을 바로 사이트(DB)로 (유료 플랜)
   workflow_dispatch:
   push:  # 이 작업의 코드가 바뀌면 바로 한 번 실행
     branches: [main]
