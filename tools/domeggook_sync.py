@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
 LIMIT = int(os.environ.get("LIMIT", "4000"))
 CACHE = ROOT / "data" / "domeme_api_cache.json"
-CSVS = [ROOT / "data" / "도매매묶음상품.csv", ROOT / "data" / "도매매상품.csv"]
+CSVS = [ROOT / "data" / "도매매묶음상품.csv", ROOT / "data" / "도매매상품.csv", ROOT / "data" / "도매매API상품.csv"]
 MAX_RANK = 8
 BUNDLE_BOX = 1  # 고정배송비 = 1개마다 배송비 (대표님 확인)
 
@@ -63,7 +63,9 @@ def main():
     rows_by_file = {p: list(csv.DictReader(open(p, encoding="utf-8-sig"))) for p in CSVS if p.exists()}
     codes = [r["상품코드"][2:] for rows in rows_by_file.values() for r in rows if r["상품코드"].startswith("DM")]
     # 한 번도 안 본 상품 먼저, 그다음 오래전에 본 순서
-    codes.sort(key=lambda c: cache.get(c, {}).get("checked", ""))
+    zero = {r["상품코드"][2:] for rows in rows_by_file.values() for r in rows if r["상품코드"].startswith("DM") and num(r.get("공급 배송비")) == 0}
+    codes = list(dict.fromkeys(codes))
+    codes.sort(key=lambda c: (c not in zero or bool(cache.get(c, {}).get("checked")), cache.get(c, {}).get("checked", "")))  # 배송비 0(확인 전) 먼저
     today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")
     done = 0
     for c in codes[:LIMIT]:
