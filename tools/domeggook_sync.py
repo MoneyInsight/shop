@@ -95,10 +95,17 @@ def main():
             if "minp" in info and str(num(info.get("minp")) or "") != str(r.get("공급사최저판매가") or ""):
                 r["공급사최저판매가"] = str(num(info.get("minp")) or ""); repriced += 1
             ship = num(r.get("공급 배송비"))
-            if ship and num(info.get("ship_fee")) and num(info.get("ship_fee")) != ship:
-                r["공급 배송비"] = str(num(info.get("ship_fee"))); ship = num(info.get("ship_fee")); repriced += 1
+            import dm_ship  # 배송 규칙 해석은 새 상품 찾기·결제 직전 확인과 같은 함수로 (고정 = 주문당 1번, 수량별비례 = N개마다)
+            try:
+                fee2, box = dm_ship.parse(json.loads(info.get("ship_raw") or "{}"))
+            except Exception:
+                fee2, box = num(info.get("ship_fee")), "1"
+            if info.get("pay", "선결제") != "선결제":
+                box = "1"  # 착불 등은 1개마다 (손해 방지)
+            if fee2 and fee2 != ship:
+                r["공급 배송비"] = str(fee2); ship = fee2; repriced += 1
             if ship and "묶음배송수량" in r:
-                box = "" if info.get("ship_type") == "고정배송비" and info.get("pay", "선결제") == "선결제" else "1"  # 고정 = 주문당 1번
+                box = str(box)
                 fixed += box != "1"
                 if r.get("묶음배송수량") != box:
                     r["묶음배송수량"] = box; changed += 1
