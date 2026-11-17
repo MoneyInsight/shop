@@ -1294,7 +1294,10 @@ export async function handle(req, env, path) {
     }
   }
   if (req.method === "GET" && path === "/db_removed") {  // 사진이 없어 서버가 바로 내린 상품 번호 (상품 DB 채우기·사이트 빌드가 참고)
-    return json((await env.SHOP.get("db_removed", "json")) || {});
+    const rm = (await env.SHOP.get("db_removed", "json")) || {};
+    const b = (await env.SHOP.get("broken", "json")) || {};  // 이 기록을 남기기 전(11/17 저녁)에 신고로 내린 상품도 다시 확인하게 포함
+    for (const [id, at] of Object.entries(b)) if (at >= "2026-11-17T10:00" && at < "2026-11-17T14:00" && !rm[id]) rm[id] = new Date().toISOString().slice(0, 10) + "T00:00:00+00:00";
+    return json(rm);
   }
   if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
     return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
