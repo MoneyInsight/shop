@@ -553,9 +553,9 @@ footer .logo .logo-mark{width:24px;height:24px}
 .mb-btn{display:inline-block;margin-top:22px;background:var(--ink);color:#fff;border-radius:999px;padding:11px 22px;font-size:15px;font-weight:700}
 .mb-art{display:flex;gap:14px;align-items:center}
 .mb-art img{width:200px;height:250px;object-fit:cover;border-radius:16px;background:#fff;box-shadow:0 10px 24px rgba(0,0,0,.12)}
-.mb-art img:nth-child(2){height:280px}
-@media (max-width:1180px){.mb-art img:nth-child(3){display:none}}
-@media (max-width:960px){.mb-art img{width:170px;height:220px}.mb-art img:nth-child(2){height:240px}}
+.mb-art a:nth-child(2) img{height:280px}
+@media (max-width:1180px){.mb-art a:nth-child(3){display:none}}
+@media (max-width:960px){.mb-art img{width:170px;height:220px}.mb-art a:nth-child(2) img{height:240px}}
 .mb-ctrl{position:absolute;right:20px;bottom:18px;display:flex;gap:6px;align-items:center}
 .mb-ctrl>*{background:rgba(40,40,40,.62);color:#fff;border:0;height:40px;border-radius:20px;font-size:15px}
 .mb-count{display:inline-flex;align-items:center;padding:0 16px}
@@ -595,3 +595,7 @@ footer .logo-tag{display:none}
 .logo-3d{height:48px}
 .logo-tag{font-size:13.5px}
 @media (max-width:640px){.head .wrap{height:auto}.logo-3d{height:36px}.logo-tag{font-size:11.5px}}
+.mb-txt{display:block;color:inherit;text-decoration:none}
+.mb-art a{display:block;border-radius:16px;transition:transform .2s}
+.mb-art a:hover{transform:translateY(-4px)}
+.mb-art img{display:block}

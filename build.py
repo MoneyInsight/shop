@@ -459,7 +459,7 @@ def build_home(ps):
     def pics(cat, n=3):
         pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
         step = max(1, len(pool) // (n * 7))
-        return "".join(f'<img src="{e(p["image"])}" alt="" loading="lazy">' for p in pool[::step][:n])
+        return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in pool[::step][:n])
     rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
     slides = [
         ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
@@ -473,8 +473,8 @@ def build_home(ps):
     slides.append(("bulk", "대량 구매", "10개 이상이면<br>견적으로 더 싸게", "단체·행사·회사 구매 · 로고 인쇄·포장 · 여러 곳 배송", "bulk.html", "견적 요청하기", pics("tools")))
     def slide(i, k, tag, h, sub, href, btn, art_):
         hid = "" if i == 0 else ' aria-hidden="true" tabindex="-1"'
-        return (f'<a class="mb-slide mb-{k}" href="{href}"{hid}><div class="mb-txt"><span class="mb-tag">{e(tag)}</span><h2>{h}</h2>'
-                f'<p>{e(sub)}</p><span class="mb-btn">{e(btn)} &rsaquo;</span></div><div class="mb-art">{art_}</div></a>')
+        return (f'<div class="mb-slide mb-{k}"{hid}><a class="mb-txt" href="{href}"><span class="mb-tag">{e(tag)}</span><h2>{h}</h2>'
+                f'<p>{e(sub)}</p><span class="mb-btn">{e(btn)} &rsaquo;</span></a><div class="mb-art">{art_}</div></div>')
     banner = "".join(slide(i, *x) for i, x in enumerate(slides))
     dots = "".join(f'<button aria-label="{i + 1}번 배너"{" class=on" if i == 0 else ""}></button>' for i in range(len(slides)))
     body = f'''<section class="mbanner" aria-roledescription="carousel" aria-label="이벤트 배너"><div class="wrap"><div class="mb-box"><div class="mb-track">{banner}</div>

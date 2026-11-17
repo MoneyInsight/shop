@@ -283,7 +283,7 @@
     let i = 0, timer = null, paused = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const go = (k) => {
       i = (k + n) % n; track.style.transform = `translateX(-${i * 100}%)`;
-      slides.forEach((s, j) => { s.toggleAttribute("aria-hidden", j !== i); s.tabIndex = j === i ? 0 : -1; });
+      slides.forEach((s, j) => { s.toggleAttribute("aria-hidden", j !== i); s.querySelectorAll("a").forEach(a => a.tabIndex = j === i ? 0 : -1); });
       if (cnt) cnt.textContent = i + 1; dots.forEach((d, j) => d.classList.toggle("on", j === i));
     };
     const start = () => { clearInterval(timer); if (!paused && n > 1) timer = setInterval(() => go(i + 1), 4500); };
