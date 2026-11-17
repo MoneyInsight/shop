@@ -634,6 +634,6 @@ footer .logo-tag{display:none}
 .pg-n{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;margin-top:8px;line-height:1.4}
 .pop-grid em{font-style:normal;font-weight:700;font-size:15px}
 @media(max-width:1180px){.pop{flex-basis:190px}}
-@media(max-width:1024px){.pop{order:4;flex:1 1 100%;margin-top:8px}.pop-tick{height:36px}.pop-list{left:0;right:0;width:auto}}
+@media(max-width:1024px){.head .wrap{flex-wrap:wrap;height:auto;row-gap:0;padding-bottom:10px}.pop{order:4;flex:1 1 100%;margin-top:8px}.pop-tick{height:36px}.pop-list{left:0;right:0;width:auto}}
 @media(max-width:900px){.pop-grid{grid-template-columns:repeat(3,1fr);gap:12px}}
 @media(max-width:640px){.pop-grid{grid-template-columns:repeat(2,1fr)}.pop-it{font-size:13px}}
