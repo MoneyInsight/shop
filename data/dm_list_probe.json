@@ -1,57 +1,57 @@
 {
  "기본": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "rd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"67845411\", \"title\": \"볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/QW/파스텔컬러/똑딱볼펜/PEN-147152\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_330.png?hash=f9a167707bd7b582e2c447408bc07e66\", \"idxCOM\": null, \"id\": \"jklasfd1\", \"price\": \"258\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\"",
   "first": [
    {
-    "no": "46242401",
-    "title": "뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b",
+    "no": "67845411",
+    "title": "볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/QW/파스텔컬러/똑딱볼펜/PEN-147152",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_330.png?hash=f9a167707bd7b582e2c447408bc07e66",
     "idxCOM": null,
-    "id": "djaaksms46",
-    "price": "220",
+    "id": "jklasfd1",
+    "price": "258",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
      "who": "P",
-     "fee": "2800",
-     "add": "true",
+     "fee": "3000",
+     "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/46242401",
+    "url": "http://domeme.domeggook.com/s/67845411",
     "market": {
      "domeggook": "true",
      "supply": "true"
     }
    },
    {
-    "no": "46242402",
-    "title": "뉴백담 삼색 볼펜 겸용 터치펜 개별 박스 or 벌크 포장 바코드 인쇄가능",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_stt_330.png?hash=80b96a24c9a7949b183cbd9e397fe498",
+    "no": "64015665",
+    "title": "귀여운 구름 젤볼펜 4종 세트 LM-0865",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_stt_330.png?hash=8b5ab678c5481e23ffec6d08b559b5b3",
     "idxCOM": null,
-    "id": "djaaksms46",
-    "price": "420",
+    "id": "tjql12_growth",
+    "price": "2970",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
      "who": "P",
-     "fee": "2800",
-     "add": "true",
+     "fee": "3000",
+     "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/46242402",
+    "url": "http://domeme.domeggook.com/s/64015665",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -59,81 +59,81 @@
    }
   ],
   "nos": [
+   "67845411",
+   "64015665",
+   "50335991",
+   "64069377",
    "46242401",
+   "65054552",
+   "63481433",
    "46242402",
    "60939609",
+   "51165388",
    "51769754",
+   "69681547",
    "67493157",
+   "69102338",
    "60511129",
    "39798363",
    "46831958",
    "52865695",
-   "67845411",
-   "22528092",
-   "66377694",
-   "66360145",
-   "62537773",
-   "39321858",
-   "62294260",
-   "49506741",
-   "14551426",
-   "62294162",
-   "49424800"
+   "67845720",
+   "22528092"
   ]
  },
  "rd": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "rd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"67845411\", \"title\": \"볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/QW/파스텔컬러/똑딱볼펜/PEN-147152\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_330.png?hash=f9a167707bd7b582e2c447408bc07e66\", \"idxCOM\": null, \"id\": \"jklasfd1\", \"price\": \"258\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\"",
   "first": [
    {
-    "no": "46242401",
-    "title": "뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b",
+    "no": "67845411",
+    "title": "볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/QW/파스텔컬러/똑딱볼펜/PEN-147152",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_330.png?hash=f9a167707bd7b582e2c447408bc07e66",
     "idxCOM": null,
-    "id": "djaaksms46",
-    "price": "220",
+    "id": "jklasfd1",
+    "price": "258",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
      "who": "P",
-     "fee": "2800",
-     "add": "true",
+     "fee": "3000",
+     "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/46242401",
+    "url": "http://domeme.domeggook.com/s/67845411",
     "market": {
      "domeggook": "true",
      "supply": "true"
     }
    },
    {
-    "no": "46242402",
-    "title": "뉴백담 삼색 볼펜 겸용 터치펜 개별 박스 or 벌크 포장 바코드 인쇄가능",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_stt_330.png?hash=80b96a24c9a7949b183cbd9e397fe498",
+    "no": "64015665",
+    "title": "귀여운 구름 젤볼펜 4종 세트 LM-0865",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_stt_330.png?hash=8b5ab678c5481e23ffec6d08b559b5b3",
     "idxCOM": null,
-    "id": "djaaksms46",
-    "price": "420",
+    "id": "tjql12_growth",
+    "price": "2970",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
      "who": "P",
-     "fee": "2800",
-     "add": "true",
+     "fee": "3000",
+     "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/46242402",
+    "url": "http://domeme.domeggook.com/s/64015665",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -141,39 +141,39 @@
    }
   ],
   "nos": [
+   "67845411",
+   "64015665",
+   "50335991",
+   "64069377",
    "46242401",
+   "65054552",
+   "63481433",
    "46242402",
    "60939609",
+   "51165388",
    "51769754",
+   "69681547",
    "67493157",
+   "69102338",
    "60511129",
    "39798363",
    "46831958",
    "52865695",
-   "67845411",
-   "22528092",
-   "66377694",
-   "66360145",
-   "62537773",
-   "39321858",
-   "62294260",
-   "49506741",
-   "14551426",
-   "62294162",
-   "49424800"
+   "67845720",
+   "22528092"
   ]
  },
  "ha": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "ha"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"ha\"}, \"list\": {\"item\": [{\"no\": \"67675175\", \"title\": \"만년필 흑색 무광 고급만년필 필기감좋은만년필 선물만년필 선물용만년필 잉크펜\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/01/17882167350351E24988B9FDF42531FB/17882167350351E24988B9FDF42531FB_stt_330.png?hash=fcf7bb0ef3775f0466bad5de5b3b80e0\", \"idxCOM\": null, \"id\": \"ymym455\", \"price\": \"66900\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"fa",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"ha\"}, \"list\": {\"item\": [{\"no\": \"67675175\", \"title\": \"만년필 흑색 무광 고급만년필 필기감좋은만년필 선물만년필 선물용만년필 잉크펜\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/01/17882167350351E24988B9FDF42531FB/17882167350351E24988B9FDF42531FB_stt_330.png?hash=fcf7bb0ef3775f0466bad5de5b3b80e0\", \"idxCOM\": null, \"id\": \"ymym455\", \"price\": \"66900\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"fa",
   "first": [
    {
     "no": "67675175",
@@ -227,49 +227,49 @@
    "60444655",
    "63375291",
    "68958989",
+   "67845411",
    "22528092",
    "43995527",
-   "67845411",
    "58324996",
    "39321858",
    "68180752",
    "14551426",
    "16370707",
-   "59649834",
-   "39512427",
    "51508960",
+   "59649834",
+   "52544444",
+   "39512427",
    "68255435",
    "47986369",
-   "52544444",
    "60149411",
    "64725681"
   ]
  },
  "hd": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:33\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-18 01:20:07\"}}",
   "first": [],
   "nos": []
  },
  "da": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "da"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"da\"}, \"list\": {\"item\": [{\"no\": \"69069631\", \"title\": \"3M 수정테이프 미니필 리필 5mmx6M 작은수정테이프 화이트수정펜 화이트수정테이프 볼펜수정테이프 볼펜지\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/10/30/179332596062A4DC8F214D0B60EE2CE3/179332596062A4DC8F214D0B60EE2CE3_stt_330.png?hash=d7fec610154a4bcb09a8114e80560e68\", \"idxCOM\": null, \"id\": \"buynselling1\", \"price\": \"3800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"da\"}, \"list\": {\"item\": [{\"no\": \"64317956\", \"title\": \"연필꽂이 회전형 6구 대용량 이쁜문구 펜슬꽂이 볼펜트레이 사무실용품\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/04/05/17753839213AC71CD31CA5E628E1CC2F/17753839213AC71CD31CA5E628E1CC2F_stt_330.png?hash=de18d1f3f033f2287b4c132f58191b62\", \"idxCOM\": null, \"id\": \"solseonppyu\", \"price\": \"5200\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"fal",
   "first": [
    {
-    "no": "69069631",
-    "title": "3M 수정테이프 미니필 리필 5mmx6M 작은수정테이프 화이트수정펜 화이트수정테이프 볼펜수정테이프 볼펜지",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/10/30/179332596062A4DC8F214D0B60EE2CE3/179332596062A4DC8F214D0B60EE2CE3_stt_330.png?hash=d7fec610154a4bcb09a8114e80560e68",
+    "no": "64317956",
+    "title": "연필꽂이 회전형 6구 대용량 이쁜문구 펜슬꽂이 볼펜트레이 사무실용품",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/04/05/17753839213AC71CD31CA5E628E1CC2F/17753839213AC71CD31CA5E628E1CC2F_stt_330.png?hash=de18d1f3f033f2287b4c132f58191b62",
     "idxCOM": null,
-    "id": "buynselling1",
-    "price": "3800",
+    "id": "solseonppyu",
+    "price": "5200",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
@@ -280,30 +280,30 @@
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/69069631",
+    "url": "http://domeme.domeggook.com/s/64317956",
     "market": {
      "domeggook": "true",
      "supply": "true"
     }
    },
    {
-    "no": "65773141",
-    "title": "자바 0.7 제트3볼 24개 3색볼펜 볼펜 클립볼펜",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/06/11/1781141250A67A4EF25DEAFB4E43D02A/1781141250A67A4EF25DEAFB4E43D02A_stt_330.png?hash=8207790113ba969a414fffeb66f2e52f",
+    "no": "64478599",
+    "title": "제트스트림 3색볼펜 아이보리 0.5mm 흑 청 적 갑 고급볼펜 부드러운볼펜 잘써지는펜 일본펜",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/04/14/17761683437075B40C173568A6837FB9/17761683437075B40C173568A6837FB9_stt_330.png?hash=734deacc3f8f4181d85f2c271bd90a6b",
     "idxCOM": null,
-    "id": "jcowls4",
-    "price": "32840",
+    "id": "2hamarket",
+    "price": "43200",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
-     "who": "P",
-     "fee": "3000",
+     "who": "S",
+     "fee": "0",
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/65773141",
+    "url": "http://domeme.domeggook.com/s/64478599",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -311,39 +311,39 @@
    }
   ],
   "nos": [
-   "69069631",
-   "65773141",
-   "64536368",
-   "66399673",
-   "64073580",
-   "64495101",
-   "64493404",
-   "65745588",
-   "65767885",
-   "69124033",
-   "69675759",
-   "69675747",
-   "69675740",
-   "64499509",
-   "69675713",
-   "65296060",
-   "66000392",
-   "69675696",
-   "64226754",
-   "64226704"
+   "64317956",
+   "64478599",
+   "64812365",
+   "64490500",
+   "65467682",
+   "64536495",
+   "65608615",
+   "64490328",
+   "65467560",
+   "64478120",
+   "66231020",
+   "64489596",
+   "64810148",
+   "65979950",
+   "66581226",
+   "66020121",
+   "64491168",
+   "64564042",
+   "67335327",
+   "64762096"
   ]
  },
  "aa": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "aa"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"aa\"}, \"list\": {\"item\": [{\"no\": \"62537773\", \"title\": \"[ABC0625] 블랙수성볼펜 고급형 블랙 볼펜 한국당일배송\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2025/12/11/1765410542DC0B07A62D4514D57AA1E2/1765410542DC0B07A62D4514D57AA1E2_stt_330.png?hash=0527cceee23b8d1d51cc972b3bcd45df\", \"idxCOM\": null, \"id\": \"zong1416\", \"price\": \"49\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"true\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"true\", \"fromO",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"aa\"}, \"list\": {\"item\": [{\"no\": \"62537773\", \"title\": \"[ABC0625] 블랙수성볼펜 고급형 블랙 볼펜 한국당일배송\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2025/12/11/1765410542DC0B07A62D4514D57AA1E2/1765410542DC0B07A62D4514D57AA1E2_stt_330.png?hash=0527cceee23b8d1d51cc972b3bcd45df\", \"idxCOM\": null, \"id\": \"zong1416\", \"price\": \"49\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"true\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"true\", \"fromO",
   "first": [
    {
     "no": "62537773",
@@ -369,9 +369,9 @@
     }
    },
    {
-    "no": "62294260",
-    "title": "[ABC0613] 0.5mm 블랙 볼펜 캐릭터 스냅 연필 한국당일배송",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2025/12/02/17646322467A272FAC390E7097194AF8/17646322467A272FAC390E7097194AF8_stt_330.png?hash=fdceec376c11aab7df125199dde867b3",
+    "no": "62294162",
+    "title": "[ABC0612] 1.0mm 블랙 볼펜 캐릭터 스냅 연필 한국당일배송",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2025/12/02/1764631771FF3E1A00164D9C87CA8FF0/1764631771FF3E1A00164D9C87CA8FF0_stt_330.png?hash=26c63f7ac853973b2eded9b563c28966",
     "idxCOM": null,
     "id": "zong1416",
     "price": "50",
@@ -385,7 +385,7 @@
      "add": "true",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/62294260",
+    "url": "http://domeme.domeggook.com/s/62294162",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -394,8 +394,8 @@
   ],
   "nos": [
    "62537773",
-   "62294260",
    "62294162",
+   "62294260",
    "66106702",
    "26910272",
    "44078188",
@@ -417,15 +417,15 @@
  },
  "ad": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "ad"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"ad\"}, \"list\": {\"item\": [{\"no\": \"67012503\", \"title\": \"혜명생필품몰 유니 제트스트림 멀티펜 2&1 MSXE3-500-07투명 / [0.7흑+적/0.5샤프] - 박스 (500개입) 제트\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/08/04/178584164592405EB30B1713DE9A8E85/178584164592405EB30B1713DE9A8E85_stt_330.png?hash=8dcf60567b6c3f41bdd94a433d99d313\", \"idxCOM\": null, \"id\": \"hmsaengpilpummall\", \"price\": \"2803800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"del",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"ad\"}, \"list\": {\"item\": [{\"no\": \"67012503\", \"title\": \"혜명생필품몰 유니 제트스트림 멀티펜 2&1 MSXE3-500-07투명 / [0.7흑+적/0.5샤프] - 박스 (500개입) 제트\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/08/04/178584164592405EB30B1713DE9A8E85/178584164592405EB30B1713DE9A8E85_stt_330.png?hash=8dcf60567b6c3f41bdd94a433d99d313\", \"idxCOM\": null, \"id\": \"hmsaengpilpummall\", \"price\": \"2803800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"del",
   "first": [
    {
     "no": "67012503",
@@ -492,59 +492,59 @@
    "64566876",
    "64566343",
    "64559518",
-   "64560162",
    "64565001",
+   "64560162",
    "64566361"
   ]
  },
  "sa": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:36\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-18 01:20:11\"}}",
   "first": [],
   "nos": []
  },
  "sd": {
   "header": {
-   "numberOfItems": 27512,
+   "numberOfItems": 27624,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1376,
+   "numberOfPages": 1382,
    "sort": "sd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"sd\"}, \"list\": {\"item\": [{\"no\": \"69660344\", \"title\": \"잘써지는볼펜 클립펜 흑색 볼펜 0.5mm\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/11/16/1794830820461D1F8B412E66906842F4/1794830820461D1F8B412E66906842F4_stt_330.png?hash=8d7f1ab3c4200825ad2fdc15777550a1\", \"idxCOM\": null, \"id\": \"janepick7\", \"price\": \"560\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"false\", \"fromOversea\"",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27624, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1382, \"sort\": \"sd\"}, \"list\": {\"item\": [{\"no\": \"69694185\", \"title\": \"볼펜미니노트 아트빌 하트 볼펜수첩 레드 유선 미니노트\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/11/17/1794925550D3AB5FCEC44042FEC33307/1794925550D3AB5FCEC44042FEC33307_stt_330.png?hash=0c6960e22e7c8c67f8061e112389c33a\", \"idxCOM\": null, \"id\": \"cristina640\", \"price\": \"2780\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3500\", \"add\": \"false\", \"fr",
   "first": [
    {
-    "no": "69660344",
-    "title": "잘써지는볼펜 클립펜 흑색 볼펜 0.5mm",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/11/16/1794830820461D1F8B412E66906842F4/1794830820461D1F8B412E66906842F4_stt_330.png?hash=8d7f1ab3c4200825ad2fdc15777550a1",
+    "no": "69694185",
+    "title": "볼펜미니노트 아트빌 하트 볼펜수첩 레드 유선 미니노트",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/11/17/1794925550D3AB5FCEC44042FEC33307/1794925550D3AB5FCEC44042FEC33307_stt_330.png?hash=0c6960e22e7c8c67f8061e112389c33a",
     "idxCOM": null,
-    "id": "janepick7",
-    "price": "560",
+    "id": "cristina640",
+    "price": "2780",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
     "lwp": "false",
     "deli": {
      "who": "P",
-     "fee": "3000",
+     "fee": "3500",
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/69660344",
+    "url": "http://domeme.domeggook.com/s/69694185",
     "market": {
      "domeggook": "true",
      "supply": "true"
     }
    },
    {
-    "no": "69660070",
-    "title": "널스포켓간호사주머니 작은공구가방 간호사 포켓 주머니",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/11/16/179482974160D0F2D0C3A13B2521B383/179482974160D0F2D0C3A13B2521B383_stt_330.png?hash=47f17c0658fdc4f182d1b6f98dfdb70f",
+    "no": "69694550",
+    "title": "스마트폰터치펜 멀티스마트폰터치볼펜 5 p 세트네이비태블릿터치펜",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/11/17/1794925736E3DE150B7B95640F2CAF3F/1794925736E3DE150B7B95640F2CAF3F_stt_330.png?hash=fe7872731a45080b584a0e758a36ec14",
     "idxCOM": null,
-    "id": "janepick7",
-    "price": "5160",
+    "id": "cristina640",
+    "price": "6420",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
@@ -555,7 +555,7 @@
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/69660070",
+    "url": "http://domeme.domeggook.com/s/69694550",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -563,82 +563,82 @@
    }
   ],
   "nos": [
-   "69660344",
-   "69660070",
-   "69659625",
-   "69633183",
-   "69626785",
-   "69626712",
-   "69626698",
-   "69626676",
-   "69626415",
-   "69615097",
-   "69614119",
-   "69605132",
-   "69605049",
-   "69571312",
-   "61928971",
-   "63333684",
-   "60170765",
-   "59820794",
-   "59820792",
-   "65974739"
+   "69694185",
+   "69694550",
+   "69694592",
+   "69694235",
+   "69694360",
+   "69694220",
+   "69694493",
+   "69694549",
+   "69694621",
+   "69694836",
+   "69694799",
+   "69694912",
+   "69690566",
+   "69690391",
+   "69689948",
+   "69689939",
+   "69689705",
+   "69689570",
+   "69689171",
+   "69688789"
   ]
  },
  "ra": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:38\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-18 01:20:12\"}}",
   "first": [],
   "nos": []
  },
  "pop": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:38\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-18 01:20:12\"}}",
   "first": [],
   "nos": []
  },
  "sale": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:39\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-18 01:20:13\"}}",
   "first": [],
   "nos": []
  },
- "view_46242401": {
+ "view_67845411": {
   "domeggook": {
    "basis": {
-    "no": 46242401,
+    "no": 67845411,
     "status": "판매중",
-    "title": "뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능",
+    "title": "볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/QW/파스텔컬러/똑딱볼펜/PEN-147152",
     "keywords": {
      "kw": [
-      "볼펜",
-      "터치펜",
-      "볼펜터치펜",
-      "개별박스",
-      "벌크포장",
-      "바코드인쇄",
-      "스마트기기액세서리",
-      "뉴백담볼펜",
-      "디지털펜",
-      "특이한볼펜"
+      "크리스마스어린이선물",
+      "컬러마카롱볼펜",
+      "학교겨울행사기념품",
+      "여학생파스텔팬시문구",
+      "초등학생학용품",
+      "휴대용똑딱이필기구",
+      "다이어리꾸미기필기용",
+      "수강생학원판촉물",
+      "유치원구디백구성품",
+      "어린이집생일단체선물"
      ]
     },
     "section": "MD홍보대행",
     "nego": "disable",
     "adult": "false",
-    "dateStart": "2026-09-28 00:00:00",
-    "dateEnd": "2027-02-08 23:59:59",
-    "dateReg": "2024-05-04 19:33:02",
+    "dateStart": "2026-09-08 00:00:00",
+    "dateEnd": "2027-11-04 17:25:13",
+    "dateReg": "2026-09-08 10:23:41",
     "secretItem": "공개",
     "tax": "과세상품"
    },
    "price": {
-    "dome": "190",
-    "supply": 220
+    "dome": "158",
+    "supply": "1+258|10+198|50+158"
    },
    "qty": {
-    "inventory": "10786",
-    "domeMoq": "30",
+    "inventory": "6229",
+    "domeMoq": "50",
     "domeUnit": 1,
     "supplyUnit": 1
    },
@@ -646,26 +646,26 @@
     "method": "택배",
     "pay": "선결제",
     "dome": {
-     "type": "수량별비례",
-     "tbl": "1000+2800|1000+2800"
+     "type": "고정배송비",
+     "fee": "3000"
     },
     "supply": {
-     "type": "수량별비례",
-     "tbl": "1000+2800|1000+2800"
+     "pay": "선결제",
+     "type": "고정배송비",
+     "fee": 3000
     },
-    "wating": "1일 소요",
-    "periodDeli": "1",
-    "sendAvg": "0.4",
+    "wating": "즉시배송가능",
+    "periodDeli": "0",
+    "sendAvg": "0.3",
     "fastDeli": "true",
     "merge": {
-     "enable": "c",
-     "basePrice": "50000"
+     "enable": "y"
     },
-    "shippingArea": "61162",
+    "shippingArea": 48067,
     "feeExtra": {
      "jeju": "3000",
-     "islands": "5000",
-     "useDeliPro": "true"
+     "islands": "2500",
+     "useDeliPro": "false"
     },
     "fromOversea": "false",
     "reqCcno": "false"
@@ -675,52 +675,46 @@
     "supply": "true"
    },
    "thumb": {
-    "small": "https://cdn1.domeggook.com/upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_img_150?hash=4d40dca6aaa0c869ab9d8094fea2511b",
-    "large": "https://cdn1.domeggook.com/upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_img_330?hash=4d40dca6aaa0c869ab9d8094fea2511b",
-    "original": "https://cdn1.domeggook.com/upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_img_760?hash=4d40dca6aaa0c869ab9d8094fea2511b",
-    "smallPng": "https://cdn1.domeggook.com/upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_150.png?hash=4d40dca6aaa0c869ab9d8094fea2511b",
-    "largePng": "https://cdn1.domeggook.com/upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b",
-    "hash": "5b5c442104d99ee44208c71fedba7a2f",
-    "lastUpdate": "2024-05-04 19:33:02"
+    "small": "https://cdn1.domeggook.com/upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_img_150?hash=f9a167707bd7b582e2c447408bc07e66",
+    "large": "https://cdn1.domeggook.com/upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_img_330?hash=f9a167707bd7b582e2c447408bc07e66",
+    "original": "https://cdn1.domeggook.com/upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_img_760?hash=f9a167707bd7b582e2c447408bc07e66",
+    "smallPng": "https://cdn1.domeggook.com/upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_150.png?hash=f9a167707bd7b582e2c447408bc07e66",
+    "largePng": "https://cdn1.domeggook.com/upload/item/2026/09/08/17888306211740C0C791ABFE1CEC6AC4/17888306211740C0C791ABFE1CEC6AC4_stt_330.png?hash=f9a167707bd7b582e2c447408bc07e66",
+    "hash": "d3ea64d22c07f8a3c026dfe7826b16fb",
+    "lastUpdate": "2026-09-08 10:23:41"
    },
    "desc": {
     "license": {
      "usable": "true",
-     "msg": "상품설명에 사용된 이미지를 다른 곳에서 사용하는 것을 허용합니다."
+     "msg": "직접제작한 이미지입니다 \n도매매 도매꾹 재배포 사용 법적조치합니다\n\n사용시 사용처를 남겨주세요"
     },
-    "notice": "\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/1공지 뉴백담 디자인.png\"><br><br><br><br><br><br>\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/1 뉴백담 배송공지2.png\"><br><br><br><br>\n",
-    "comment": [
-     {
-      "date": "-1714819044",
-      "memo": "인쇄비는 별도 문의 해주시면 감사하겠습니다.\r\n1도 레이져 인쇄 가능합니다."
-     }
-    ],
+    "notice": "<div style=\"text-align:center;\">\n  <a href=\"https://domeggook.com/main/item/itemList.php?sw=%BF%C0%B7%CE%B6%F3%BC%B1%B9%B0%B0%A1%B0%D4&amp;sf=nick&amp;mnp=&amp;mxp=&amp;mnq=&amp;mxq=&amp;swi%5B%5D=OA\" target=\"_blank\">\n    <img src=\"https://moida.godohosting.com/INFOOA.png\" border=\"0\" style=\"max-width:100%; height:auto;\">\n  </a>\n\n  <div style=\"margin-top:18px; font-size:24px; font-weight:bold;\">\n    <a href=\"https://domeggook.com/main/item/itemList.php?sw=%BF%C0%B7%CE%B6%F3%BC%B1%B9%B0%B0%A1%B0%D4&amp;sf=nick&amp;mnp=&amp;mxp=&amp;mnq=&amp;mxq=&amp;swi%5B%5D=OA\" target=\"_blank\">\n      OA 바로가기 클릭\n    </a>\n  </div>\n</div>",
     "contents": {
-     "item": "<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/2 뉴백담 배송 공지.jpg\" />\r\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/단색터치볼펜-상세.jpg\" />",
+     "item": "<div style=\"margin-bottom:2em; text-align:left;\"><a href=\"https://domeggook.com/main/item/itemList.php?sfc=nick&sf=nick&sw=%BF%C0%B7%CE%B6%F3%BC%B1%B9%B0%B0%A1%B0%D4&image_file=\" target=\"_blank\"><img src=\"https://moida.godohosting.com/INFO/puls.png\" alt=\"OA 배너\" style=\"width:80%; height:auto; display:block; border:0; margin-bottom:2em;\"></a></div><div style=\"margin-bottom:2em; text-align:left;\"><a href=\"https://domeggook.com/main/item/itemList.php?sw=%BF%C0%B7%CE%B6%F3%BC%B1%B9%B0%B0%A1%B0%D4&sf=nick&mnp=&mxp=&mnq=&mxq=&swi%5B%5D=GTF\" target=\"_blank\"><img src=\"https://moida.godohosting.com/INFO/GTF.png\" alt=\"포장용품 배너\" style=\"width:80%; height:auto; display:block; border:0; margin-bottom:2em;\"></a></div><img src=\"https://moida.godohosting.com/2026PEN/PEN147152.png\">",
      "deli": "",
      "event": "",
-     "otherItem": ""
+     "otherItem": "<!-- [ST]catalog -->\n<div style=\"margin: 0px auto; width: 930px;\"><div data-hintbox=\"off\" data-hidetype=\"0\" class=\"  tmpl06\"><div style=\"text-align: center; padding: 40px 0px;\"><div style=\"display: inline-block; font-size: 30px; padding: 0px 70px; line-height: 70px; letter-spacing: -1px; color: rgb(0, 0, 0); white-space: nowrap; text-align: center;\">상품공급사 추천상품</div> <div style=\"border-bottom: 2px solid rgb(0, 0, 0); width: 2em; margin: 15px auto 0px;\"></div></div> <!----> <div style=\"text-align: center;\"><a href=\"http://domeggook.com/66360145\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_0_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">01</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/178341852282581B57A655510FA0164D/178341852282581B57A655510FA0164D_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66360145</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">인기 볼펜/변색볼펜/태양광변색볼펜/실리콘 튤립볼펜/꽃볼펜/캐릭터볼펜/실리콘볼펜/ PEN-106</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">340</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66377694\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_1_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">02</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/08/178348320805651BB1E9130AF93B4ADC/178348320805651BB1E9130AF93B4ADC_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66377694</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/파스텔볼펜/마카롱볼펜/풀바디컬러볼펜/파스텔컬러/똑딱볼펜/PEN-147152</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">158</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67828948\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_2_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">03</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/178875987431D78CEA88131792A39841/178875987431D78CEA88131792A39841_stt_330.png?hash=94d96ab0d67019f0ce4c6e1ed45eeb2c\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67828948</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">꽁치/물고기볼펜/캐릭터볼펜/생선볼펜/물고기볼펜/제주소품/바다소품/바다기념품/물고기소품/PEN-165167</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">680</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67827043\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_3_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">04</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/1788754454DDB985D1F38352E82C7DBA/1788754454DDB985D1F38352E82C7DBA_stt_330.png?hash=94d96ab0d67019f0ce4c6e1ed45eeb2c\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67827043</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">플라워볼펜/해바라기볼펜/해바라기/해바라기조화/해바라기소품/해바라기장식품/꽃볼펜/PEN-401</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">330</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66360122\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_4_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">05</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/1783418376BD8CBD6F5999E83D661F10/1783418376BD8CBD6F5999E83D661F10_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66360122</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/고양이볼펜/고양이소품/걸터진 귀여운 고양이 볼펜/고양이캐릭터/고양이인형/피규어볼펜/PEN-108111</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">280</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66361338\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_5_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">06</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/178342155768A03061B03DC9A4746761/178342155768A03061B03DC9A4746761_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66361338</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/팬더볼펜/판다볼펜/팬더/판다/캐릭터볼펜/인형볼펜/팬더소품/판다소품/피규어볼펜/실리콘볼펜/PEN-158</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">320</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67824657\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_6_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">07</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/1788748871A1BFD3227B7BC16797C445/1788748871A1BFD3227B7BC16797C445_stt_330.png?hash=6202a5c47142305240f54426173d5a66\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67824657</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">크리스마스/선물/캐릭터볼펜/학용품/소품/산타/루돌프/트리/눈사람/캐릭터/사은품/문구/팬시/PEN-142</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">240</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66360138\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_7_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">08</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/17834184582520A8494E896D64BC04A8/17834184582520A8494E896D64BC04A8_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66360138</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/고양이/고양이볼펜/인형볼펜/캐릭터볼펜/고양인형볼펜/고양이캐릭터/고양이피규어볼펜/PEN-117122</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">124</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66362052\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_8_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">09</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/178342381919F0C5AF6577AA6E66B81A/178342381919F0C5AF6577AA6E66B81A_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66362052</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">인기 볼펜/벚꽃/벚꽃볼펜/사쿠라/사쿠라볼펜/플라워볼펜/신학기선물/꽃볼펜/핑크펜/플라워펜/PEN-153</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">300</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67812850\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_9_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">10</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/06/17886802629F0BE42388124EFAAA3420/17886802629F0BE42388124EFAAA3420_stt_330.png?hash=94d96ab0d67019f0ce4c6e1ed45eeb2c\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67812850</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/똑딱이팬더볼펜/판다볼펜/캐릭터볼펜/인형볼펜/팬더소품/판다소품/피규어볼펜/실리콘볼펜/PEN-101</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">148</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67830622\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_10_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">11</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/1788764538A89838428F8E229770C513/1788764538A89838428F8E229770C513_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67830622</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">롱노즈 여우볼펜/인형볼펜/고급볼펜/캐릭터볼펜/PEN-184</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">1380</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67829601\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_11_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">12</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/1788763117FA035100B66492C37BBEE0/1788763117FA035100B66492C37BBEE0_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67829601</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">수량한정세일/단체 행사 최고 인기 부채볼펜/부채/겨울/행사사은품/판촉물/부채볼펜/캐릭터볼펜/PEN-105</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">126</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/68429132\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_12_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">13</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/10/07/179136450083EC3FBF3E40244CBC1A72/179136450083EC3FBF3E40244CBC1A72_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">68429132</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">크리스마스 10색볼펜/크리스마스선물/QW/크리스마스볼펜/산타볼펜/루돌프볼펜/크리스마스구디백/산타/ PEN-</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">680</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67830729\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_13_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">14</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/1788765022758770A1D533D4255016BB/1788765022758770A1D533D4255016BB_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67830729</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">볼펜/죽순팬더볼펜/판다볼펜/캐릭터볼펜/인형볼펜/팬더소품/판다소품/피규어볼펜/실리콘볼펜/PEN-180182</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">170</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/68499262\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_14_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">15</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/10/10/1791616324232828E47B49DE1873064B/1791616324232828E47B49DE1873064B_stt_330.png?hash=b28da076eabd5d93cbf1b6ac7cfffd4f\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">68499262</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">크리스마스 똑딱이볼펜/크리스마스선물/크리스마스볼펜/산타볼펜/크리스마스구디백/산타 PEN-905906</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">158</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67830549\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_15_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">16</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/178876419518D3AFF548BE69E69792C7/178876419518D3AFF548BE69E69792C7_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67830549</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">메모지/벚꽃수첩/꽃 메모지/점착식메모지/학생선물/플라워 메모지/학원판촉물/단체선물/MEM-004</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">295</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66576344\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_16_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">17</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/15/17840980270A2F565B50EFC717084D17/17840980270A2F565B50EFC717084D17_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66576344</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">인형키링/나라별 만화 속 고양이키링 6종 /가방고리 열쇠고리 자동차키링/고양이 캐릭터키링/KEY-113118</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">440</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67829689\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_17_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">18</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/07/17887635728E4C34941878405D40234F/17887635728E4C34941878405D40234F_stt_330.png?hash=22298c46bf1d77597d9aa28841d17e73\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67829689</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">리얼미니어처/에어팟고리/키링/오징어키링/오징어소품/음식키링/오징어캐릭터/에어팟키링/KEY-885</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">1080</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66028501\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_18_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">19</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/06/19/1781866198B2A2D8A2FFE511AC3DA6D4/1781866198B2A2D8A2FFE511AC3DA6D4_stt_330.png?hash=6202a5c47142305240f54426173d5a66\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66028501</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">키링/립스틱 케이스 키링/립스틱키링/파우치키링/케이스키링/립스틱파우치/립스틱보관/손거울/KEY-8793</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">1680</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66403593\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_19_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">20</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/09/17835775840E2BCEF4B41573115AD76F/17835775840E2BCEF4B41573115AD76F_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66403593</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">곰돌이키링/곰돌이인형/ 키링/ 열쇠고리 가방펜던트 /가방펜던트/인형펜던트/곰인형열쇠고리/KEY-014</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">440</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66361364\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_20_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">21</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/178342173157C115F6DD5E00E8F734C5/178342173157C115F6DD5E00E8F734C5_stt_330.png?hash=5553a6f85db48179ef4fd872fa9575f0\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66361364</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">공룡키링/공룡소품/피규어키링/키링/캐릭터키링/가방고리/가방펜던트/가방인형고리/구디백/KEY-877880</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">480</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/67812771\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_21_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">22</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/09/06/1788678550B8397EF8D1431CF207ADF8/1788678550B8397EF8D1431CF207ADF8_stt_330.png?hash=94d96ab0d67019f0ce4c6e1ed45eeb2c\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">67812771</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">재물복/코끼리키링/동물키링/피규어키링/코끼리인형/인형키링/캐릭터키링/명절키링/KEY-164</div> <div style=\"text-align: right; white-space: nowrap;\"><span style=\"font-size: 1.8em; line-height: 1.45em; letter-spacing: -1px; color: rgb(63, 116, 255);\">420</span> <span style=\"font-size: 1.1em; line-height: 1.45em; letter-spacing: -1px;\">원</span></div> <!----></div></div></a><a href=\"http://domeggook.com/66361388\" target=\"_blank\" style=\"text-align: left; display: inline-block; width: 142px; margin: 4px; border: 1px solid rgb(164, 164, 164); color: rgb(66, 66, 66); text-decoration: none; font-size: 10px; box-sizing: content-box; vertical-align: top; overflow: hidden;\"><div style=\"font-size: 10px;\"><div data-focus=\"#nav_22_idx\" style=\"color: rgb(255, 255, 255); width: 1.8em; font-size: 1.4em; line-height: 1.45em; padding: 0px; margin-bottom: -1.45em; height: 1.45em; text-align: center; position: relative; z-index: 10; background-color: rgb(63, 116, 255);\">23</div> <img src=\"https://cdn1.domeggook.com//upload/item/2026/07/07/1783421818259235EFE63A9170670D21/1783421818259235EFE63A9170670D21_stt_330.png?hash=ffc476e0104e89a5e96157cb32ea9139\" style=\"display: block; width: 100%;\"> <div style=\"padding: 8px;\"><div style=\"font-size: 1em; line-height: 1.45em;\">66361388</div> <div style=\"font-size: 1.2em; line-height: 1.45em; letter-spacing: -1px; height: 3em; white-space: normal; word-break: break-all; overflow: hidden; text-align: left;\">인형캐릭터/인형캐릭터선물/인형캐릭터구디백/인형캐릭터키링/산타키링/산타/루돌프/트리/KEY-88891</div> <div style=\"text-align: right; w"
     }
    },
-   "selectOpt": "{\"type\":\"combination\",\"optSort\":\"DA\",\"set\":[{\"opts\":[\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\",\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\",\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\"],\"domPrice\":[\"0\",\"0\",\"0\"],\"name\":\"\\ud3ec\\uc7a5 \\ubc29\\ubc95\",\"changeKey\":[\"0\",\"1\",\"2\"]},{\"opts\":[\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub8e8\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ub808\\ub4dc\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\uadf8\\ub9b0\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub799\"],\"domPrice\":[\"0\",\"0\",\"0\",\"0\"],\"name\":\"\\uc0c9\\uc0c1\\uc120\\ud0dd\",\"changeKey\":[\"0\",\"1\",\"2\",\"3\"]}],\"orgSet\":[{\"name\":\"\\ud3ec\\uc7a5 \\ubc29\\ubc95\",\"opts\":[\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\",\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\",\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\"],\"domPrice\":[\"0\",\"0\",\"0\"]},{\"name\":\"\\uc0c9\\uc0c1\\uc120\\ud0dd\",\"opts\":[\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub8e8\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ub808\\ub4dc\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\uadf8\\ub9b0\",\"\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub799\"],\"domPrice\":[\"0\",\"0\",\"0\",\"0\"]}],\"data\":{\"00_00\":{\"name\":\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub8e8\",\"dom\":\"1\",\"domPrice\":\"0\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"0\",\"qty\":\"877\",\"hid\":\"0\",\"hash\":\"b128feaec75b1062d51506954034af41\"},\"00_01\":{\"name\":\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ub808\\ub4dc\",\"dom\":\"1\",\"domPrice\":\"0\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"0\",\"qty\":\"883\",\"hid\":\"0\",\"hash\":\"2aafa794a727846068ab562c6fa5807c\"},\"00_02\":{\"name\":\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\uadf8\\ub9b0\",\"dom\":\"1\",\"domPrice\":\"0\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"0\",\"qty\":\"913\",\"hid\":\"0\",\"hash\":\"f240ee42e7dded980c3e6372107e090f\"},\"00_03\":{\"name\":\"\\ubc8c\\ud06c(\\ud3ec\\uc7a5\\uc5c6\\uc74c)\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub799\",\"dom\":\"1\",\"domPrice\":\"0\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"0\",\"qty\":\"272\",\"hid\":\"0\",\"hash\":\"d3acd9746e8416a982bcf6560c32b412\"},\"01_00\":{\"name\":\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub8e8\",\"dom\":\"1\",\"domPrice\":\"50\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"55\",\"supPrice\":\"60\",\"qty\":\"961\",\"hid\":\"0\",\"hash\":\"ebf8664c79f8780ddf4328a2f1d97920\"},\"01_01\":{\"name\":\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ub808\\ub4dc\",\"dom\":\"1\",\"domPrice\":\"50\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"55\",\"supPrice\":\"60\",\"qty\":\"962\",\"hid\":\"0\",\"hash\":\"b48f0031c2648c8429f47b0c13fb97b1\"},\"01_02\":{\"name\":\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\uadf8\\ub9b0\",\"dom\":\"1\",\"domPrice\":\"50\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"55\",\"supPrice\":\"60\",\"qty\":\"977\",\"hid\":\"0\",\"hash\":\"a2f34adb5220d270bc913f234e80d347\"},\"01_03\":{\"name\":\"opp\\uc9c0\\ud37c\\ud329\\ub0b1\\uac1c\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub799\",\"dom\":\"1\",\"domPrice\":\"50\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"55\",\"supPrice\":\"60\",\"qty\":\"946\",\"hid\":\"0\",\"hash\":\"7af18bba57e1cfa00a433c2022d35823\"},\"02_00\":{\"name\":\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub8e8\",\"dom\":\"1\",\"domPrice\":\"150\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"165\",\"supPrice\":\"180\",\"qty\":\"999\",\"hid\":\"0\",\"hash\":\"52dadcf278dec4371a4b625aec641258\"},\"02_01\":{\"name\":\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ub808\\ub4dc\",\"dom\":\"1\",\"domPrice\":\"150\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"165\",\"supPrice\":\"180\",\"qty\":\"999\",\"hid\":\"0\",\"hash\":\"156e53b53fe37f341bf2f74da794f81e\"},\"02_02\":{\"name\":\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\uadf8\\ub9b0\",\"dom\":\"1\",\"domPrice\":\"150\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"165\",\"supPrice\":\"180\",\"qty\":\"999\",\"hid\":\"0\",\"hash\":\"f1a2c1034f5b25c188271c6234a8d9f7\"},\"02_03\":{\"name\":\"\\ud22c\\uba85\\ubc15\\uc2a4\\ud3ec\\uc7a5\\/\\ub2e8\\uc0c9\\ud130\\uce58\\ud39c \\ube14\\ub799\",\"dom\":\"1\",\"domPrice\":\"150\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"165\",\"supPrice\":\"180\",\"qty\":\"998\",\"hid\":\"0\",\"hash\":\"0128e37a73c50e0654e03a61164c2b7f\"}}}",
+   "selectOpt": "{\"type\":\"combination\",\"optSort\":\"DA\",\"set\":[{\"opts\":[\"PEN-147 \\ub9c8\\uce74\\ub871 \\uadf8\\ub9b0\",\"PEN-148 \\ub9c8\\uce74\\ub871 \\ud551\\ud06c\",\"PEN-149 \\ub9c8\\uce74\\ub871 \\uc5d8\\ub85c\",\"PEN-150 \\ub9c8\\uce74\\ub871 \\ud654\\uc774\\ud2b8\",\"PEN-151 \\ub9c8\\uce74\\ub871 \\ud37c\\ud50c\",\"PEN-152 \\ub9c8\\uce74\\ub871 \\uc2a4\\uce74\\uc774\"],\"domPrice\":[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"],\"name\":\"\\ud3ec\\uc7a5 \\ubc8c\\ud06c(10\\uac1c\\uc529 OPP)\",\"changeKey\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\"]}],\"orgSet\":[{\"name\":\"\\ud3ec\\uc7a5 \\ubc8c\\ud06c(10\\uac1c\\uc529 OPP)\",\"opts\":[\"PEN-147 \\ub9c8\\uce74\\ub871 \\uadf8\\ub9b0\",\"PEN-148 \\ub9c8\\uce74\\ub871 \\ud551\\ud06c\",\"PEN-149 \\ub9c8\\uce74\\ub871 \\uc5d8\\ub85c\",\"PEN-150 \\ub9c8\\uce74\\ub871 \\ud654\\uc774\\ud2b8\",\"PEN-151 \\ub9c8\\uce74\\ub871 \\ud37c\\ud50c\",\"PEN-152 \\ub9c8\\uce74\\ub871 \\uc2a4\\uce74\\uc774\"],\"domPrice\":[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]}],\"data\":{\"00\":{\"name\":\"PEN-147 \\ub9c8\\uce74\\ub871 \\uadf8\\ub9b0\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"1457\",\"hid\":\"0\",\"hash\":\"32344c51d2955316b383fc42c81a7628\"},\"01\":{\"name\":\"PEN-148 \\ub9c8\\uce74\\ub871 \\ud551\\ud06c\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"1646\",\"hid\":\"0\",\"hash\":\"d930d48144087ecdae61e75120304954\"},\"02\":{\"name\":\"PEN-149 \\ub9c8\\uce74\\ub871 \\uc5d8\\ub85c\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"1498\",\"hid\":\"0\",\"hash\":\"131b3dc4713199d1f6c2e3bf3bc836c6\"},\"03\":{\"name\":\"PEN-150 \\ub9c8\\uce74\\ub871 \\ud654\\uc774\\ud2b8\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"247\",\"hid\":\"0\",\"hash\":\"f860ae0f706c3172639a73b301d5b84b\"},\"04\":{\"name\":\"PEN-151 \\ub9c8\\uce74\\ub871 \\ud37c\\ud50c\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"0\",\"hid\":\"0\",\"hash\":\"b773329617d1c0345b635f151bccfc72\"},\"05\":{\"name\":\"PEN-152 \\ub9c8\\uce74\\ub871 \\uc2a4\\uce74\\uc774\",\"dom\":\"1\",\"domPrice\":\"0\",\"sam\":\"0\",\"samPrice\":\"0\",\"sup\":\"1\",\"supPrice\":\"0\",\"qty\":\"1381\",\"hid\":\"0\",\"hash\":\"966172e68e00e9230ff7ada2ef89cbc6\"}}}",
    "seller": {
-    "id": "djaaksms46",
-    "nick": "뉴백담",
+    "id": "jklasfd1",
+    "nick": "오로라선물가게",
     "type": "일반과세자",
-    "rank": "2",
+    "rank": "1",
     "power": "false",
     "good": "true",
     "global": "false",
     "score": {
-     "avg": "93%",
-     "cnt": 7
+     "avg": "90%",
+     "cnt": 21
     },
     "company": {
-     "name": "한섬유통",
-     "boss": "송철",
-     "cno": "210-21-47437",
-     "addr": "서울 강북구 삼양로28길 18-6 (미아동) (미아동)",
-     "phone": "010-2718-4242"
+     "name": "모이다무역",
+     "boss": "강현순",
+     "cno": "468-67-00344",
+     "addr": "광주광역시 서구 쌍학로 47 (쌍촌동) 106-707",
+     "phone": "010-5619-9019"
     }
    },
    "benefits": {
@@ -729,60 +723,65 @@
     }
    },
    "detail": {
-    "size": "X",
-    "weight": "X",
+    "size": "1",
+    "weight": "1",
     "country": "수입산_아시아_중국",
-    "manufacturer": "뉴백담(중국oem)",
-    "model": "뉴백담 단색 터치볼펜 인쇄가능",
+    "manufacturer": "오로라홈",
+    "model": "볼펜 0.5mm",
     "oversea": "true",
-    "itemCustomCode": "단색터치펜",
+    "itemCustomCode": "",
     "infoDuty": {
-     "type": "기타 재화",
+     "type": "기타 용역",
      "item": [
       {
        "type": "item",
-       "name": "품명 및 모델명",
-       "desc": "상세설명참조"
+       "name": "서비스 제공 사업자",
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "item",
-       "name": "법에 의한 인증·허가 등을 받았음을 확인할 수 있는 경우 그에 대한 사항",
-       "desc": "상세설명참조"
+       "name": "법에 의한 인증,허가 등을 받았음을 확인할 수 있는 경우 그에 대한 사항",
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "item",
-       "name": "제조국 또는 원산지",
-       "desc": "상세설명참조"
+       "name": "이용조건",
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "item",
-       "name": "제조사",
-       "desc": "상세설명참조"
+       "name": "취소·중도해약·해지 조건 및 환불기준",
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "item",
-       "name": "A/S 책임자와 전화번호 또는 소비자상담 관련 전화번호",
-       "desc": "상세설명참조"
+       "name": "취소·환불 방법",
+       "desc": "전체상세정보별도표시"
+      },
+      {
+       "type": "item",
+       "name": "소비자상담 관련 전화번호",
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "transaction",
        "name": "청약철회 및 계약의 해제에 관한 사항",
-       "desc": "상세설명참조"
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "transaction",
        "name": "재화 등의 교환/반품/보증과 그 대금 환불 및 환불의 지연에 따른 배상급 지급의 조건/절차",
-       "desc": "상세설명참조"
+       "desc": "전체상세정보별도표시"
       },
       {
        "type": "transaction",
        "name": "소비자피해보상의 처리, 재화 등에 대한 불만 처리 및 소비자와 사업자 사이의 분쟁처리에 관한 사항",
-       "desc": "상세설명참조"
+       "desc": "전체상세정보별도표시정보 안내"
       },
       {
        "type": "transaction",
        "name": "거래에 관한 약관의 내용 또는 확인할 수 있는 방법",
-       "desc": "상세설명참조"
+       "desc": "전체상세정보별도표시"
       }
      ]
     }
@@ -791,33 +790,38 @@
     "parents": {
      "elem": [
       {
-       "name": "디지털/가전",
-       "code": "17_00_00_00_00",
+       "name": "문구",
+       "code": "10_00_00_00_00",
        "depth": 1
       },
       {
-       "name": "태블릿PC/태블릿PC액세서리",
-       "code": "17_21_00_00_00",
+       "name": "사무용품",
+       "code": "10_01_00_00_00",
        "depth": 2
+      },
+      {
+       "name": "필기도구",
+       "code": "10_01_20_00_00",
+       "depth": 3
       }
      ]
     },
     "current": {
-     "name": "터치펜/기타",
-     "code": "17_21_05_00_00",
-     "depth": 3
+     "name": "볼펜",
+     "code": "10_01_20_06_00",
+     "depth": 4
     }
    },
    "return": {
     "addr": {
-     "no": "61162",
-     "zipcode": "01201",
-     "address1": "서울 강북구 삼양로28길 18-6 (미아동)",
-     "address2": "미아동",
-     "phone": "0507-1300-2798",
-     "mobile": "010-3775-2768"
+     "no": "48067",
+     "zipcode": "18021",
+     "address1": "경기 평택시 고덕면 도시지원1길 49 (W-TOWER)",
+     "address2": "W타워 2층 213호",
+     "phone": "070-1111-1111",
+     "mobile": "010-9272-0608"
     },
-    "deliAmt": 2800,
+    "deliAmt": 3000,
     "deliAmtDouble": "true"
    },
    "event": {
@@ -831,41 +835,42 @@
    }
   }
  },
- "view_46242402": {
+ "view_64015665": {
   "domeggook": {
    "basis": {
-    "no": 46242402,
+    "no": 64015665,
     "status": "판매중",
-    "title": "뉴백담 삼색 볼펜 겸용 터치펜 개별 박스 or 벌크 포장 바코드 인쇄가능",
+    "title": "귀여운 구름 젤볼펜 4종 세트 LM-0865",
     "keywords": {
      "kw": [
-      "터치펜",
-      "볼펜겸터치펜",
-      "삼색볼펜",
-      "판촉사은품",
-      "볼펜선물",
-      "사은품인쇄",
-      "스마트폰터치펜",
-      "스타일러스펜",
-      "태블릿터치펜"
+      "구름볼펜",
+      "귀여운볼펜",
+      "캐릭터볼펜",
+      "젤펜세트",
+      "학생볼펜",
+      "필기용젤펜",
+      "볼펜",
+      "귀여운문구세트",
+      "학용품볼펜",
+      "선물용볼펜"
      ]
     },
     "section": "MD홍보대행",
-    "nego": "disable",
+    "nego": "enable",
     "adult": "false",
-    "dateStart": "2026-09-28 00:00:00",
-    "dateEnd": "2027-02-08 23:59:59",
-    "dateReg": "2024-05-04 19:33:59",
+    "dateStart": "2026-03-19 00:00:00",
+    "dateEnd": "2026-12-05 18:13:00",
+    "dateReg": "2026-03-19 18:13:47",
     "secretItem": "공개",
     "tax": "과세상품"
    },
    "price": {
-    "dome": "1+360|1000+356|5000+349|10000+342",
-    "supply": 420
+    "dome": "2700",
+    "supply": 2970
    },
    "qty": {
-    "inventory": "1808",
-    "domeMoq": "16",
+    "inventory": "96841",
+    "domeMoq": "3",
     "domeUnit": 1,
     "supplyUnit": 1
    },
@@ -873,26 +878,25 @@
     "method": "택배",
     "pay": "선결제",
     "dome": {
-     "type": "수량별비례",
-     "tbl": "1000+2800|1000+2800"
+     "type": "고정배송비",
+     "fee": "3000"
     },
     "supply": {
-     "type": "수량별비례",
-     "tbl": "1000+2800|1000+2800"
+     "type": "고정배송비",
+     "fee": "3000"
     },
-    "wating": "1일 소요",
-    "periodDeli": "1",
-    "sendAvg": "0.4",
+    "wating": "즉시배송가능",
+    "periodDeli": "0",
+    "sendAvg": "0.3",
     "fastDeli": "true",
     "merge": {
-     "enable": "c",
-     "basePrice": "50000"
+     "enable": "y"
     },
-    "shippingArea": "61162",
+    "shippingArea": "72334",
     "feeExtra": {
-     "jeju": "3000",
+     "jeju": "4000",
      "islands": "5000",
-     "useDeliPro": "true"
+     "useDeliPro": "false"
     },
     "fromOversea": "false",
     "reqCcno": "false"
@@ -902,52 +906,46 @@
     "supply": "true"
    },
    "thumb": {
-    "small": "https://cdn1.domeggook.com/upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_img_150?hash=80b96a24c9a7949b183cbd9e397fe498",
-    "large": "https://cdn1.domeggook.com/upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_img_330?hash=80b96a24c9a7949b183cbd9e397fe498",
-    "original": "https://cdn1.domeggook.com/upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_img_760?hash=80b96a24c9a7949b183cbd9e397fe498",
-    "smallPng": "https://cdn1.domeggook.com/upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_stt_150.png?hash=80b96a24c9a7949b183cbd9e397fe498",
-    "largePng": "https://cdn1.domeggook.com/upload/item/2024/05/04/17148188398C7C4B9CCC54ABB1F870D8/17148188398C7C4B9CCC54ABB1F870D8_stt_330.png?hash=80b96a24c9a7949b183cbd9e397fe498",
-    "hash": "06ca34e3be8b0734fe47b98a202262c2",
-    "lastUpdate": "2024-05-04 19:34:00"
+    "small": "https://cdn1.domeggook.com/upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_img_150?hash=8b5ab678c5481e23ffec6d08b559b5b3",
+    "large": "https://cdn1.domeggook.com/upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_img_330?hash=8b5ab678c5481e23ffec6d08b559b5b3",
+    "original": "https://cdn1.domeggook.com/upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_img_760?hash=8b5ab678c5481e23ffec6d08b559b5b3",
+    "smallPng": "https://cdn1.domeggook.com/upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_stt_150.png?hash=8b5ab678c5481e23ffec6d08b559b5b3",
+    "largePng": "https://cdn1.domeggook.com/upload/item/2026/03/19/1773911628B96121B633EFB0ECD27836/1773911628B96121B633EFB0ECD27836_stt_330.png?hash=8b5ab678c5481e23ffec6d08b559b5b3",
+    "hash": "19ea32f3d6250a3fe1978d56d65ea0e4",
+    "lastUpdate": "2026-03-19 18:13:49"
    },
    "desc": {
     "license": {
      "usable": "true",
      "msg": "상품설명에 사용된 이미지를 다른 곳에서 사용하는 것을 허용합니다."
     },
-    "notice": "\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/1공지 뉴백담 디자인.png\"><br><br><br><br><br><br>\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/1 뉴백담 배송공지2.png\"><br><br><br><br>\n",
-    "comment": [
-     {
-      "date": "-1714819022",
-      "memo": "인쇄비는 별도 문의 해주시면 감사하겠습니다.\r\n1도 레이져 인쇄 가능합니다."
-     }
-    ],
+    "notice": "<div style=\"text-align: center;\"><img src=\"https://gi.esmplus.com/hheimish2/%EB%8F%84%EB%A7%A4%EA%BE%B9%EC%95%88%EB%82%B4%EC%84%9C.jpg\" style=\"font-size: 9pt;\"></div>",
     "contents": {
-     "item": "<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/2 뉴백담 배송 공지.jpg\" />\r\n<img src=\"http://djaaksms46.godohosting.com/한섬 B2B /뉴백담 전용/삼색터치볼펜-상세.jpg\" />",
+     "item": "<center><img src=\"https://gi.esmplus.com/hheimish2/LM0865/LM-0865-0.jpg\">\r\n</center>",
      "deli": "",
      "event": "",
      "otherItem": ""
     }
    },
-   "selectOpt": "{\"type\":\"combination\",\"optSort\":\"DA\",\"set\":[{\"opts\":[\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc8c\\ud06c\",\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c opp\\ud3ec\\uc7a5\",\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc15\\uc2a4\\ud3ec\\uc7a5\"],\"domPrice\":[\"0\",\"0\",\"0\"],\"name\":\"\\uc120\\ud0dd\",\"changeKey\":[\"0\",\"1\",\"2\"]}],\"orgSet\":[{\"name\":\"\\uc120\\ud0dd\",\"opts\":[\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc8c\\ud06c\",\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c opp\\ud3ec\\uc7a5\",\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc15\\uc2a4\\ud3ec\\uc7a5\"],\"domPrice\":[\"0\",\"0\",\"0\"]}],\"data\":{\"00\":{\"name\":\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc8c\\ud06c\",\"dom\":\"1\",\"domPrice\":\"0\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"0\",\"qty\":\"753\",\"hid\":\"0\",\"hash\":\"acfb0c5b99679882c1e439845001d71d\"},\"01\":{\"name\":\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c opp\\ud3ec\\uc7a5\",\"dom\":\"1\",\"domPrice\":\"50\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"60\",\"qty\":\"57\",\"hid\":\"0\",\"hash\":\"969708dc40ca2a692c5383bce5a9575c\"},\"02\":{\"name\":\"\\uc0bc\\uc0c9 \\ubcfc\\ud39c \\uacb8\\uc6a9 \\ud130\\uce58\\ud39c \\ubc15\\uc2a4\\ud3ec\\uc7a5\",\"dom\":\"1\",\"domPrice\":\"150\",\"sup\":\"1\",\"sam\":\"0\",\"samPrice\":\"0\",\"supPrice\":\"180\",\"qty\":\"998\",\"hid\":\"0\",\"hash\":\"40b1126d99fc4e488f8fbd228e732191\"}}}",
+   "selectOpt": null,
    "seller": {
-    "id": "djaaksms46",
-    "nick": "뉴백담",
+    "id": "tjql12_growth",
+    "nick": "라이크미그로스",
     "type": "일반과세자",
-    "rank": "2",
+    "rank": "1",
     "power": "false",
     "good": "true",
     "global": "false",
     "score": {
-     "avg": "93%",
-     "cnt": 7
+     "avg": "99%",
+     "cnt": 28
     },
     "company": {
-     "name": "한섬유통",
-     "boss": "송철",
-     "cno": "210-21-47437",
-     "addr": "서울 강북구 삼양로28길 18-6 (미아동) (미아동)",
-     "phone": "010-2718-4242"
+     "name": "라이크미",
+     "boss": "김용섭",
+     "cno": "683-30-00990",
+     "addr": "경북 칠곡군 동명면 송산11길 14 라이크미",
+     "phone": "010-8201-4605"
     }
    },
    "benefits": {
@@ -958,58 +956,58 @@
    "detail": {
     "size": "X",
     "weight": "X",
-    "country": "수입산_아시아_중국",
-    "manufacturer": "뉴백담(중국oem)",
-    "model": "뉴백담 삼색 볼펜 겸용 터치펜",
-    "oversea": "true",
-    "itemCustomCode": "삼색 터치펜",
+    "country": "상세정보별도표기",
+    "manufacturer": "라미협력사",
+    "model": "해당없음",
+    "oversea": "false",
+    "itemCustomCode": "",
     "infoDuty": {
      "type": "기타 재화",
      "item": [
       {
        "type": "item",
        "name": "품명 및 모델명",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "item",
        "name": "법에 의한 인증·허가 등을 받았음을 확인할 수 있는 경우 그에 대한 사항",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "item",
        "name": "제조국 또는 원산지",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "item",
        "name": "제조사",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "item",
        "name": "A/S 책임자와 전화번호 또는 소비자상담 관련 전화번호",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "transaction",
        "name": "청약철회 및 계약의 해제에 관한 사항",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "transaction",
        "name": "재화 등의 교환/반품/보증과 그 대금 환불 및 환불의 지연에 따른 배상급 지급의 조건/절차",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "transaction",
        "name": "소비자피해보상의 처리, 재화 등에 대한 불만 처리 및 소비자와 사업자 사이의 분쟁처리에 관한 사항",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       },
       {
        "type": "transaction",
        "name": "거래에 관한 약관의 내용 또는 확인할 수 있는 방법",
-       "desc": "상세설명참조"
+       "desc": "상세정보 별도표기"
       }
      ]
     }
@@ -1018,33 +1016,38 @@
     "parents": {
      "elem": [
       {
-       "name": "디지털/가전",
-       "code": "17_00_00_00_00",
+       "name": "문구",
+       "code": "10_00_00_00_00",
        "depth": 1
       },
       {
-       "name": "태블릿PC/태블릿PC액세서리",
-       "code": "17_21_00_00_00",
+       "name": "사무용품",
+       "code": "10_01_00_00_00",
        "depth": 2
+      },
+      {
+       "name": "필기도구",
+       "code": "10_01_20_00_00",
+       "depth": 3
       }
      ]
     },
     "current": {
-     "name": "터치펜/기타",
-     "code": "17_21_05_00_00",
-     "depth": 3
+     "name": "볼펜",
+     "code": "10_01_20_06_00",
+     "depth": 4
     }
    },
    "return": {
     "addr": {
-     "no": "61162",
-     "zipcode": "01201",
-     "address1": "서울 강북구 삼양로28길 18-6 (미아동)",
-     "address2": "미아동",
-     "phone": "0507-1300-2798",
-     "mobile": "010-3775-2768"
+     "no": "72334",
+     "zipcode": "41951",
+     "address1": "대구 중구 달구벌대로446길 7-12 (대봉동)",
+     "address2": "한진 대봉집배점 라이크미",
+     "phone": "",
+     "mobile": "010-8201-4605"
     },
-    "deliAmt": 2800,
+    "deliAmt": 3000,
     "deliAmtDouble": "true"
    },
    "event": {
