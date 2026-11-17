@@ -1086,10 +1086,19 @@
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $$(".install-link").forEach((a) => (a.style.display = "")); });
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
   if (isIos) $$(".install-link").forEach((a) => (a.style.display = ""));
+  // 휴대폰에서 보이는 앱 설치 띠 (설치 가능할 때만, 닫으면 7일 동안 안 보임, 이미 앱으로 열었으면 안 보임)
+  const standalone = matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  const showBar = () => {
+    if (standalone || $("#app-bar") || !/android|iphone|ipad|ipod/i.test(navigator.userAgent) || Date.now() < (+store.get("appbar_off", 0) || 0)) return;
+    document.body.insertAdjacentHTML("beforeend", `<div id="app-bar" class="app-bar"><img src="${ROOT}icons/icon-192.png" alt="" width="40" height="40"><div><b>담고사고 앱 받기</b><small>홈 화면에 설치하고 더 빠르게 쇼핑하세요</small></div><a href="#" class="install-link btn-app">설치</a><button type="button" aria-label="닫기" class="app-x">✕</button></div>`);
+    $("#app-bar .app-x").onclick = () => { store.set("appbar_off", Date.now() + 7 * 864e5); $("#app-bar").remove(); };
+  };
+  window.addEventListener("beforeinstallprompt", showBar);
+  if (isIos) setTimeout(showBar, 1500);
   document.addEventListener("click", async (e) => {
     if (!e.target.closest(".install-link")) return;
     e.preventDefault();
-    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $$(".install-link").forEach((a) => (a.style.display = "none")); }
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $$(".install-link").forEach((a) => (a.style.display = "none")); $("#app-bar")?.remove(); }
     else alert("사파리 아래쪽 ‘공유’ 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하면 앱처럼 설치돼요.");
   });
 

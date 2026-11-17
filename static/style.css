@@ -600,3 +600,7 @@ footer .logo-tag{display:none}
 .mb-art a:hover{transform:translateY(-4px)}
 .mb-art img{display:block}
 .ship-tip{color:#C2410C;font-weight:600}
+.app-bar{position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.app-bar img{border-radius:10px;flex:none}.app-bar div{flex:1;min-width:0}.app-bar b{display:block;font-size:14px}.app-bar small{display:block;font-size:12px;color:#6B6B70}
+.app-bar .btn-app{display:inline-block!important;background:#F2541B;color:#fff;font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;text-decoration:none}.app-bar .app-x{background:none;border:0;font-size:16px;color:#999;padding:4px}
+@media (min-width:900px){.app-bar{display:none}}
