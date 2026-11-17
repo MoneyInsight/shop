@@ -394,7 +394,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <link rel="icon" href="{root}favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="{root}icons/icon-180.png"><link rel="manifest" href="{root}manifest.json">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="{name}">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&text=Go&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="{root}style.css?v={ASSET_V}">{extra_head}
 {cfg_js}
@@ -742,7 +742,7 @@ def build_shop_pages():
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
-    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#FF5A1F"/><path d="M11 16h6l5.2 22.5h23.6L51 21H19.6" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 29.5l5 5 9.5-9.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="47" r="3.8" fill="#fff"/><circle cx="43" cy="47" r="3.8" fill="#fff"/></svg>')
+    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7A3D"/><stop offset="1" stop-color="#E2400E"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#g)"/><rect x=".75" y=".75" width="62.5" height="62.5" rx="15.3" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="1.5"/><path d="M12 17h5.5l5 21.5h22.8L50 22H19.8" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M27.5 29.5l4.5 4.5 8.5-8.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="46.5" r="3.3" fill="#fff"/><circle cx="42.5" cy="46.5" r="3.3" fill="#fff"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
           "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#fdf8ef",
           "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},

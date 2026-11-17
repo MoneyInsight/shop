@@ -522,7 +522,7 @@ footer .logo{font-size:20px;color:var(--ink);margin-bottom:10px}
 .hero-perks b{white-space:nowrap}
 @media (max-width:380px){.hero-perks b{font-size:13px}.hero-perks span{font-size:11px}}
 .logo{align-items:center;gap:8px}
-.logo-mark{width:30px;height:30px;border-radius:8px;flex:none}
+.logo-mark{width:30px;height:30px;border-radius:8px;flex:none;box-shadow:0 2px 6px rgba(226,64,14,.28)}
 @media (max-width:640px){.logo-mark{width:26px;height:26px;border-radius:7px}}
 footer .logo .logo-mark{width:24px;height:24px}
 .office-band{background:#16171a;color:#fff}
@@ -580,5 +580,5 @@ footer .logo .logo-mark{width:24px;height:24px}
 }
 
 /* 담Go사Go 로고 (2026-11-17) */
-.logo-word{font-family:var(--sans);font-weight:800;letter-spacing:-.05em}
-.logo-word .go{color:#FF5A1F;font-style:italic;font-weight:800;font-size:.68em;font-weight:900;vertical-align:.55em;line-height:0;margin:0 .1em 0 .03em;letter-spacing:0}
+.logo-word{font-family:var(--sans);font-weight:800;letter-spacing:-.045em;color:#1C1C1E}
+.logo-word .go{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:700;font-size:.66em;vertical-align:.62em;line-height:0;margin:0 .14em 0 .02em;letter-spacing:0;background:linear-gradient(180deg,#FF7A3D,#E2400E);-webkit-background-clip:text;background-clip:text;color:transparent}
