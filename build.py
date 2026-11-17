@@ -352,7 +352,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     name = e(CFG["shop_name"])
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
-    word = e(name).replace("Go", '<b class="go">Go</b>')  # 담Go사Go: Go만 주황 기울임
+    word = '담고<sup class="go">Go</sup>사고<sup class="go">Go</sup>'  # 한글 담고사고가 메인, 영어 Go는 작게
     logo = f'<a class="logo" href="{root}index.html" aria-label="{e(name)} 홈"><img class="logo-mark" src="{root}favicon.svg" alt="" width="30" height="30"><span class="logo-word">{word}</span></a>'
     cfg_js = f"<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>"
     top = f'''<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "무료배송 상품 따로 모아보기 · 회원가입 없이 바로 주문"}</span>
