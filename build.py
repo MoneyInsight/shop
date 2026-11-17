@@ -292,7 +292,11 @@ def clean_catalog(ps):
         if len(k) < 6 or p.get("category") == "used":  # 중고는 한 점 한 점이 다른 상품이라 합치지 않음  # 너무 짧은 이름(예: '원통목걸이')은 다른 상품일 수 있어 합치지 않음
             best[("id", p["id"])] = p; continue
         cur = best.get(k)
-        if cur is None or (p.get("soldout"), int(p["price"])) < (cur.get("soldout"), int(cur["price"])):
+        # 같은 상품이면 품절 아닌 것 → 오너클랜(반품 적음) 우선(10% 이내 가격 차이까지) → 더 싼 것
+        def pref(x):
+            oc = bool(re.match(r"^W[0-9A-Z]{6}$", str(x["id"])))
+            return (bool(x.get("soldout")), int(x["price"]) / (1.10 if oc else 1.0))
+        if cur is None or pref(p) < pref(cur):
             best[k] = p
     kept = list(best.values())
     print(f"정리: 건강기능식품·성인 제외 후 {len(ps)}개 → 중복 상품 정리 후 {len(kept)}개 (가장 싼 것만 남김)")

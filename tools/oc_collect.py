@@ -18,7 +18,7 @@ STATE = ROOT / "data/oc_collect_state.json"
 WH = ROOT / "warehouse"
 FIELDS = ["상품코드", "상품명", "카테고리코드", "카테고리명", "공급가", "공급 배송비", "묶음배송수량", "반품배송비", "교환배송비",
           "대표 이미지 주소", "브랜드", "제조사", "상세 설명", "인증정보", "옵션명", "옵션", "공급사등급"]
-GOOD = (("DIAMOND", "1"), ("PALTINUM", "2"), ("PLATINUM", "2"), ("GOLD", "3"))  # 오너클랜 표기 그대로 (PALTINUM 오타 포함)
+GOOD = (("DIAMOND", "1"), ("PALTINUM", "2"), ("PLATINUM", "2"), ("GOLD", "3"), ("SILVER", "4"))  # 오너클랜 표기 그대로 (PALTINUM 오타 포함) — 신규(NEW)·주의·BAD 공급사만 제외
 PER_FILE = 40000
 
 

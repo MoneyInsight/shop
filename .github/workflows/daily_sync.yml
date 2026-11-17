@@ -34,7 +34,7 @@ jobs:
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
           NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
-          ADD_TARGET: "27000"   # 도매꾹 랭킹순(인기순) 분류별 상위 500개 안에서만
+          ADD_TARGET: "5000"   # 도매매는 반품이 많아 하루 5천 개까지만 (오너클랜 위주) — 랭킹순 상위 500개 안에서
           MAX_MIN: "270"
       - name: 빌드·손해 점검
         run: |

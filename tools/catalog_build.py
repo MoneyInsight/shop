@@ -75,12 +75,12 @@ def products():
             c = x.get("상품코드") or ""
             wh_ids.add(c if c.startswith(("DM", "CH", "W", "OWN")) or not c.isdigit() else "CH" + c)
 
-    def tier(pid):  # 사이트 '추천순' 순서: 자체상품 → 지금까지 고른 사이트 상품 → 인기순으로 새로 찾은 도매매·온채널 → 오너클랜 우수 공급사
+    def tier(pid):  # 사이트 '추천순': 자체상품 → 오너클랜(반품 적고 품질 좋음) → 온채널 → 도매매(반품 많음) — 같은 단계 안에서는 사이트에서 고른 순서·인기순
         if pid.startswith("OWN"):
             return 0
-        if pid not in wh_ids and not re.match(r"^W[0-9A-Z]{6}$", pid):
+        if re.match(r"^W[0-9A-Z]{6}$", pid):
             return 1
-        if pid.startswith(("DM", "CH")):
+        if pid.startswith("CH"):
             return 2
         return 3
     for i, r in enumerate(build.load_products()):
@@ -97,7 +97,7 @@ def products():
              "shipping_fee": int(r.get("shipping_fee") or 0), "sn": int(r.get("sn") or 0), "mq": int(r.get("mq") or 1), "pk": int(r.get("pk") or 1)}
         if not safe(p, P):
             unsafe += 1; continue  # 손해 가능 상품은 DB에 올리지 않음
-        body = json.dumps({k: v for k, v in p.items() if k != "rank"}, ensure_ascii=False, sort_keys=True)
+        body = json.dumps({**{k: v for k, v in p.items() if k != "rank"}, "tier": p["rank"] // 10_000_000}, ensure_ascii=False, sort_keys=True)  # 정렬 단계가 바뀌면 다시 올림
         tt = " ".join(terms(p["name"] + " " + p["brand"]))
         p["terms"] = tt
         p["h"] = hashlib.sha1(body.encode()).hexdigest()[:16] + ":" + hashlib.sha1(tt.encode()).hexdigest()[:6]  # 내용:검색어
