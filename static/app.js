@@ -499,11 +499,11 @@
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
     const qd = $("#qty-deal");
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
-      qd.hidden = false; $(".offer-box").hidden = true;
+      qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; };
       qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +
         [1, 2, 3, 5].filter((n) => n <= p.qt.length && !(n === 5 && p.qt[4] >= p.qt[2])).map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(p.qt[n - 1])}</span><em>${n > 1 && p.qt[n - 1] < p.qt[0] ? Math.round((1 - p.qt[n - 1] / p.qt[0]) * 100) + "%↓" : "&nbsp;"}</em></button>`).join("") + `</div>`;
     }
-    if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); $(".offer-box").hidden = true; }
+    if (p.soldout) { $("#add-cart")?.remove(); $("#buy-now")?.replaceWith(Object.assign(document.createElement("button"), { className: "btn btn-soldout", disabled: true, textContent: "일시품절 · 입고되면 다시 판매해요" })); { const ob = $(".offer-box"); if (ob) ob.hidden = true; }; }
     $(".detail-body").innerHTML = p.detail_html ? `<div class="detail-html">${p.detail_html}</div>` : `<img src="${esc(img(p.image))}" alt="${esc(p.name)}" loading="lazy" style="max-width:640px;width:100%"><p style="margin-top:18px">${esc(p.name)}</p>`;
     $$(".notice-table tr").forEach((tr) => { const k = tr.querySelector("th")?.textContent, td = tr.querySelector("td");
       if (k === "상품명") td.textContent = p.name; if (k === "브랜드") td.textContent = p.brand || "상세페이지 참조"; });
