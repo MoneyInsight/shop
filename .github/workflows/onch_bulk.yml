@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p warehouse
           OUT="../warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv" CAT=auto EXCL=온채널상품.csv,온채널겨울상품.csv,온채널추가상품.csv NO_GIT=1 bash tools/onch_apply.sh $(cat files.txt)
-          gzip -9 "warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv"
+          gzip -9f "warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv"
           echo "${{ steps.chk.outputs.at }}" > data/onch_bulk_last.txt
       - if: steps.chk.outputs.go
         name: 저장
