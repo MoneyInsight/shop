@@ -1,7 +1,7 @@
 name: 오너클랜 상품 대량 수집 (상품 창고)
 on:
   schedule:
-    - cron: "11 */6 * * *"   # 6시간마다 이어서 (목표 수량 채우면 저절로 멈춤)
+    - cron: "11 * * * *"   # 매시간 (한 번에 최대 5시간 — 끝나면 바로 이어서 계속 수집, 겹치면 대기)
   workflow_dispatch:
   push:
     branches: [main]
