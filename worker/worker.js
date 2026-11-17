@@ -1501,4 +1501,11 @@ async function ocToken(env) {
   return tok;
 }
 
-export default { fetch: (req, env) => handle(req, env), scheduled: (ev, env, ctx) => ctx.waitUntil(trackSweep(env)) };  // 정기 실행: 배송 단계 확인
+// 상품 DB가 대량 반영 중이라 잠깐 바쁠 때(일시 오류) 0.2·0.6초 쉬고 다시 시도 — 손님 화면에 오류가 안 뜨게
+function retryDB(db) {
+  if (!db || db.__retry) return db;
+  const again = async (fn) => { let e; for (const w of [0, 200, 600]) { if (w) await new Promise((r) => setTimeout(r, w)); try { return await fn(); } catch (x) { e = x; if (/no such|syntax|constraint/i.test(String(x))) break; } } throw e; };
+  const wrap = (st) => ({ bind: (...a) => wrap(st.bind(...a)), first: (...a) => again(() => st.first(...a)), all: () => again(() => st.all()), run: () => again(() => st.run()), raw: (...a) => again(() => st.raw(...a)), __st: st });
+  return { __retry: true, prepare: (sql) => wrap(db.prepare(sql)), batch: (list) => again(() => db.batch(list.map((x) => x.__st || x))), exec: (q) => db.exec(q), dump: () => db.dump() };
+}
+export default { fetch: (req, env) => handle(req, env.DB ? { ...env, DB: retryDB(env.DB) } : env), scheduled: (ev, env, ctx) => ctx.waitUntil(trackSweep(env)) };  // 정기 실행: 배송 단계 확인
