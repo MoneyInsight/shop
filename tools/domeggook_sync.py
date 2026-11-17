@@ -36,6 +36,8 @@ def view(no):
 def summarize(v):
     if "_err" in v:
         return {"err": v["_err"][:200]}
+    if v.get("errors") or not v.get("basis"):  # 호출 한도 초과 등 오류 응답은 '품절'로 오해하지 않고 건너뜀 (다음 점검에서 다시)
+        return {"err": str(v.get("errors") or "빈 응답")[:200]}
     b, deli, sel = v.get("basis", {}), v.get("deli", {}), v.get("seller", {})
     sup = deli.get("supply") or {}  # 도매매(위탁) 배송정보만 (도매꾹 도매 배송정보로 대신하지 않음)
     kw = (b.get("keywords") or {}).get("kw") or []
