@@ -126,13 +126,14 @@ def main():
             if r:
                 kept.append(r); have.add(r["상품코드"])
         pg = d.get("page") or {}
-        after = pg.get("endCursor") or after
+        nxt = pg.get("endCursor")
+        if not items or not nxt or nxt == after:  # 오너클랜 hasNextPage 값은 믿지 않고, 받은 게 없거나 커서가 그대로일 때만 끝
+            done = True; st["cursor"] = None; st["rounds"] = st.get("rounds", 0) + 1; break
+        after = nxt
         st.update(cursor=after, seen=st.get("seen", 0) + len(items))
         if len(kept) >= PER_FILE:
             total += len(kept); flush()
             STATE.write_text(json.dumps(st), encoding="utf-8")
-        if not pg.get("hasNextPage"):
-            done = True; st["cursor"] = None; st["rounds"] = st.get("rounds", 0) + 1; break
     total += len(kept); flush()
     st["warehouse_total"] = total; st["at"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
     STATE.write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
