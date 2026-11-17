@@ -1,16 +1,16 @@
 {
- "at": "2026-11-17 19:30 UTC",
+ "at": "2026-11-17 21:15 UTC",
  "db": "allchaeum",
  "in_db": 582982,
- "site_and_warehouse_total": 1471409,
+ "site_and_warehouse_total": 1476966,
  "uploaded_today": 0,
- "left": 896529,
+ "left": 902138,
  "files_ok": 0,
- "files_planned": 498,
+ "files_planned": 501,
  "rows_written_24h_before": 4228192,
  "rows_written_24h_after": 4228192,
  "writes_per_product": null,
  "unsafe_skipped": 0,
- "warehouse_files": 44,
+ "warehouse_files": 46,
  "stopped": "최근 24시간 쓰기 2,995,087.5줄 + 다음 파일 예상 20,250.0줄 > 한도 3,000,000"
 }
