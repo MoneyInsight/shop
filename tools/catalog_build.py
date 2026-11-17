@@ -136,7 +136,7 @@ def main():
     # 서버가 사진 신고로 바로 내린 상품: 상태에서 빼서, 아직 팔 수 있는 상품(사진 점검 통과)이면 다시 올리고 아니면 그대로 둠
     try:
         import urllib.request
-        rm = json.loads(urllib.request.urlopen(product_import_worker() + "/db_removed", timeout=20).read().decode())
+        rm = json.loads(urllib.request.urlopen(urllib.request.Request(product_import_worker() + "/db_removed", headers={"User-Agent": "allchaeum-d1"}), timeout=20).read().decode())
         since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=26)).isoformat()
         back = [i for i, at in rm.items() if i in state and at >= since]  # 최근 26시간 안에 내린 것만 (계속 다시 올리지 않게)
         for i in back:
