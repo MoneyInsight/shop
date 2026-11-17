@@ -1,0 +1,34 @@
+name: 도메인 연결 (damgosago.com → GitHub Pages)
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/domain_setup.yml"]
+  workflow_dispatch:
+permissions: { contents: read, pages: write }
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 클라우드플레어 DNS (깃허브 Pages로)
+        env:
+          T1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          T2: ${{ secrets.CLOUDFLARE_TOKEN }}
+        run: |
+          D=damgosago.com
+          for T in "$T1" "$T2"; do
+            [ -z "$T" ] && continue
+            Z=$(curl -s -H "Authorization: Bearer $T" "https://api.cloudflare.com/client/v4/zones?name=$D" | jq -r '.result[0].id // empty')
+            echo "zone: ${Z:+found}"
+            [ -z "$Z" ] && continue
+            add() { curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" -d "$1" | jq -c '{ok:.success, err:[.errors[]?.message]}'; }
+            for ip in 185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153; do add "{\"type\":\"A\",\"name\":\"$D\",\"content\":\"$ip\",\"proxied\":false,\"ttl\":1}"; done
+            add "{\"type\":\"CNAME\",\"name\":\"www.$D\",\"content\":\"moneyinsight.github.io\",\"proxied\":false,\"ttl\":1}"
+            curl -s -H "Authorization: Bearer $T" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" | jq -c '[.result[]|{type,name,content,proxied}]'
+            break
+          done
+      - name: 깃허브 Pages 사용자 도메인
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PUT repos/${{ github.repository }}/pages -f cname=damgosago.com && echo "cname ok" || echo "cname 실패(설정 화면에서 직접)"
+          gh api repos/${{ github.repository }}/pages | jq -c '{cname, html_url, https_enforced, status}'
