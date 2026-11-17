@@ -519,6 +519,20 @@
     return true;
   }
 
+  // DB 모드 첫 화면: 상품 수·무료배송 수·카테고리별 수를 실제 DB 기준으로 (정적 페이지는 일부 상품만 담겨 숫자가 작음)
+  async function homeCounts() {
+    if (!DBMODE || !$(".mbanner")) return;
+    const c = await apiGet("/catalog/counts");
+    if (!c) return;
+    const n = (k) => Number(c[k] || 0), f = (x) => x.toLocaleString("ko-KR");
+    const total = Object.entries(c).filter(([k]) => !k.startsWith("_")).reduce((a, [, v]) => a + Number(v || 0), 0);
+    if (!total) return;
+    const rep = [[/상품 [\d,]+개/g, "상품 " + f(total) + "개"], [/무료배송 [\d,]+개/g, "무료배송 " + f(n("_free")) + "개"], [/전체 [\d,]+개 보기/g, "전체 " + f(total) + "개 보기"],
+      [/(방한용품) [\d,]+개/g, "$1 " + f(n("winter")) + "개"], [/(문구·사무용품) [\d,]+개/g, "$1 " + f(n("office")) + "개"]];
+    const w = document.createTreeWalker(document.querySelector("main") || document.body, NodeFilter.SHOW_TEXT);
+    for (let t; (t = w.nextNode());) { let v = t.nodeValue; for (const [re, to] of rep) v = v.replace(re, to); if (v !== t.nodeValue) t.nodeValue = v; }
+    $$(".cat-tiles a").forEach((a) => { const m = (a.getAttribute("href") || "").match(/category\/([^.]+)\.html/), sm = a.querySelector("small"); if (m && sm && c[m[1]]) sm.textContent = f(n(m[1])) + "개"; });
+  }
   // ── 최근 본 상품 (메인) ──
   async function initRecent() {
     const box = $("#recent-box");
@@ -1089,5 +1103,5 @@
     try { fetch(API + "/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid, path: location.pathname.replace(/^.*\/shop/, ""), ...visitSrc }), keepalive: true }).catch(() => {}); } catch (e) {}
   }
   updateCounts(); markWished(); paintLogin(); handleLoginHash().then(initLogin);
-  initListing(); initRecent(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
+  initListing(); initRecent(); homeCounts(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
 })();

@@ -105,7 +105,8 @@ export const FREE_WHERE = "p.shipping_fee = 0";
 
 export async function counts(db) {
   const rows = (await db.prepare("SELECT category, COUNT(*) AS n FROM products WHERE soldout = 0 GROUP BY category").all()).results || [];
-  return Object.fromEntries(rows.map((r) => [r.category, r.n]));
+  const free = await db.prepare("SELECT COUNT(*) AS n FROM products WHERE soldout = 0 AND shipping_fee = 0").first();
+  return { ...Object.fromEntries(rows.map((r) => [r.category, r.n])), _free: (free && free.n) || 0 };
 }
 
 // 상품 넣기/갱신 (도매처 동기화가 사용). 검색 색인도 함께 갱신
