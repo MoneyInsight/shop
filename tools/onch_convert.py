@@ -92,7 +92,7 @@ for f in sorted(src.glob("*.xlsx")):
                      n(g(r, "반품배송비")), n(g(r, "교환배송비")), g(r, "대표이미지"),
                      "|".join(x for x in g(r, "추가이미지").replace("\n", ",").split(",") if x.strip().startswith("http")),
                      g(r, "브랜드"), g(r, "제조사"), g(r, "원산지 직접입력"), g(r, "상세설명"), g(r, "상품정보제공고시인증허가사항"),
-                     "옵션" if opts else "", "|".join(opts), MALL_CAT, box if (box >= 2 and SHIP_RATIO and ship > cost * SHIP_RATIO) else ""])  # 묶음 정보는 낱개 저가품 묶음 만들 때만
+                     "옵션" if opts else "", "|".join(opts), MALL_CAT, ((box or 1) if g(r, "배송비유형") == "수량별" else 0) if ship else ""])  # 수량별 배송비면 N개마다 (1 = 개당) — 손해 방지
 
 PICK = [k for k in opt.get("pick", "").split(",") if k]
 SKIP = [k for k in opt.get("skip", "").split(",") if k]  # 상품명에 이 단어가 있으면 뺌 (다른 그룹이 가져감)

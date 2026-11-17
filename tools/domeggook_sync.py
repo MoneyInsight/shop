@@ -55,7 +55,8 @@ def summarize(v):
                 opts = "soldout"
         except Exception:
             opts = None
-    return {"opts": opts, "oname": oname, "minp": minp or "", "status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
+    unit = num((v.get("qty") or {}).get("supplyUnit")) or 1  # 위탁 판매 단위 (2 이상이면 낱개 주문 불가)
+    return {"unit": unit, "opts": opts, "oname": oname, "minp": minp or "", "status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
             "ship_type": sup.get("type", ""), "ship_fee": sup.get("fee", ""), "ship_raw": json.dumps(sup, ensure_ascii=False)[:300],
             "pay": deli.get("pay", ""), "merge": (deli.get("merge") or {}).get("enable", ""),
             "price": price, "inv": (v.get("qty") or {}).get("inventory", ""), "kw": kw[:12]}
@@ -108,6 +109,8 @@ def main():
                 r["공급가"] = str(num(info.get("price"))); repriced += 1
             if "minp" in info and str(num(info.get("minp")) or "") != str(r.get("공급사최저판매가") or ""):
                 r["공급사최저판매가"] = str(num(info.get("minp")) or ""); repriced += 1
+            if num(info.get("unit")) > 1:  # 판매 단위가 묶음(예: 10개 단위)인 상품은 낱개로 팔면 손해 → 내림
+                soldout.append(c); continue
             if info.get("opts") == "soldout":
                 soldout.append(c); continue
             if isinstance(info.get("opts"), list) and "옵션" in r:  # 옵션을 도매처와 똑같이 (추가금은 원가 차이만큼 판매가에 반영)

@@ -188,15 +188,17 @@ def code_raw(get):
     return get("code") or get("product_no") or ""
 
 
-def ship_every(code, box, ship):
+def ship_every(code, box, ship, raw=None):
     """배송비를 몇 개마다 받는지 (0 = 같은 상품이면 수량·옵션 상관없이 주문당 1번)
     - 온채널(CH): 발주 화면 계산으로 확인 → 상품당 1번
     - 도매매(DM): 고정배송비 → 1번, 수량별(묶음 수량 N) → N개마다, N 모름(1) → 1개마다
     - 오너클랜 등 확인 안 된 곳 → 1개마다 (손해 방지)"""
     if not ship:
         return 0
-    if code.startswith("CH"):
-        return 0
+    if code.startswith("CH"):  # 온채널: "0" = 주문당 1번(확인됨), N = N개마다(수량별), 빈칸 = 방식 모름 → 1개마다 (손해 방지)
+        if raw is not None and not str(raw).strip():
+            return 1
+        return int(box) if box else 0
     if code.startswith("DM"):
         return int(box) if box else 0
     return int(box) if box and box > 1 else 1
@@ -283,7 +285,7 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                         cheap += 1; continue
                     pk, goods, box = k, goods * k, 0  # k개 묶음 1세트
                     name = f"[{k}개 묶음] {name}"
-                sf, sn = cship, ship_every(get(r, "code") or get(r, "product_no") or "", box, cship)
+                sf, sn = cship, ship_every(get(r, "code") or get(r, "product_no") or "", box, cship, get(r, "box_qty"))
                 shipx = math.ceil(cship * pricing.get("card_fee", 0.034) / (1 - pricing.get("card_fee", 0.034) - 1 / 11) / 10) * 10 if cship else 0  # 배송비에 붙는 카드수수료
                 price = price_from_cost(goods, pricing) + shipx
                 qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, pricing)]
