@@ -1030,7 +1030,7 @@
       if (!v("name") || digits(v("contact")).length < 9) { alert("회사·단체명(담당자)과 연락처를 입력해 주세요."); return; }
       if (!$("#bk-agree").checked) { alert("개인정보 수집·이용에 동의해 주세요."); return; }
       const text = [`[대량 구매 견적 요청]`, `상품: ${v("product")}${id ? ` (상품번호 ${id})` : ""}`, `수량: ${v("qty")}개`, v("date") && `희망 날짜: ${v("date")}`, v("price") && `희망 단가/예산: ${v("price")}`,
-        v("email") && `이메일: ${v("email")}`, $("#bk-tax").checked && "세금계산서 필요", $("#bk-print").checked && "맞춤 작업(인쇄·포장) 필요", v("text") && `요청 사항: ${v("text")}`].filter(Boolean).join("\n");
+        v("email") && `이메일: ${v("email")}`, $("#bk-print").checked && "맞춤 작업(인쇄·포장) 필요", v("text") && `요청 사항: ${v("text")}`].filter(Boolean).join("\n");
       const b = $("#bk-btn"); b.disabled = true;
       const { ok, d } = await api("/inquiry/add", { name: v("name"), contact: v("contact"), type: "대량구매", orderId: id || "", text });
       b.disabled = false;

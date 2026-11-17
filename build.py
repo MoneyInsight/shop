@@ -459,7 +459,7 @@ def build_home(ps):
     slides = [
         ("brand", "올채움", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
         ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·목도리·장갑·방한용품 {len(by_cat.get('winter', [])):,}개", "category/winter.html", "겨울용품 보기", pics("winter")),
-        ("office", "기업·학교 구매", "사무실·학교 비품은<br>올채움 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서·세금계산서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
+        ("office", "기업·학교 구매", "사무실·학교 비품은<br>올채움 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
     ]
     if max_deal >= 2:
         slides.append(("deal", "담을수록 할인", "같은 상품 2개부터<br>자동으로 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
@@ -476,7 +476,7 @@ def build_home(ps):
 <div class="mb-ctrl"><span class="mb-count"><b>1</b> / {len(slides)}</span><button class="mb-prev" aria-label="이전 배너">&lsaquo;</button><button class="mb-next" aria-label="다음 배너">&rsaquo;</button><button class="mb-play" aria-label="자동 넘김 멈춤">&#10074;&#10074;</button></div>
 <div class="mb-dots">{dots}</div></div></div></section>
 <section class="office-band"><div class="wrap"><div><small>OFFICE · 기업·학교 구매</small><b>사무실·학교 비품은 올채움 오피스</b>
-<span>문구·사무용품 {len(by_cat.get("office", [])):,}개 · 견적서 바로 발급 · 세금계산서 · 많이 살수록 할인</span></div>
+<span>문구·사무용품 {len(by_cat.get("office", [])):,}개 · 견적서 바로 발급 · 많이 살수록 할인</span></div>
 <div class="office-btns"><a class="btn" href="category/office.html">문구·사무 보기</a><a class="btn btn-ghost" href="bulk.html">기업 견적 문의</a></div></div></section>
 <div class="benefits"><div class="wrap">
 <div>{I_TRUCK}<p><b><a href="search.html?free=1" style="color:inherit">무료배송 {sum(1 for x in ps if not x["shipping_fee"]):,}개</a></b><span>같은 상품은 여러 개 사도 배송비 한 번</span></p></div>
@@ -561,7 +561,7 @@ def product_body(p, related):
 <a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
 <span class="bulk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/></svg></span>
 <span class="bulk-txt"><b>대량 구매 · 기업/단체 견적</b><small>수량에 맞춰 더 좋은 가격으로 견적을 보내 드려요</small>
-<span class="bulk-tags"><em>10개 이상</em><em>세금계산서</em><em>로고 인쇄·포장</em><em>여러 곳 배송</em></span></span>
+<span class="bulk-tags"><em>10개 이상</em><em>로고 인쇄·포장</em><em>여러 곳 배송</em></span></span>
 <span class="bulk-go">견적 요청<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></a>
 <div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
 </div></div>
@@ -647,7 +647,7 @@ FAQ = [
     ("교환이나 반품은 어떻게 하나요?", "상품을 받으신 날부터 7일 이내에 주문·배송 조회에서 신청해 주세요. 상품은 출고지에서 바로 보내드리기 때문에 직접 보내지 마시고, 신청하시면 택배 기사님이 방문해 회수합니다. 단순 변심은 상품 페이지에 적힌 반품 배송비를 부담하셔야 하며, 불량·오배송은 무료로 처리해 드립니다."),
     ("환불은 언제 되나요?", "취소는 즉시, 반품은 상품이 도착해 확인된 뒤 3영업일 안에 결제하신 수단으로 환불됩니다. 카드사 사정에 따라 3~7영업일이 더 걸릴 수 있습니다."),
     ("어떤 결제 수단을 쓸 수 있나요?", "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다."),
-    ("현금영수증이나 세금계산서를 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 세금계산서가 필요하시면 1:1 문의로 사업자 정보를 남겨 주세요."),
+    ("현금영수증을 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 카드 결제는 카드 매출전표가 증빙이 됩니다."),
     ("여러 개 사면 할인되나요?", "네. 같은 상품을 2개 이상 담으시면 개당 가격이 자동으로 내려갑니다(옵션이 달라도 합산). 할인율은 상품 페이지의 ‘많이 살수록 개당 가격이 내려가요’ 표에서 확인하세요. 기업·단체 대량 구매는 ‘대량 구매 문의’로 견적을 요청하시면 됩니다."),
     ("쿠폰은 어디에 입력하나요?", "주문서의 결제 금액 영역에서 쿠폰 코드를 입력하고 적용 버튼을 누르시면 됩니다."),
     ("리뷰는 누구나 쓸 수 있나요?", "실제로 구매하신 분만 작성하실 수 있습니다. 상품이 발송된 뒤 상품 페이지에서 주문번호와 연락처를 입력해 작성해 주세요."),
@@ -727,7 +727,7 @@ def build_shop_pages():
 <label for="bk-price">희망 단가 또는 예산 (선택)</label><input id="bk-price" placeholder="예) 개당 15,000원 / 총 300만 원">
 <div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 올채움상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
 <label for="bk-email">이메일 (견적서 받을 곳, 선택)</label><input id="bk-email" type="email">
-<label class="check"><input type="checkbox" id="bk-tax"><span>세금계산서 발행이 필요해요</span></label>
+
 <label class="check"><input type="checkbox" id="bk-print"><span>로고 인쇄·개별 포장 등 맞춤 작업이 필요해요</span></label>
 <label for="bk-text">요청 사항</label><textarea id="bk-text" style="height:110px" placeholder="옵션(색상·사이즈)별 수량, 배송지가 여러 곳인지 등"></textarea>
 <label class="check"><input type="checkbox" id="bk-agree"><span>견적 안내를 위한 개인정보(이름·연락처·이메일) 수집·이용에 동의합니다.</span></label>
