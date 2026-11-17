@@ -651,3 +651,4 @@ footer .logo-tag{display:none}
 .find-cta b{font-size:18px;color:var(--ink)}.find-cta span{font-size:14px}
 .find-cta .btn{max-width:240px;width:100%;margin-top:6px}
 .find-bar{display:block;margin:28px 0 8px;padding:16px 18px;border:1px dashed var(--accent);background:var(--accent-soft);text-align:center;font-size:14px}.find-bar b{color:var(--accent);margin-right:6px}
+#listing:has(.find-empty) .find-bar{display:none}
