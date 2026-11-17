@@ -200,3 +200,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    import resource  # 최대 메모리 기록 (상품이 늘어 작업 컴퓨터 메모리 16GB에 가까워지는지 보려고)
+    print(f"최대 메모리 {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024:,}MB")
