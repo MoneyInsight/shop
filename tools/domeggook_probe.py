@@ -5,6 +5,6 @@ def call(params):
     q = urllib.parse.urlencode({**params, "aid": KEY, "om": "json"})
     with urllib.request.urlopen("https://domeggook.com/ssl/api/?" + q, timeout=60) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
-for no in (os.environ.get("NOS") or "63457910,47924039,66996546").split(","):
+for no in (os.environ.get("NOS") or "49577904").split(","):
     v = call({"ver": "4.5", "mode": "getItemView", "no": no}).get("domeggook", {})
     print("ITEM", no, json.dumps({k: v.get(k) for k in ("price", "qty", "deli", "unitQty", "basis")}, ensure_ascii=False)[:3000])
