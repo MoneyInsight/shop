@@ -637,3 +637,4 @@ footer .logo-tag{display:none}
 @media(max-width:1024px){.head .wrap{flex-wrap:wrap;height:auto;row-gap:0;padding-bottom:10px}.pop{order:4;flex:1 1 100%;margin-top:8px}.pop-tick{height:36px}.pop-list{left:0;right:0;width:auto}}
 @media(max-width:900px){.pop-grid{grid-template-columns:repeat(3,1fr);gap:12px}}
 @media(max-width:640px){.pop-grid{grid-template-columns:repeat(2,1fr)}.pop-it{font-size:13px}}
+.pop-list ol,.pop-grid{list-style:none}
