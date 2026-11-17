@@ -81,7 +81,11 @@ def main():
     codes.sort(key=lambda c: (c not in zero or bool(cache.get(c, {}).get("checked")), cache.get(c, {}).get("checked", "")))  # 배송비 0(확인 전) 먼저
     today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")
     done = 0
+    t0, max_min = time.time(), float(os.environ.get("MAX_MIN", "290"))  # 작업 제한 시간 전에 멈추고 여기까지 저장 (통째로 날리지 않게)
     for c in codes[:LIMIT]:
+        if time.time() - t0 > max_min * 60:
+            print(f"시간 다 됨 → {done}개까지 반영, 나머지는 다음 점검에서")
+            break
         s = summarize(view(c))
         s["checked"] = today
         cache[c] = s

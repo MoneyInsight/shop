@@ -26,6 +26,7 @@ jobs:
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
           LIMIT: "10000"
+          MAX_MIN: "270"
       - name: 빌드·손해 점검
         run: |
           python3 build.py
