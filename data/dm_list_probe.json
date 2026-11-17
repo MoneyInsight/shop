@@ -1,15 +1,15 @@
 {
  "기본": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "rd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
   "first": [
    {
     "no": "46242401",
@@ -71,27 +71,27 @@
    "67845411",
    "22528092",
    "66377694",
-   "62294260",
-   "49424800",
-   "68255435",
-   "52544444",
    "66360145",
-   "66360122",
+   "62537773",
    "39321858",
-   "67845720"
+   "62294260",
+   "49506741",
+   "14551426",
+   "62294162",
+   "49424800"
   ]
  },
  "rd": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "rd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"rd\"}, \"list\": {\"item\": [{\"no\": \"46242401\", \"title\": \"뉴백담 볼펜 겸용 터치펜 단색 개별 박스 or 벌크 포장 바코드 인쇄가능\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2024/05/04/1714818782224D12E45A8387E0941D65/1714818782224D12E45A8387E0941D65_stt_330.png?hash=4d40dca6aaa0c869ab9d8094fea2511b\", \"idxCOM\": null, \"id\": \"djaaksms46\", \"price\": \"220\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"2800\", \"add\": \"tr",
   "first": [
    {
     "no": "46242401",
@@ -153,27 +153,27 @@
    "67845411",
    "22528092",
    "66377694",
-   "62294260",
-   "49424800",
-   "68255435",
-   "52544444",
    "66360145",
-   "66360122",
+   "62537773",
    "39321858",
-   "67845720"
+   "62294260",
+   "49506741",
+   "14551426",
+   "62294162",
+   "49424800"
   ]
  },
  "ha": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "ha"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"ha\"}, \"list\": {\"item\": [{\"no\": \"67675175\", \"title\": \"만년필 흑색 무광 고급만년필 필기감좋은만년필 선물만년필 선물용만년필 잉크펜\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/01/17882167350351E24988B9FDF42531FB/17882167350351E24988B9FDF42531FB_stt_330.png?hash=fcf7bb0ef3775f0466bad5de5b3b80e0\", \"idxCOM\": null, \"id\": \"ymym455\", \"price\": \"66900\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"fa",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"ha\"}, \"list\": {\"item\": [{\"no\": \"67675175\", \"title\": \"만년필 흑색 무광 고급만년필 필기감좋은만년필 선물만년필 선물용만년필 잉크펜\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/09/01/17882167350351E24988B9FDF42531FB/17882167350351E24988B9FDF42531FB_stt_330.png?hash=fcf7bb0ef3775f0466bad5de5b3b80e0\", \"idxCOM\": null, \"id\": \"ymym455\", \"price\": \"66900\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"fa",
   "first": [
    {
     "no": "67675175",
@@ -227,49 +227,49 @@
    "60444655",
    "63375291",
    "68958989",
-   "67845411",
    "22528092",
    "43995527",
+   "67845411",
    "58324996",
-   "59649834",
    "39321858",
-   "68255435",
-   "51508960",
-   "16370707",
    "68180752",
-   "64819089",
-   "39512427",
    "14551426",
+   "16370707",
+   "59649834",
+   "39512427",
+   "51508960",
+   "68255435",
    "47986369",
    "52544444",
-   "60149411"
+   "60149411",
+   "64725681"
   ]
  },
  "hd": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 01:51:19\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:33\"}}",
   "first": [],
   "nos": []
  },
  "da": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "da"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"da\"}, \"list\": {\"item\": [{\"no\": \"67171486\", \"title\": \"물고기 젤펜 볼펜 캐릭터 팬시 다꾸 동물 디자인 물고기볼펜 팬시볼펜 물고기젤펜\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/08/11/1786382175BDED65ABD6C966459612AC/1786382175BDED65ABD6C966459612AC_stt_330.png?hash=fb80aa69e1605118bf915005c3001d3d\", \"idxCOM\": null, \"id\": \"normal1509\", \"price\": \"1300\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\":",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"da\"}, \"list\": {\"item\": [{\"no\": \"69069631\", \"title\": \"3M 수정테이프 미니필 리필 5mmx6M 작은수정테이프 화이트수정펜 화이트수정테이프 볼펜수정테이프 볼펜지\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/10/30/179332596062A4DC8F214D0B60EE2CE3/179332596062A4DC8F214D0B60EE2CE3_stt_330.png?hash=d7fec610154a4bcb09a8114e80560e68\", \"idxCOM\": null, \"id\": \"buynselling1\", \"price\": \"3800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee",
   "first": [
    {
-    "no": "67171486",
-    "title": "물고기 젤펜 볼펜 캐릭터 팬시 다꾸 동물 디자인 물고기볼펜 팬시볼펜 물고기젤펜",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/08/11/1786382175BDED65ABD6C966459612AC/1786382175BDED65ABD6C966459612AC_stt_330.png?hash=fb80aa69e1605118bf915005c3001d3d",
+    "no": "69069631",
+    "title": "3M 수정테이프 미니필 리필 5mmx6M 작은수정테이프 화이트수정펜 화이트수정테이프 볼펜수정테이프 볼펜지",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/10/30/179332596062A4DC8F214D0B60EE2CE3/179332596062A4DC8F214D0B60EE2CE3_stt_330.png?hash=d7fec610154a4bcb09a8114e80560e68",
     "idxCOM": null,
-    "id": "normal1509",
-    "price": "1300",
+    "id": "buynselling1",
+    "price": "3800",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
@@ -280,19 +280,19 @@
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/67171486",
+    "url": "http://domeme.domeggook.com/s/69069631",
     "market": {
      "domeggook": "true",
      "supply": "true"
     }
    },
    {
-    "no": "63804480",
-    "title": "휴대용 칫솔 케이스 펜슬케이스 연필케이스 펜케이스",
-    "thumb": "https://cdn1.domeggook.com//upload/item/2026/03/11/1773192512A79B453F30C7E0FE211AED/1773192512A79B453F30C7E0FE211AED_stt_330.png?hash=55abb85c6152ee4ff554533dabbf8aef",
+    "no": "65773141",
+    "title": "자바 0.7 제트3볼 24개 3색볼펜 볼펜 클립볼펜",
+    "thumb": "https://cdn1.domeggook.com//upload/item/2026/06/11/1781141250A67A4EF25DEAFB4E43D02A/1781141250A67A4EF25DEAFB4E43D02A_stt_330.png?hash=8207790113ba969a414fffeb66f2e52f",
     "idxCOM": null,
     "id": "jcowls4",
-    "price": "400",
+    "price": "32840",
     "unitQty": "1",
     "comOnly": "true",
     "adultOnly": "false",
@@ -303,7 +303,7 @@
      "add": "false",
      "fromOversea": "false"
     },
-    "url": "http://domeme.domeggook.com/s/63804480",
+    "url": "http://domeme.domeggook.com/s/65773141",
     "market": {
      "domeggook": "true",
      "supply": "true"
@@ -311,39 +311,39 @@
    }
   ],
   "nos": [
-   "67171486",
-   "63804480",
-   "64480441",
-   "64492657",
-   "65251255",
-   "65250009",
-   "64560286",
-   "65432881",
-   "64550358",
-   "65511033",
-   "65510421",
-   "65251947",
-   "64482064",
-   "64467426",
-   "63256130",
-   "64538640",
-   "65338309",
-   "65835405",
-   "65573379",
-   "65773124"
+   "69069631",
+   "65773141",
+   "64536368",
+   "66399673",
+   "64073580",
+   "64495101",
+   "64493404",
+   "65745588",
+   "65767885",
+   "69124033",
+   "69675759",
+   "69675747",
+   "69675740",
+   "64499509",
+   "69675713",
+   "65296060",
+   "66000392",
+   "69675696",
+   "64226754",
+   "64226704"
   ]
  },
  "aa": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "aa"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"aa\"}, \"list\": {\"item\": [{\"no\": \"62537773\", \"title\": \"[ABC0625] 블랙수성볼펜 고급형 블랙 볼펜 한국당일배송\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2025/12/11/1765410542DC0B07A62D4514D57AA1E2/1765410542DC0B07A62D4514D57AA1E2_stt_330.png?hash=0527cceee23b8d1d51cc972b3bcd45df\", \"idxCOM\": null, \"id\": \"zong1416\", \"price\": \"49\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"true\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"true\", \"fromO",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"aa\"}, \"list\": {\"item\": [{\"no\": \"62537773\", \"title\": \"[ABC0625] 블랙수성볼펜 고급형 블랙 볼펜 한국당일배송\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2025/12/11/1765410542DC0B07A62D4514D57AA1E2/1765410542DC0B07A62D4514D57AA1E2_stt_330.png?hash=0527cceee23b8d1d51cc972b3bcd45df\", \"idxCOM\": null, \"id\": \"zong1416\", \"price\": \"49\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"true\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"true\", \"fromO",
   "first": [
    {
     "no": "62537773",
@@ -403,8 +403,8 @@
    "54443832",
    "65949875",
    "62537803",
-   "52594807",
    "39049882",
+   "52594807",
    "62662719",
    "63411564",
    "62294274",
@@ -417,15 +417,15 @@
  },
  "ad": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "ad"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"ad\"}, \"list\": {\"item\": [{\"no\": \"67012503\", \"title\": \"혜명생필품몰 유니 제트스트림 멀티펜 2&1 MSXE3-500-07투명 / [0.7흑+적/0.5샤프] - 박스 (500개입) 제트\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/08/04/178584164592405EB30B1713DE9A8E85/178584164592405EB30B1713DE9A8E85_stt_330.png?hash=8dcf60567b6c3f41bdd94a433d99d313\", \"idxCOM\": null, \"id\": \"hmsaengpilpummall\", \"price\": \"2803800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"del",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"ad\"}, \"list\": {\"item\": [{\"no\": \"67012503\", \"title\": \"혜명생필품몰 유니 제트스트림 멀티펜 2&1 MSXE3-500-07투명 / [0.7흑+적/0.5샤프] - 박스 (500개입) 제트\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/08/04/178584164592405EB30B1713DE9A8E85/178584164592405EB30B1713DE9A8E85_stt_330.png?hash=8dcf60567b6c3f41bdd94a433d99d313\", \"idxCOM\": null, \"id\": \"hmsaengpilpummall\", \"price\": \"2803800\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"del",
   "first": [
    {
     "no": "67012503",
@@ -477,21 +477,21 @@
   "nos": [
    "67012503",
    "67013528",
-   "66964096",
    "66970888",
    "66970167",
-   "64559942",
+   "66964096",
    "64566908",
+   "64559942",
    "64559500",
    "64564508",
+   "64559509",
+   "64560284",
    "64565324",
    "64559686",
    "64565534",
    "64566876",
    "64566343",
-   "64560284",
    "64559518",
-   "64559509",
    "64560162",
    "64565001",
    "64566361"
@@ -499,21 +499,21 @@
  },
  "sa": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 01:51:23\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:36\"}}",
   "first": [],
   "nos": []
  },
  "sd": {
   "header": {
-   "numberOfItems": 27618,
+   "numberOfItems": 27512,
    "firstItem": 1,
    "lastItem": 20,
    "currentPage": 1,
    "itemsPerPage": "20",
-   "numberOfPages": 1381,
+   "numberOfPages": 1376,
    "sort": "sd"
   },
-  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27618, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1381, \"sort\": \"sd\"}, \"list\": {\"item\": [{\"no\": \"69660344\", \"title\": \"잘써지는볼펜 클립펜 흑색 볼펜 0.5mm\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/11/16/1794830820461D1F8B412E66906842F4/1794830820461D1F8B412E66906842F4_stt_330.png?hash=8d7f1ab3c4200825ad2fdc15777550a1\", \"idxCOM\": null, \"id\": \"janepick7\", \"price\": \"560\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"false\", \"fromOversea\"",
+  "raw_head": "{\"domeggook\": {\"header\": {\"numberOfItems\": 27512, \"firstItem\": 1, \"lastItem\": 20, \"currentPage\": 1, \"itemsPerPage\": \"20\", \"numberOfPages\": 1376, \"sort\": \"sd\"}, \"list\": {\"item\": [{\"no\": \"69660344\", \"title\": \"잘써지는볼펜 클립펜 흑색 볼펜 0.5mm\", \"thumb\": \"https://cdn1.domeggook.com//upload/item/2026/11/16/1794830820461D1F8B412E66906842F4/1794830820461D1F8B412E66906842F4_stt_330.png?hash=8d7f1ab3c4200825ad2fdc15777550a1\", \"idxCOM\": null, \"id\": \"janepick7\", \"price\": \"560\", \"unitQty\": \"1\", \"comOnly\": \"true\", \"adultOnly\": \"false\", \"lwp\": \"false\", \"deli\": {\"who\": \"P\", \"fee\": \"3000\", \"add\": \"false\", \"fromOversea\"",
   "first": [
    {
     "no": "69660344",
@@ -582,24 +582,24 @@
    "60170765",
    "59820794",
    "59820792",
-   "65974744"
+   "65974739"
   ]
  },
  "ra": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 01:51:25\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:38\"}}",
   "first": [],
   "nos": []
  },
  "pop": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 01:51:25\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:38\"}}",
   "first": [],
   "nos": []
  },
  "sale": {
   "header": null,
-  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 01:51:26\"}}",
+  "raw_head": "{\"errors\": {\"code\": \"10\", \"message\": \"올바른 요청이 아닙니다\", \"dcode\": \"PARAMETER_ERROR\", \"dmessage\": \"파라미터가 없거나 잘못되었습니다\", \"date\": \"2026-11-17 10:42:39\"}}",
   "first": [],
   "nos": []
  },
