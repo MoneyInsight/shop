@@ -1,0 +1,35 @@
+name: 오너클랜 상품 대량 수집 (상품 창고)
+on:
+  schedule:
+    - cron: "11 */6 * * *"   # 6시간마다 이어서 (목표 수량 채우면 저절로 멈춤)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/oc_collect.yml", "tools/oc_collect.py"]
+concurrency: { group: oc-collect, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 서버 배포 기다리기 (코드가 바뀐 경우)
+        if: github.event_name == 'push'
+        run: sleep 200
+      - name: 수집 (우리 서버 경유)
+        run: python3 tools/oc_collect.py
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          OC_MAX_MIN: "300"
+          OC_TARGET: "500000"
+      - name: 저장
+        if: always()
+        run: |
+          git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          mkdir -p warehouse; git add warehouse data/oc_collect_state.json 2>/dev/null; git add warehouse
+          git commit -m "오너클랜 상품 수집 $(date -u +%F)" || exit 0
+          ok=0; for i in 1 2 3 4 5 6; do git pull --rebase --autostash -X theirs && git push && ok=1 && break; sleep 20; done
+          [ "$ok" = 1 ]
