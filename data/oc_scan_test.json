@@ -1,0 +1,117 @@
+{
+ "sizes": {
+  "100": {
+   "got": 100,
+   "ms": 2304,
+   "wall": 3.56,
+   "errors": null,
+   "page": {
+    "hasNextPage": true,
+    "endCursor": "MjAyNi0xMS0xNyAwOToxNjozN3w5Mjg5NTgyMDE="
+   }
+  },
+  "500": {
+   "got": 500,
+   "ms": 5222,
+   "wall": 5.38,
+   "errors": null,
+   "page": {
+    "hasNextPage": true,
+    "endCursor": "MjAyNi0xMS0xNyAwOToxNjozMXw5Mjg5NTc3Njg="
+   }
+  },
+  "1000": {
+   "got": 1000,
+   "ms": 6724,
+   "wall": 7.11,
+   "errors": null,
+   "page": {
+    "hasNextPage": true,
+    "endCursor": "MjAyNi0xMS0xNyAwOToxNjoyMnw5Mjg5NTcyNjM="
+   }
+  }
+ },
+ "sample_full": [
+  {
+   "key": "WFSS9S1",
+   "name": "보슈아 여성 크리스마스양말05 중목 3족세트 겨울 패",
+   "price": 16000,
+   "fixedPrice": null,
+   "shippingFee": 3000,
+   "shippingType": "inAdvance",
+   "status": "available",
+   "adultOnly": false,
+   "openmarketSellable": true,
+   "boxQuantity": 0,
+   "origin": "기타",
+   "model": "크리스마스양말곰돌이중목3족",
+   "production": "보슈아협력업체",
+   "taxFree": false,
+   "images": "['http://cdn.ownerclan.com/vKCa2UqF6vwx9BUW7Vl7b137iUXqJL10AIcj~soom1M/marketize/300/as/v1.jpg']",
+   "options": "[{'quantity': 9999, 'status': 'available', 'price': 16000, 'optionAttributes': [{'name': '색상', 'value': '곰돌이'}, {'name': '패션의류_잡화 사이즈', 'value': 'free'}]}]",
+   "metadata": "{'returnAddressCode': 14338, 'vendorKey': 2010025415, 'vendorNotice': None, 'coupangCategoryCode': '69327', 'coupangCategoryFullName': '패션의류잡화>여성패션>여성잡화>양말>여성발목양말', 'auctionCategoryCode': '69080400', 'auctionCategoryFullName': '브랜드 잡화>패션잡화>양말', 'gmarketCategoryCode': '300027207', 'gmarketCategoryFullName': '브랜드 잡화>패션잡화>양말', 'st11CategoryCode': '1346251', 'st11CategoryFullName': '패션잡화>양말>여성양말>패션양말'",
+   "content": "<img src=\"https://msd03030.cafe24.com/twogive/v_top.jpg\"></p>\r\n<p>\r\n</p>\r\n\r\n<p align=\"center\">\r\n<img src=\"https://msd03030.openhost.cafe24.com/va/wd/2025/bss/크리스마스양말곰돌이3족_01.jpg\"></p>\r\n\r\n<img src=\"https://msd03030.openhost.cafe24.com/va/wd/2025/bss/크리스마스양말곰돌이3족템플릿.jpg\"></p>\r\n<img src=\"https://msd03030.openhost.cafe24.com/va/wd/2025/bss/크리스마스양말곰돌이3족_02.jpg\"></p>\r\n<img src=\"https://msd03030.openhost"
+  },
+  {
+   "key": "WFSS9S0",
+   "name": "보슈아 여성 크리스마스양말04 중목 4족세트 겨울 패",
+   "price": 16000,
+   "fixedPrice": null,
+   "shippingFee": 3000,
+   "shippingType": "inAdvance",
+   "status": "available",
+   "adultOnly": false,
+   "openmarketSellable": true,
+   "boxQuantity": 0,
+   "origin": "기타",
+   "model": "크리스마스양말눈사람4족",
+   "production": "보슈아협력업체",
+   "taxFree": false,
+   "images": "['http://cdn.ownerclan.com/yNEYXJ92iFAQ7mXPd6p_YjwUAM7TUe2Q6GBqadBOYcU/marketize/300/as/v1.jpg']",
+   "options": "[{'quantity': 9999, 'status': 'available', 'price': 16000, 'optionAttributes': [{'name': '색상', 'value': '눈사람'}, {'name': '패션의류_잡화 사이즈', 'value': 'free'}]}]",
+   "metadata": "{'returnAddressCode': 14338, 'vendorKey': 2010025415, 'vendorNotice': None, 'coupangCategoryCode': '69327', 'coupangCategoryFullName': '패션의류잡화>여성패션>여성잡화>양말>여성발목양말', 'auctionCategoryCode': '69080400', 'auctionCategoryFullName': '브랜드 잡화>패션잡화>양말', 'gmarketCategoryCode': '300027207', 'gmarketCategoryFullName': '브랜드 잡화>패션잡화>양말', 'st11CategoryCode': '1346251', 'st11CategoryFullName': '패션잡화>양말>여성양말>패션양말'",
+   "content": "<img src=\"https://msd03030.cafe24.com/twogive/v_top.jpg\"></p>\r\n\r\n<p>\r\n</p>\r\n\r\n<p align=\"center\">\r\n\t <img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말눈사람4족_01.jpg\"><p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말눈사람4족템플릿.jpg\"><p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말눈사람4족_02.jpg\"><p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말"
+  },
+  {
+   "key": "WFSS9RZ",
+   "name": "보슈아 여성 크리스마스양말03 중목 4족세트 겨울 패",
+   "price": 16000,
+   "fixedPrice": null,
+   "shippingFee": 3000,
+   "shippingType": "inAdvance",
+   "status": "available",
+   "adultOnly": false,
+   "openmarketSellable": true,
+   "boxQuantity": 0,
+   "origin": "기타",
+   "model": "크리스마스양말트리4족",
+   "production": "보슈아협력업체",
+   "taxFree": false,
+   "images": "['http://cdn.ownerclan.com/b3A7oZ5~QuE6hpS8EjZDzF_r6daZsC8T546ZnbA3dLs/marketize/300/as/v1.jpg']",
+   "options": "[{'quantity': 9999, 'status': 'available', 'price': 16000, 'optionAttributes': [{'name': '색상', 'value': '트리'}, {'name': '패션의류_잡화 사이즈', 'value': 'free'}]}]",
+   "metadata": "{'returnAddressCode': 14338, 'vendorKey': 2010025415, 'vendorNotice': None, 'coupangCategoryCode': '69327', 'coupangCategoryFullName': '패션의류잡화>여성패션>여성잡화>양말>여성발목양말', 'auctionCategoryCode': '69080400', 'auctionCategoryFullName': '브랜드 잡화>패션잡화>양말', 'gmarketCategoryCode': '300027207', 'gmarketCategoryFullName': '브랜드 잡화>패션잡화>양말', 'st11CategoryCode': '1346251', 'st11CategoryFullName': '패션잡화>양말>여성양말>패션양말'",
+   "content": "<img src=\"https://msd03030.cafe24.com/twogive/v_top.jpg\"><p></p>\r\n\r\n<p>\r\n</p>\r\n\r\n<p align=\"center\">\r\n\t <img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말트리4족_01.jpg\"></p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말트리4족템플릿.jpg\"></p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마스양말트리4족_02.jpg\"></p>\r\n\t<img src=\"https://msd03030.cafe24.com/va/wd/2025/bss/크리스마"
+  }
+ ],
+ "full_errors": null,
+ "stream": {
+  "items": 16000,
+  "pages": 16,
+  "seconds": 126.8,
+  "per_minute": 7573,
+  "per_day_estimate": 10905090
+ },
+ "grades_sample": {
+  "NEW": 9135,
+  "SILVER1": 3845,
+  "DIAMOND5": 1729,
+  "PALTINUM3": 1063,
+  "GOLD2": 134,
+  "GOLD1": 41,
+  "DIAMOND3": 28,
+  "PALTINUM4": 8,
+  "GOLD3": 7,
+  "DIAMOND4": 5,
+  "PALTINUM2": 5
+ }
+}
