@@ -15,7 +15,7 @@ import product_import
 
 SCHEMA = re.search(r"SCHEMA = `([\s\S]*?)`", (ROOT / "worker/catalog.js").read_text(encoding="utf-8")).group(1)
 COLS = ["id", "source", "source_no", "supplier", "name", "category", "price", "normal_price", "cost", "image", "images", "detail_html",
-        "options", "qt", "option_name", "brand", "origin", "soldout", "rank", "updated", "shipping_fee", "sn", "mq", "pk", "h"]
+        "options", "qt", "option_name", "brand", "origin", "soldout", "rank", "updated", "shipping_fee", "sn", "mq", "pk", "w", "h"]
 # 상품 1개 넣을 때 D1 쓰기 줄 수 (표 1 + 색인 2 + 검색 색인 여유) — 실제 값은 워크플로가 wrangler 결과로 확인
 W_NEW, W_DEL = 6, 4
 PER_FILE = 1500
@@ -95,6 +95,8 @@ def products():
              "options": r.get("options") or [], "qt": [int(x) for x in (r.get("qt") or [])], "option_name": r.get("option_name", ""),
              "brand": r.get("brand", ""), "origin": r.get("origin", ""), "soldout": 1 if r.get("soldout") else 0, "rank": tier(pid) * 10_000_000 + i,
              "shipping_fee": int(r.get("shipping_fee") or 0), "sn": int(r.get("sn") or 0), "mq": int(r.get("mq") or 1), "pk": int(r.get("pk") or 1)}
+        if r.get("winter"):
+            p["w"] = 1  # 겨울용품 카테고리에도 보임 (겨울 아닌 상품은 키를 안 넣어 지문이 그대로 → 다시 올리지 않음)
         if not safe(p, P):
             unsafe += 1; continue  # 손해 가능 상품은 DB에 올리지 않음
         body = json.dumps({**{k: v for k, v in p.items() if k != "rank"}, "tier": p["rank"] // 10_000_000}, ensure_ascii=False, sort_keys=True)  # 정렬 단계가 바뀌면 다시 올림
@@ -151,7 +153,7 @@ def main():
         if used + W_NEW > a.budget:
             break
         p = dict(p, updated=now)
-        lines.append(f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p[c]) for c in COLS)});")
+        lines.append(f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p.get(c, 0)) for c in COLS)});")
         old_h = state.get(p["id"])
         old_t = old_h.split(":")[1] if old_h and ":" in old_h else (None if old_h is None else "?")
         if old_t is None or (old_t != "?" and old_t != p["h"].split(":")[1]):  # 새 상품이거나 상품명이 바뀐 경우만 검색 색인 추가

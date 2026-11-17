@@ -461,7 +461,7 @@ def build_home(ps):
     max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "alternateName": CFG.get("shop_name_alt") or [], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
-    by_cat = {c["slug"]: [p for p in ps if p["category"] == c["slug"]] for c in SHOW_CATS}
+    by_cat = {c["slug"]: [p for p in ps if in_cat(p, c["slug"])] for c in SHOW_CATS}
     art = [p for p in ps if p["image"].startswith("http")][:4] or ps[:4]
     tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{len(by_cat[c["slug"]]):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
@@ -529,16 +529,21 @@ def build_home(ps):
           extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
 
 
+def in_cat(p, slug):
+    """겨울용품은 원래 카테고리 + 겨울용품 카테고리 양쪽에"""
+    return p["category"] == slug or (slug == "winter" and bool(p.get("winter")))
+
+
 def build_categories(ps):
     for c in CATS:
-        if not any(p["category"] == c["slug"] for p in ps):
+        if not any(in_cat(p, c["slug"]) for p in ps):
             continue  # 상품 없는 카테고리(식품·성인 등)는 페이지를 만들지 않음
         if c.get("adult") and not CFG.get("adult_verified"):
             body = f'''<div class="wrap page"><div class="done-box"><div class="mark" style="font-weight:700">19</div><h2>청소년 이용불가</h2>
 <p>이 카테고리는 만 19세 이상 성인인증 후 이용하실 수 있습니다.<br>성인인증 서비스를 준비하고 있습니다.</p></div></div>'''
             write(f'category/{c["slug"]}.html', layout(f'{c["name"]} — {CFG["shop_name"]}', body, "../"))
             continue
-        items = [p for p in ps if p["category"] == c["slug"]]
+        items = [p for p in ps if in_cat(p, c["slug"])]
         body = f'<div class="wrap"><div class="crumb"><a href="../index.html">홈</a> / {e(c["name"])}</div></div>' + listing(c["name"], "cat", items, "../", c["slug"])
         write(f'category/{c["slug"]}.html', layout(f'{c["name"]} — {CFG["shop_name"]}', body, "../", active=c["slug"],
               desc=f'{CFG["shop_name"]} {c["name"]} 상품 {len(items)}개.', canonical=f'{BASE}/category/{c["slug"]}.html'))

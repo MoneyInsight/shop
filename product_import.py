@@ -158,6 +158,33 @@ def cat_from_code(code, cats):
     return ""
 
 
+# 겨울용품: 원래 카테고리(패션·계절가전·생활 등)에 두고, 겨울용품 카테고리에도 함께 보이게 (winter 표시)
+WINTER_WORDS = ("핫팩 손난로 발난로 전기요 전기매트 전기장판 온수매트 히터 난로 난방 보온물주머니 수면양말 털슬리퍼 털실내화 무릎담요 "
+                "귀마개 귀도리 넥워머 목도리 털모자 바라클라바 털장갑 방한장갑 스키장갑 방풍 문풍지 단열 뽁뽁이 내복 발열내의 롱패딩 패딩 방한 "
+                "기모 극세사 겨울 동계 손토시 워머 털부츠 어그 방한화").split()
+WINTER_CATS = [
+    ("fashion", "장갑 목도리 넥워머 귀마개 귀도리 털모자 바라클라바 패딩 내복 내의 양말 슬리퍼 실내화 레깅스 토시 워머 부츠 어그 방한화 모자 점퍼 조끼 자켓 코트"),
+    ("season", "전기요 전기매트 전기장판 온수매트 히터 난로 난방 방풍 문풍지 단열 뽁뽁이 가습"),
+    ("sleep", "담요 이불 극세사 차렵 쿠션 매트"),
+    ("car", "차량 자동차 성에 앞유리"),
+    ("pet", "강아지 고양이 애견 반려"),
+    ("kids", "아기 유아 어린이 아동"),
+]
+
+
+def is_winter(name, cat=""):
+    return cat == "winter" or any(w in name for w in WINTER_WORDS)
+
+
+def real_category(name, cats):
+    """겨울용품으로 들어온 상품의 원래 카테고리"""
+    slugs = {c["slug"] for c in cats}
+    for slug, words in WINTER_CATS:
+        if slug in slugs and any(w in name for w in words.split()):
+            return slug
+    return guess_category(name, [c for c in cats if c["slug"] != "winter"])
+
+
 def guess_category(name, cats):
     slugs = {c["slug"] for c in cats}
     name = re.sub(r"블랙|팬던트|팬츠|팬트리|화분대", " ", name)  # 짧은 키워드(랙·팬·화분)가 엉뚱하게 걸리지 않게
@@ -342,12 +369,15 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
             elif re.search(r"문구|사무용품|오피스|학용품|필기구|화일|바인더", sup_cat) and "office" in cat_by_name.values():
                 mc = mc or "문구·사무"  # 도매처 분류가 문구·사무면 '문구·사무' 카테고리로
             cat = cat_by_name.get(mc) or (mc if mc in {c["slug"] for c in cats} else "") or cat_from_code(get(r, "category_id"), cats) or guess_category(name, cats)
+            winter = 1 if is_winter(name, cat) else 0
+            if cat == "winter":
+                cat = real_category(name, cats)
             img = get(r, "image")
             detail = get(r, "detail")
             if require_detail and not detail.strip():
                 no_detail += 1; continue  # 상세페이지 없는 상품은 올리지 않음
             products.append({
-                "id": code, "name": name[:100], "mp": _num(get(r, "min_price")) * pk if (cost and pricing) else 0, "pk": pk, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
+                "id": code, "winter": winter, "name": name[:100], "mp": _num(get(r, "min_price")) * pk if (cost and pricing) else 0, "pk": pk, "cost": cost if (cost and pricing) else 0, "qt": qt, "sm": sm, "kc": get(r, "kc"), "return_fee": _num(get(r, "return_fee")), "exchange_fee": _num(get(r, "exchange_fee")), "category": cat, "price": str(sale), "normal_price": str(base),
                 "shipping_fee": str(sf), "sn": sn, "mq": mq, "image": img if (img.startswith("http") or img.startswith("uploads/")) else (f"uploads/{img}" if img else ""),
                 "brand": get(r, "brand"), "maker": get(r, "maker"), "origin": get(r, "origin"),
                 "event": get(r, "event") or ("" if sf else "무료배송"), "badge": "", "summary": get(r, "summary"),

@@ -97,6 +97,9 @@ def main():
         ok, err = run_sql(D / "schema.sql")
         if not ok:
             sys.exit("표 구조 적용 실패: " + err)
+        # 겨울용품 표시 열(w) — 예전 DB에 없으면 추가 (이미 있으면 오류 무시)
+        wr("d1", "execute", NAME, "--remote", "--yes", "--command=ALTER TABLE products ADD COLUMN w INTEGER NOT NULL DEFAULT 0", check=False)
+        wr("d1", "execute", NAME, "--remote", "--yes", "--command=CREATE INDEX IF NOT EXISTS idx_w ON products(w, soldout, rank)", check=False)
         if not STATE.exists():
             st = load_state_from_db()
             STATE.parent.mkdir(parents=True, exist_ok=True)

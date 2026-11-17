@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS products (
   sn INTEGER NOT NULL DEFAULT 0,          -- 배송비 단위: 0 = 같은 상품 주문당 1번, N = N개마다
   mq INTEGER NOT NULL DEFAULT 1,          -- 최소 구매 수량
   pk INTEGER NOT NULL DEFAULT 1,          -- 1개 = 도매처 상품 pk개
+  w INTEGER NOT NULL DEFAULT 0,           -- 1 = 겨울용품 카테고리에도 보임 (원래 카테고리는 category)
   h TEXT NOT NULL DEFAULT ''              -- 내용 지문 (바뀐 상품만 다시 올리려고)
 );
 CREATE INDEX IF NOT EXISTS idx_cat ON products(category, soldout, rank);
@@ -60,7 +61,12 @@ function card(r) {
 }
 
 // 목록·검색 (페이지 단위)
-export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, free = 0 } = {}) {
+export async function list(db, o = {}) {
+  try { return await list0(db, o); }
+  catch (e) { if (o.cat === "winter" && /no such column/i.test(String(e))) return list0(db, { ...o, noW: 1 }); throw e; }  // DB에 w 열이 아직 없을 때
+}
+
+async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, free = 0, noW = 0 } = {}) {
   size = Math.min(100, Math.max(1, +size || 40));
   page = Math.max(1, +page || 1);
   const where = [], args = [];
@@ -71,7 +77,8 @@ export async function list(db, { q = "", cat = "", sort = "rec", page = 1, size 
     where.push("p.id IN (SELECT id FROM products_fts WHERE products_fts MATCH ?)");
     args.push(t.map((x) => `"${x.replace(/"/g, "")}"`).join(" AND "));
   }
-  if (cat) { where.push("p.category = ?"); args.push(cat); }
+  if (cat === "winter" && !noW) where.push("(p.w = 1 OR p.category = 'winter')");  // 겨울용품: 원래 카테고리 + 겨울용품 양쪽
+  else if (cat) { where.push("p.category = ?"); args.push(cat); }
   if (+free) where.push(FREE_WHERE);
   const w = where.length ? " WHERE " + where.join(" AND ") : "";
   // 전체 개수: 무료 DB 하루 읽기 한도를 아끼려고 최대 2,000개까지만 셈 (2,000 이상이면 "2,000+")
@@ -106,7 +113,9 @@ export const FREE_WHERE = "p.shipping_fee = 0";
 export async function counts(db) {
   const rows = (await db.prepare("SELECT category, COUNT(*) AS n FROM products WHERE soldout = 0 GROUP BY category").all()).results || [];
   const free = await db.prepare("SELECT COUNT(*) AS n FROM products WHERE soldout = 0 AND shipping_fee = 0").first();
-  return { ...Object.fromEntries(rows.map((r) => [r.category, r.n])), _free: (free && free.n) || 0 };
+  const out = { ...Object.fromEntries(rows.map((r) => [r.category, r.n])), _free: (free && free.n) || 0 };
+  try { const w = await db.prepare("SELECT COUNT(*) AS n FROM products WHERE soldout = 0 AND (w = 1 OR category = 'winter')").first(); out.winter = (w && w.n) || 0; } catch (e) {}
+  return out;
 }
 
 // 상품 넣기/갱신 (도매처 동기화가 사용). 검색 색인도 함께 갱신
