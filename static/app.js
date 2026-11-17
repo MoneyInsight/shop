@@ -491,6 +491,19 @@
       document.addEventListener("click", (e) => { if (!box.contains(e.target)) open(false); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
     }
+    // 넓은 화면: 본문 오른쪽 빈 공간에 TOP 10 세로 패널 (자리가 있으면 검색창 옆 롤링 대신)
+    const side = document.createElement("aside");
+    side.className = "pop-side"; side.setAttribute("aria-label", "인기 순위 TOP 10");
+    side.innerHTML = `<p class="pop-h">인기 순위 <small>TOP 10</small></p><ol>` + items.map((p, i) => `<li><a href="${productHref(p.id)}"><b class="${i < 3 ? "top" : ""}">${i + 1}</b><img src="${esc(img(p.image))}" alt="" loading="lazy"><span>${name(p)}<em>${won(p.price)}</em></span></a></li>`).join("") + "</ol>";
+    document.body.appendChild(side);
+    const place = () => {
+      const w = $(".head .wrap") || $(".wrap");
+      const r = w ? w.getBoundingClientRect() : { right: innerWidth };
+      const left = r.right + 12, fit = innerWidth - left - 12 >= 210 && innerHeight >= 560;
+      side.style.left = left + "px"; side.style.width = Math.min(260, innerWidth - left - 16) + "px";
+      side.classList.toggle("on", fit); document.body.classList.toggle("has-pop-side", fit);
+    };
+    place(); addEventListener("resize", place);
     if (home) {
       $(".pop-grid", home).innerHTML = items.map((p, i) => `<li><a href="${productHref(p.id)}"><span class="pg-img"><img src="${esc(img(p.image))}" alt="${name(p)}" loading="lazy"><b class="${i < 3 ? "top" : ""}">${i + 1}</b></span><span class="pg-n">${name(p)}</span><em>${won(p.price)}</em></a></li>`).join("");
       home.hidden = false;
