@@ -1,0 +1,46 @@
+name: 온채널 대량 수집 반영 (상품 창고)
+on:
+  schedule:
+    - cron: "41 * * * *"   # 매시간: 브라우저가 엑셀을 다 만들어 서버에 알려두면 가져감
+  workflow_dispatch:
+concurrency: { group: onch-bulk, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 새 대량 수집 파일이 있는지
+        id: chk
+        run: |
+          curl -sSf "https://shop-api.scream0506.workers.dev/onch/files?bulk=1" -o f.json
+          python3 - <<'P'
+          import json, os, pathlib
+          d = json.load(open("f.json")); last = pathlib.Path("data/onch_bulk_last.txt")
+          at = str(d.get("at", "")); done = last.read_text().strip() if last.exists() else ""
+          files = ((d.get("groups") or {}).get("bulk") or {}).get("files") or []
+          go = bool(at and files and at != done)
+          open("files.txt", "w").write(" ".join(files))
+          open(os.environ["GITHUB_OUTPUT"], "a").write(f"go={'1' if go else ''}\nat={at}\n")
+          print("새 파일:", go, len(files))
+          P
+      - if: steps.chk.outputs.go
+        run: pip install openpyxl
+      - if: steps.chk.outputs.go
+        name: "내려받기·변환 (사이트와 같은 거르기 — 성인·식품·KC·재고)"
+        run: |
+          mkdir -p warehouse
+          OUT="../warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv" CAT=auto EXCL=온채널상품.csv,온채널겨울상품.csv,온채널추가상품.csv NO_GIT=1 bash tools/onch_apply.sh $(cat files.txt)
+          gzip -9 "warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv"
+          echo "${{ steps.chk.outputs.at }}" > data/onch_bulk_last.txt
+      - if: steps.chk.outputs.go
+        name: 저장
+        run: |
+          git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          git add warehouse data/onch_bulk_last.txt
+          git commit -m "온채널 대량 수집 반영 $(date -u +%F)" || exit 0
+          ok=0; for i in 1 2 3 4 5 6; do git pull --rebase --autostash -X theirs && git push && ok=1 && break; sleep 20; done
+          [ "$ok" = 1 ]

@@ -1251,7 +1251,7 @@ export async function handle(req, env, path) {
       items: await q("query{allItems(first:1){edges{node{key}}}}") });
   }
   if (path === "/onch/files") {  // 온채널 매일 점검: 브라우저가 만든 엑셀 파일 이름을 받아 두면 깃허브가 가져가 반영
-    if (req.method === "GET") return json((await env.SHOP.get("onch_files", "json")) || {});
+    if (req.method === "GET") return json((await env.SHOP.get(new URL(req.url).searchParams.get("bulk") ? "onch_bulk" : "onch_files", "json")) || {});
     if (req.method === "POST") {
       const d = await req.json().catch(() => ({}));
       const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(d.key || ""))))].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -1263,8 +1263,9 @@ export async function handle(req, env, path) {
         groups[g] = { files: ok(v && v.files), expected: Number(v && v.expected) || 0 };
       }
       const files = Object.values(groups).flatMap((g) => g.files);
-      if (!files.length || files.length > 400) return fail("파일 목록이 이상해요.");
-      await env.SHOP.put("onch_files", JSON.stringify({ at: Date.now(), groups }));
+      const bulk = !!d.bulk;  // 대량 수집(상품 창고용)은 매일 점검과 따로 보관
+      if (!files.length || files.length > (bulk ? 1000 : 400)) return fail("파일 목록이 이상해요.");
+      await env.SHOP.put(bulk ? "onch_bulk" : "onch_files", JSON.stringify({ at: Date.now(), groups }));
       return json({ ok: true, n: files.length });
     }
   }

@@ -10,15 +10,24 @@ const ONCH_GROUPS = {
       .map((k) => "keyword=" + encodeURIComponent(k)) },
   more: { codes: "onch_codes_more.json", lists: [], pages: 0 },  // 겨울 검색에서 함께 온 일반 상품 (품절·가격 점검만)
 };
+// 대량 수집(상품 창고 → 상품 DB): 실시간 판매순위 전체 + 상품센터 목록. 매일 점검(ONCH("all"))에는 안 들어감
+const ONCH_BULK_GROUP = { codes: "onch_codes_bulk.json", lists: ["datalab", "orderby=agree_desc"], pages: 2500 };
 window.ONCH = async (step, group = "office") => {
-  const LS = localStorage, now = Date.now(), G = ONCH_GROUPS[group], K = (x) => `__oc_${group}_${x}`;
+  const LS = localStorage, now = Date.now(), G = ONCH_GROUPS[group] || (group === "bulk" ? ONCH_BULK_GROUP : null), K = (x) => `__oc_${group}_${x}`;
   if (step === "collect") {
     const mine = await (await fetch("https://moneyinsight.github.io/shop/" + G.codes + "?" + now)).json().catch(() => []);
     const S = new Set(mine), other = new Set();
     for (const [g, o] of Object.entries(ONCH_GROUPS)) if (g !== group) (await (await fetch("https://moneyinsight.github.io/shop/" + o.codes + "?" + now)).json().catch(() => [])).forEach((c) => other.add(c));
     for (const q of G.lists) {
-      const rs = await Promise.all([...Array(G.pages)].map((_, k) => fetch(`/dbcenter_renewal/index.php?${q}&page=${k + 1}`).then((r) => r.text()).catch(() => "")));
-      for (const h of rs) for (const m of h.matchAll(/value="(CH\d+)"/g)) if (!other.has(m[1])) S.add(m[1]);
+      const url = (k) => q === "datalab" ? `/dbcenter_renewal/onch_datalab.html?page=${k + 1}` : `/dbcenter_renewal/index.php?${q}&page=${k + 1}`;
+      const pages = q === "datalab" ? 40 : G.pages;
+      for (let k = 0; k < pages; k += 10) {  // 10쪽씩 (온채널 서버 부담 줄이기)
+        const rs = await Promise.all([...Array(Math.min(10, pages - k))].map((_, j) => fetch(url(k + j)).then((r) => r.text()).catch(() => "")));
+        let found = 0;
+        for (const h of rs) for (const m of h.matchAll(q === "datalab" ? /(CH\d{6,})/g : /value="(CH\d+)"/g)) { found++; if (!other.has(m[1])) S.add(m[1]); }
+        if (!found) break;  // 마지막 쪽
+        if (group === "bulk") LS.__onchlog = new Date().toISOString().slice(11, 19) + ` [bulk] collect ${q.slice(0, 10)} ${k + 10}쪽 ${S.size}개`;
+      }
     }
     LS[K("codes")] = JSON.stringify([...S]); LS[K("done")] = "[]"; LS[K("start")] = String(now);
     return { mine: mine.length, total: S.size, batches: Math.ceil(S.size / 500) };
@@ -73,3 +82,36 @@ window.ONCH_ALL = async () => {
 };
 const _ONCH = window.ONCH;
 window.ONCH = async (step, group) => step === "all" ? (ONCH_ALL(), "started") : _ONCH(step, group);
+
+// 대량 수집 실행: await ONCH_BULK() → "started" (진행: localStorage.__onchlog)
+window.ONCH_BULK = () => {
+  (async () => {
+    const log = (m) => { localStorage.__onchlog = new Date().toISOString().slice(11, 19) + " [bulk] " + m; };
+    try {
+      log("collect " + JSON.stringify(await _ONCH("collect", "bulk")));
+      for (let i = 0; i < 2000; i++) { const r = await _ONCH("request", "bulk"); if (r.error) throw new Error(r.error); log("request left " + r.left); if (!r.left) break; }
+      let u;
+      for (let i = 0; i < 240; i++) { await new Promise((ok) => setTimeout(ok, 30000)); u = await ONCH_URLS_ALL("bulk"); log(`urls ${u.ok.length}/${u.expected} wait ${u.waiting} fail ${u.failed}`); if (!u.waiting && u.ok.length + u.failed >= u.expected) break; }
+      const r = await fetch("https://shop-api.scream0506.workers.dev/onch/files", { method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ key: localStorage.__onchkey, bulk: true, groups: { bulk: { files: u.ok, expected: u.expected } } }) });
+      log("sent " + (await r.text()));
+    } catch (e) { log("error " + e); }
+  })();
+  return "started";
+};
+// 파일이 많을 때(수백 개) 신청 목록 여러 쪽 확인
+window.ONCH_URLS_ALL = async (group) => {
+  const LS = localStorage, K = (x) => `__oc_${group}_${x}`, start = +LS[K("start")], ok = [], st = { waiting: 0, failed: 0 };
+  for (let p = 1; p <= 80; p++) {
+    const d = new DOMParser().parseFromString(await (await fetch("/mypage/excel_download_stat.php?page=" + p)).text(), "text/html");
+    const rows = [...d.querySelectorAll("tr")].slice(1); let older = false;
+    for (const r of rows) {
+      const m = r.textContent.match(/(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)/); if (!m) continue;
+      if (new Date(m[1].replace(" ", "T") + "+09:00").getTime() < start - 60000) { older = true; continue; }
+      if (/성공/.test(r.textContent)) { const u = r.querySelector("[data-url]")?.dataset.url; if (u && !ok.includes(u)) ok.push(u); }
+      else if (/실패/.test(r.textContent)) st.failed++; else st.waiting++;
+    }
+    if (older || !rows.length) break;
+  }
+  return { ok, ...st, expected: Math.ceil(JSON.parse(LS[K("codes")]).length / 500) };
+};
