@@ -1,9 +1,7 @@
 name: 상품 DB(D1) 매일 채우기 — 무료 한도 안에서
 on:
   schedule:
-    - cron: "23 0 * * *"   # 한국 시간 오전 9시 23분 (D1 하루 한도는 오전 9시에 초기화) — 이때 하루 몫을 거의 다 올림
-    - cron: "53 10 * * *"  # 저녁 7시 53분 — 오후에 찾은 인기 새 상품을 당일에 DB로 (남은 하루 한도 안에서)
-    - cron: "53 19 * * *"  # 새벽 4시 53분 — 새벽 점검 반영
+    - cron: "23 */3 * * *"   # 3시간마다 — 모인 상품·바뀐 가격/품절을 바로 DB로 (유료 플랜)
   workflow_dispatch:
   push:  # 이 작업의 코드가 바뀌면 바로 한 번 실행
     branches: [main]
@@ -35,7 +33,7 @@ jobs:
       - name: DB 준비 (없으면 만들기 + 표 구조)
         run: python3 tools/d1_push.py prepare
       - name: 바뀐 상품·새 상품 골라내기 (사이트와 같은 규칙 + 손해 검사)
-        run: python3 tools/catalog_build.py --state dist/d1_state.json --budget 600000
+        run: python3 tools/catalog_build.py --state dist/d1_state.json --budget 20000000
       - name: DB에 올리기 (하루 쓰기 한도 안에서)
         run: python3 tools/d1_push.py push
       - name: 상태 저장

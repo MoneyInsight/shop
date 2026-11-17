@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME = os.environ.get("D1_NAME", "allchaeum")
-LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "85000"))  # 무료 10만 줄 — 집계가 몇 분 늦게 잡혀 여유를 둠
+LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "3000000"))  # 유료 플랜(2026-11-17~): 월 5천만 줄 포함 — 하루 300만 줄까지 (무료로 돌아가면 85000)  # 무료 10만 줄 — 집계가 몇 분 늦게 잡혀 여유를 둠
 STATE = Path(os.environ.get("D1_STATE", ROOT / "dist/d1_state.json"))
 D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
