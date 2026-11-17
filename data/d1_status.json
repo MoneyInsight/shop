@@ -1,16 +1,16 @@
 {
- "at": "2026-11-17 03:14 UTC",
+ "at": "2026-11-17 03:47 UTC",
  "db": "allchaeum",
- "in_db": 90363,
- "site_and_warehouse_total": 90363,
- "uploaded_today": 0,
+ "in_db": 90401,
+ "site_and_warehouse_total": 90401,
+ "uploaded_today": 2161,
  "left": 0,
- "files_ok": 0,
- "files_planned": 0,
+ "files_ok": 1,
+ "files_planned": 1,
  "rows_written_24h_before": 83388,
  "rows_written_24h_after": 83388,
  "writes_per_product": null,
  "unsafe_skipped": 0,
- "warehouse_files": 1,
+ "warehouse_files": 2,
  "stopped": ""
 }
