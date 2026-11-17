@@ -1,5 +1,5 @@
-// 올채움 서비스워커 — 항상 최신 화면을 먼저 받고, 인터넷이 끊겼을 때만 안내 화면을 보여줍니다.
-const CACHE = "allchaeum-v16";
+// 담Go사Go 서비스워커 — 항상 최신 화면을 먼저 받고, 인터넷이 끊겼을 때만 안내 화면을 보여줍니다.
+const CACHE = "damgosago-v17";
 const API = new URL(self.location.href).searchParams.get("api") || "";
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["offline.html", "style.css", "favicon.svg"]))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
@@ -17,8 +17,8 @@ self.addEventListener("push", (e) => {
       const r = await fetch(API + "/push/pull", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub && sub.endpoint }) });
       list = (await r.json()).messages || [];
     } catch (err) {}
-    if (!list.length) list = [{ title: "올채움", body: "새 알림이 있어요.", url: "./" }];
-    await Promise.all(list.map((m, i) => self.registration.showNotification(m.title || "올채움", {
+    if (!list.length) list = [{ title: "담Go사Go", body: "새 알림이 있어요.", url: "./" }];
+    await Promise.all(list.map((m, i) => self.registration.showNotification(m.title || "담Go사Go", {
       body: m.body || "", icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: "ttaeng-" + Date.now() + i, data: { url: m.url || "./" } })));
   })());
 });

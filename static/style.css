@@ -1,9 +1,9 @@
 :root{color-scheme:light only}html,body{background:#fff}
-/* 올채움 — 차분하고 정돈된 스토어 디자인 */
+/* 담Go사Go — 차분하고 정돈된 스토어 디자인 */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --ink:#16171a;--ink2:#3d4046;--sub:#868a91;--line:#e7e5e1;--line2:#f1efeb;
-  --bg:#fffdf9;--paper:#fff;--accent:#9a7b4f;--accent-soft:#f6f1e8;--sale:#c2372b;--ok:#2f6b4f;
+  --bg:#fffdf9;--paper:#fff;--accent:#F2541B;--accent-soft:#FFF1EA;--sale:#c2372b;--ok:#2f6b4f;
   --serif:"Noto Serif KR","Nanum Myeongjo",serif;
   --sans:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
 }
@@ -578,3 +578,7 @@ footer .logo .logo-mark{width:24px;height:24px}
   .mb-count{padding:0 11px}
   .mb-dots{display:flex}
 }
+
+/* 담Go사Go 로고 (2026-11-17) */
+.logo-word{font-family:var(--sans);font-weight:800;letter-spacing:-.05em}
+.logo-word .go{color:#FF5A1F;font-style:italic;font-weight:800;margin:0 .02em}

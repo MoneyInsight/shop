@@ -352,7 +352,8 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     name = e(CFG["shop_name"])
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
-    logo = f'<a class="logo" href="{root}index.html" aria-label="{name} 홈"><img class="logo-mark" src="{root}favicon.svg" alt="" width="30" height="30">{name}</a>'
+    word = e(name).replace("Go", '<b class="go">Go</b>')  # 담Go사Go: Go만 주황 기울임
+    logo = f'<a class="logo" href="{root}index.html" aria-label="{e(name)} 홈"><img class="logo-mark" src="{root}favicon.svg" alt="" width="30" height="30"><span class="logo-word">{word}</span></a>'
     cfg_js = f"<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>"
     top = f'''<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "무료배송 상품 따로 모아보기 · 회원가입 없이 바로 주문"}</span>
 <nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
@@ -461,9 +462,9 @@ def build_home(ps):
         return "".join(f'<img src="{e(p["image"])}" alt="" loading="lazy">' for p in pool[::step][:n])
     rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
     slides = [
-        ("brand", "올채움", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
+        ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
         ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·목도리·장갑·방한용품 {len(by_cat.get('winter', [])):,}개", "category/winter.html", "겨울용품 보기", pics("winter")),
-        ("office", "기업·학교 구매", "사무실·학교 비품은<br>올채움 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
+        ("office", "기업·학교 구매", "사무실·학교 비품은<br>담Go사Go 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
     ]
     if max_deal >= 2:
         slides.append(("deal", "담을수록 할인", "같은 상품 2개부터<br>자동으로 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
@@ -479,7 +480,7 @@ def build_home(ps):
     body = f'''<section class="mbanner" aria-roledescription="carousel" aria-label="이벤트 배너"><div class="wrap"><div class="mb-box"><div class="mb-track">{banner}</div>
 <div class="mb-ctrl"><span class="mb-count"><b>1</b> / {len(slides)}</span><button class="mb-prev" aria-label="이전 배너">&lsaquo;</button><button class="mb-next" aria-label="다음 배너">&rsaquo;</button><button class="mb-play" aria-label="자동 넘김 멈춤">&#10074;&#10074;</button></div>
 <div class="mb-dots">{dots}</div></div></div></section>
-<section class="office-band"><div class="wrap"><div><small>OFFICE · 기업·학교 구매</small><b>사무실·학교 비품은 올채움 오피스</b>
+<section class="office-band"><div class="wrap"><div><small>OFFICE · 기업·학교 구매</small><b>사무실·학교 비품은 담Go사Go 오피스</b>
 <span>문구·사무용품 {len(by_cat.get("office", [])):,}개 · 견적서 바로 발급 · 많이 살수록 할인</span></div>
 <div class="office-btns"><a class="btn" href="category/office.html">문구·사무 보기</a><a class="btn btn-ghost" href="bulk.html">기업 견적 문의</a></div></div></section>
 <div class="benefits"><div class="wrap">
@@ -729,7 +730,7 @@ def build_shop_pages():
 <label for="bk-product">상품명 또는 상품 주소</label><input id="bk-product" placeholder="예) 메탈 선반 4단 화이트">
 <div class="row"><div><label for="bk-qty">필요 수량</label><input id="bk-qty" inputmode="numeric" placeholder="예) 200"></div><div><label for="bk-date">받고 싶은 날짜 (선택)</label><input id="bk-date" type="date"></div></div>
 <label for="bk-price">희망 단가 또는 예산 (선택)</label><input id="bk-price" placeholder="예) 개당 15,000원 / 총 300만 원">
-<div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 올채움상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
+<div class="row"><div><label for="bk-name">회사·단체명 / 담당자</label><input id="bk-name" placeholder="예) 담고상사 홍길동"></div><div><label for="bk-contact">연락처</label><input id="bk-contact" inputmode="tel" placeholder="010-0000-0000"></div></div>
 <label for="bk-email">이메일 (견적서 받을 곳, 선택)</label><input id="bk-email" type="email">
 
 <label class="check"><input type="checkbox" id="bk-print"><span>로고 인쇄·개별 포장 등 맞춤 작업이 필요해요</span></label>
@@ -739,7 +740,7 @@ def build_shop_pages():
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
-    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0d9a8"/><stop offset=".55" stop-color="#c9a15e"/><stop offset="1" stop-color="#9c763f"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22232a"/><stop offset="1" stop-color="#101114"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#bg)"/><rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#c9a15e" stroke-opacity=".35"/><path d="M24.5 23.5v-4a7.5 7.5 0 0 1 15 0v4" fill="none" stroke="url(#g)" stroke-width="2.8" stroke-linecap="round"/><path d="M15.5 23.5h33l-2.9 27.2a4 4 0 0 1-4 3.6H22.4a4 4 0 0 1-4-3.6z" fill="none" stroke="url(#g)" stroke-width="2.8" stroke-linejoin="round"/><circle cx="32" cy="39.5" r="3.6" fill="none" stroke="url(#g)" stroke-width="2.4"/><path d="M35.6 36v4.6a2.5 2.5 0 0 0 5 0v-1.1a8.6 8.6 0 1 0-3.4 6.9" fill="none" stroke="url(#g)" stroke-width="2.4" stroke-linecap="round"/></svg>')
+    write("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#FF5A1F"/><path d="M11 16h6l5.2 22.5h23.6L51 21H19.6" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 29.5l5 5 9.5-9.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="47" r="3.8" fill="#fff"/><circle cx="43" cy="47" r="3.8" fill="#fff"/></svg>')
     write("manifest.json", json.dumps({"name": CFG["shop_name"], "short_name": CFG["shop_name"], "description": CFG["slogan"], "lang": "ko",
           "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#fbfaf8", "theme_color": "#fdf8ef",
           "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -817,9 +818,9 @@ def build_partner_pages():
 <label>상세 설명 (줄마다 한 가지 특징)</label><textarea name="description" style="height:120px"></textarea>
 <button class="btn btn-dark" style="margin-top:14px" data-api="/seller/product">상품 등록 요청</button></div>
 <div class="card form" id="bulk-form"><h2>3. 엑셀로 한꺼번에 등록</h2>
-<p style="color:#555;font-size:15px">올채움 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
+<p style="color:#555;font-size:15px">담Go사Go 상품등록 양식을 내려받아 채워서 올려 주세요. 수백 개도 한 번에 접수돼요.<br>
 가격은 <b>오픈마켓 판매가(무료배송 기준)</b>이 그대로 판매가가 되고, 대표 이미지는 <b>이미지 주소(https://…)</b>로 적어 주세요.</p>
-<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>올채움 상품등록 양식 내려받기 (.xlsx)</a>
+<a class="btn btn-line" style="margin-top:12px" href="product_template.xlsx" download>담Go사Go 상품등록 양식 내려받기 (.xlsx)</a>
 <label>입점코드</label><input id="bulk-code" placeholder="승인 시 받은 코드">
 <label>작성한 엑셀 파일</label><input id="bulk-file" type="file" accept=".xlsx,.xls,.csv" style="padding-top:10px">
 <button class="btn btn-dark" style="margin-top:14px" id="bulk-btn">엑셀 상품 등록 요청</button>
