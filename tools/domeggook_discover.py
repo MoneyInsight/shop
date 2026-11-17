@@ -169,7 +169,18 @@ def main():
         if any(k in n for n in c for k in OFFICE): return 0
         if len(c) > 1 and c[1] == "건강식품": return 1
         return 2
+    BEAUTY = ("화장품", "뷰티", "미용", "스킨케어", "메이크업", "향수", "헤어케어", "바디케어", "네일")
+    def focus(c):  # 화장품·건강기능식품 (대표님: 전부 가져오기)
+        return any(k in n for n in c for k in BEAUTY) or (len(c) > 1 and c[1] == "건강식품")
+    _p = prio
+    prio = lambda c: 0 if focus(c) else _p(c) + 1
     cats.sort(key=prio)
+    global TOP_PAGES
+    if os.environ.get("FOCUS"):  # 화장품·건강식품만 깊게 (랭킹 상위 N쪽까지)
+        cats = [c for c in cats if focus(c)]
+        TOP_PAGES = int(os.environ.get("FOCUS_PAGES", "50"))
+        state.setdefault("focus_cat", 0)
+        print("집중 수집: 화장품·건강식품 분류", len(cats), "개, 분류마다", TOP_PAGES, "쪽까지")
     if not state.get("office_first"):
         state["office_first"] = True; state["supp_first"] = True; state["cat"] = 0
     print("우선 분류(문구·사무):", sum(1 for c in cats if prio(c) == 0), "개 / 건강식품:", sum(1 for c in cats if prio(c) == 1), "개")
@@ -181,21 +192,23 @@ def main():
         if p.name not in ("products.csv", "도매매API상품.csv"):
             total += sum(1 for _ in csv.reader(open(p, encoding="utf-8-sig"))) - 1
     total += len(rows)
-    ci = state.get("cat", 0) % len(cats)
+    ck = "focus_cat" if os.environ.get("FOCUS") else "cat"
+    ci = state.get(ck, 0) % len(cats)
     loops = 0
     t0 = time.time()
     def more():
         return (views < NEW_LIMIT and errs < 20 and added + len(wh_rows) < ADD_TARGET and wh_have + len(wh_rows) < WH_MAX
                 and time.time() - t0 < MAX_MIN * 60)
-    while more() and loops < len(cats) * 30:
+    while more() and loops < len(cats) * max(30, TOP_PAGES):
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
-        pg = int(pgs.get(kw, 1))
+        pk = ("f:" if os.environ.get("FOCUS") else "") + kw  # 집중 수집은 쪽 번호를 따로 기억
+        pg = int(pgs.get(pk, 1))
         d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": str(pg), "so": "rd"}).get("domeggook") or {})
         items = (d.get("list") or {}).get("item") or []
         if isinstance(items, dict):
             items = [items]
-        pgs[kw] = pg + 1 if len(items) >= 100 and pg < TOP_PAGES else 1  # 다음 방문 땐 다음 쪽 (끝까지 가면 처음부터)
+        pgs[pk] = pg + 1 if len(items) >= 100 and pg < TOP_PAGES else 1  # 다음 방문 땐 다음 쪽 (끝까지 가면 처음부터)
         for it in items:
             no = str(it.get("no", ""))
             if not no or no in have or no in seen or it.get("adultOnly") == "true" or num((it.get("deli") or {}).get("fee")) > MAX_SHIP:
@@ -225,7 +238,7 @@ def main():
             if info:
                 kwmap["DM" + no] = info[:12]
         time.sleep(0.3)
-    state["cat"] = ci
+    state[ck] = ci
     with open(OUT, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS); w.writeheader(); w.writerows(rows)
     if wh_rows:

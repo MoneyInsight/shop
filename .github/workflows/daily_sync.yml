@@ -6,6 +6,7 @@ on:
     inputs:
       limit: { description: "점검할 기존 상품 수", default: "4000" }
       new_limit: { description: "새 상품 찾기 조회 수", default: "60000" }
+      focus: { description: "1이면 화장품·건강기능식품만 깊게 수집", default: "" }
 permissions:
   contents: write
   pages: write
@@ -34,8 +35,10 @@ jobs:
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
           NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
-          ADD_TARGET: "10000"  # 오너클랜 전체 수집 완료(약 11만) → 도매매 하루 1만 개로 늘림 (대표님 요청) — 랭킹순 상위 안에서
+          ADD_TARGET: ${{ github.event.inputs.focus && '50000' || '10000' }}  # 오너클랜 전체 수집 완료(약 11만) → 도매매 하루 1만 개로 늘림 (대표님 요청) — 랭킹순 상위 안에서
           MAX_MIN: "270"
+          FOCUS: ${{ github.event.inputs.focus || '' }}
+          FOCUS_PAGES: "50"
       - name: 빌드·손해 점검
         run: |
           python3 build.py
