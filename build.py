@@ -853,6 +853,8 @@ def build_feeds(ps):
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
           "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
     write("edits_ver.txt", EDITS_VER)  # 관리자 수정 반영 확인용
+    for fn, body in (CFG.get("verify_files") or {}).items():  # 검색엔진 소유 확인 파일 (구글 등)
+        write(fn, body)
     write("robots.txt", (f"#DaumWebMasterTool:{CFG['daum_webmaster']}\n" if CFG.get("daum_webmaster") else "") + f"User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /checkout.html\nDisallow: /cart.html\nDisallow: /orders.html\nDisallow: /login.html\nDisallow: /wish.html\nDisallow: /success.html\nDisallow: /fail.html\nSitemap: {BASE}/sitemap.xml\n")
 
     pub = [{k: p[k] for k in ("id", "name", "category", "category_name", "price", "normal_price", "shipping_fee",
