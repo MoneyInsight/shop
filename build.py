@@ -631,18 +631,25 @@ def product_body(p, related):
     return body, ld, url, img
 
 
+SEO_IDS = set()  # 검색 노출용으로 실제 내용을 담아 만든 상품 페이지
+
+
 def build_products(ps):
     by_cat = {}
     for p in ps:
         by_cat.setdefault(p["category"], []).append(p)
-    if CFG.get("catalog_api"):  # 상품 DB 모드: 상품 페이지는 DB에서 불러오는 item.html 한 장 + 예전 주소는 작은 이동 페이지만 (용량 확보)
+    if CFG.get("catalog_api"):  # 상품 DB 모드: 검색 노출용 상위 상품은 내용이 들어간 진짜 상품 페이지, 나머지는 작은 이동 페이지 (용량 1GB 안)
+        seo_n = int(CFG.get("seo_pages", 50000))
+        SEO_IDS.update(p["id"] for p in ps[:seo_n] if not p.get("soldout"))
         for p in ps:
+            if p["id"] in SEO_IDS:
+                continue
             pid = html.escape(str(p["id"]), quote=True); q = urllib.parse.quote(str(p["id"]), safe="")
             write(f'product/{p["id"]}.html', f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>{e(p["name"])}</title>'
                   f'<link rel="canonical" href="{BASE}/product/item.html?id={q}"><meta http-equiv="refresh" content="0;url=item.html?id={q}">'
                   f'<script>location.replace("item.html?id={q}"+location.search.replace("?","&")+location.hash)</script></head>'
                   f'<body><a href="item.html?id={q}">{e(p["name"])}</a></body></html>')
-        ps_pages = []
+        ps_pages = [p for p in ps if p["id"] in SEO_IDS]
     else:
         ps_pages = ps
     for p in ps_pages:
@@ -877,7 +884,7 @@ def build_feeds(ps):
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
     # DB 모드의 product/<id>.html 은 이동용 빈 페이지라 검색 등록에서 뺌 (상품 검색 노출은 서버 렌더 상품 페이지로 따로)
-    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + ([] if CFG.get("catalog_api") else [f'product/{p["id"]}.html' for p in ps])
+    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps if not CFG.get("catalog_api") or p["id"] in SEO_IDS]
     today = datetime.date.today().isoformat()
     chunks = [urls[i:i + 45000] for i in range(0, len(urls), 45000)]  # 사이트맵 한 파일 5만 개 제한
     for n, ch in enumerate(chunks):
