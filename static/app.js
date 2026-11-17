@@ -653,10 +653,20 @@
       try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(data.url); alert("상품 주소를 복사했어요."); } } catch (e) {}
     };
     // 이미지 갤러리
-    $$(".thumbs button").forEach((b) => b.addEventListener("click", () => {
-      $("#main-img").src = b.dataset.src;
-      $$(".thumbs button").forEach((x) => x.classList.toggle("on", x === b));
-    }));
+    const tb = $$(".thumbs button"), mi = $("#main-img");
+    let gi = 0, gTimer = null, gHold = false;
+    const show = (i) => {
+      gi = (i + tb.length) % tb.length;
+      mi.style.opacity = "0";
+      setTimeout(() => { mi.src = tb[gi].dataset.src; mi.style.opacity = "1"; }, 180);
+      tb.forEach((x, j) => x.classList.toggle("on", j === gi));
+    };
+    const gStart = () => { clearInterval(gTimer); if (tb.length > 1 && !gHold && !matchMedia("(prefers-reduced-motion: reduce)").matches) gTimer = setInterval(() => show(gi + 1), 3000); };
+    tb.forEach((b, j) => b.addEventListener("click", () => { show(j); gHold = true; clearInterval(gTimer); setTimeout(() => { gHold = false; gStart(); }, 10000); }));  // 손님이 고르면 10초 멈춤
+    const gBox = $(".gallery .main-img");
+    if (gBox) { gBox.addEventListener("mouseenter", () => clearInterval(gTimer)); gBox.addEventListener("mouseleave", gStart); }
+    if (mi) mi.style.transition = "opacity .18s";
+    gStart();  // 사진이 여러 장이면 3초마다 다음 사진으로 자동 넘김
     // 탭 강조
     const tabs = $$(".tabs a"), secs = tabs.map((a) => $(a.getAttribute("href")));
     if ("IntersectionObserver" in window) {
