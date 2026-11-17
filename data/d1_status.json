@@ -1,5 +1,5 @@
 {
- "at": "2026-11-17 17:26 UTC",
+ "at": "2026-11-17 18:16 UTC",
  "db": "allchaeum",
  "in_db": 582982,
  "site_and_warehouse_total": 1455387,
@@ -11,6 +11,6 @@
  "rows_written_24h_after": 4228192,
  "writes_per_product": null,
  "unsafe_skipped": 0,
- "warehouse_files": 42,
+ "warehouse_files": 43,
  "stopped": "최근 24시간 쓰기 2,995,087.5줄 + 다음 파일 예상 20,250.0줄 > 한도 3,000,000"
 }
