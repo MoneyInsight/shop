@@ -1188,6 +1188,27 @@ export async function handle(req, env, path) {
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
       kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
   }
+  if (req.method === "POST" && path === "/oc/scan") {  // 오너클랜 상품 목록 한 쪽 (깃허브 대량 수집용, 관리자 비밀번호 필요)
+    const pw = String(env.ADMIN_PASSWORD || "").trim(), got = String(req.headers.get("x-admin-pass") || "").trim();
+    if (!pw || got.length !== pw.length || !crypto.subtle.timingSafeEqual(new TextEncoder().encode(got), new TextEncoder().encode(pw))) return fail("권한 없음", 403);
+    const d = await req.json().catch(() => ({}));
+    const tok = await ocToken(env);
+    if (!tok) return fail("오너클랜 로그인 실패", 502);
+    const first = Math.min(1000, Math.max(1, +d.first || 100));
+    const args = [`first:${first}`, "status:available"];
+    if (d.after) args.push(`after:${JSON.stringify(String(d.after))}`);
+    if (d.category) args.push(`category:${JSON.stringify(String(d.category))}`);
+    if (d.sortBy) args.push(`sortBy:${String(d.sortBy).replace(/[^a-zA-Z]/g, "")}`);
+    const fields = d.full ? "key name price fixedPrice shippingFee shippingType status adultOnly openmarketSellable boxQuantity origin model production taxFree images options{quantity status price optionAttributes{name value}} metadata content"
+      : "key name price shippingFee shippingType status adultOnly openmarketSellable boxQuantity metadata";
+    const t0 = Date.now();
+    const r = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      body: JSON.stringify({ query: `query{allItems(${args.join(",")}){pageInfo{hasNextPage endCursor} edges{node{${fields}}}}}` }) });
+    const txt = await r.text();
+    let j = {}; try { j = JSON.parse(txt); } catch (e) {}
+    const c = (j.data || {}).allItems || {};
+    return json({ ms: Date.now() - t0, status: r.status, page: c.pageInfo || null, items: (c.edges || []).map((e) => e.node), errors: (j.errors || []).map((e) => String(e.message).slice(0, 200)), raw: j.data ? undefined : txt.slice(0, 300) });
+  }
   if (req.method === "POST" && path === "/oc/items") {  // 오너클랜 재고·가격 조회 (깃허브 매일 점검용 — 깃허브는 오너클랜이 막아서 서버가 대신 조회)
     const pw = String(env.ADMIN_PASSWORD || "").trim(), got = String(req.headers.get("x-admin-pass") || "").trim();
     if (!pw || got.length !== pw.length || !crypto.subtle.timingSafeEqual(new TextEncoder().encode(got), new TextEncoder().encode(pw))) return fail("권한 없음", 403);
