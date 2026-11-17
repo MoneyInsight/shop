@@ -379,7 +379,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 '''
     bot = f'''
 <footer><div class="wrap">
-<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p></div>
+<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p><p class="give-foot">💛 판매금액의 일부는 후원금으로 사용됩니다.</p></div>
 <div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
@@ -517,7 +517,7 @@ def build_home(ps):
 <div>{I_TRUCK}<p><b><a href="search.html?free=1" style="color:inherit">무료배송 {sum(1 for x in ps if not x["shipping_fee"]):,}개</a></b><span>같은 상품은 여러 개 사도 배송비 한 번</span></p></div>
 <div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>
 <div>{I_SHIELD}<p><b>안전 결제</b><span>토스페이먼츠 구매안전 서비스</span></p></div>
-<div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div></div>
+<div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div><div class="wrap"><p class="give-band">💛 담Go사Go에서 사시면 <b>판매금액의 일부는 후원금으로 사용됩니다.</b></p></div></div>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
@@ -601,6 +601,7 @@ def product_body(p, related):
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
+<p class="give-note">💛 판매금액의 일부는 후원금으로 사용됩니다.</p>
 <a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
 <span class="bulk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/></svg></span>
 <span class="bulk-txt"><b>대량 구매 문의</b><small>단체·기업 주문은 문의 주시면 빠르게 안내해 드려요</small>
