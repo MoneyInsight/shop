@@ -58,6 +58,15 @@ def cert(meta):
     return " ".join(vals)[:200]
 
 
+def box_qty(it, ship):
+    """오너클랜 묶음배송 수량(boxQuantity): 2 이상이면 그 개수까지 배송비 1번 (N개마다), 0·1·없음이면 1개마다 (손해 없는 쪽)"""
+    try:
+        b = int(it.get("boxQuantity") or 0)
+    except (TypeError, ValueError):
+        b = 0
+    return str(b) if ship and b > 1 else ""
+
+
 def row(it):
     meta = it.get("metadata") or {}
     g = str(meta.get("grade") or "")
@@ -82,7 +91,7 @@ def row(it):
     ship = 0 if it.get("shippingType") == "free" else int(it.get("shippingFee") or 0)
     ret = int(meta.get("returnShippingFee") or 0)
     return {"상품코드": it["key"], "상품명": it.get("name", ""), "카테고리코드": meta.get("smartstoreCategoryCode") or "",
-            "카테고리명": meta.get("smartstoreCategoryFullName") or "", "공급가": price, "공급 배송비": ship, "묶음배송수량": "",
+            "카테고리명": meta.get("smartstoreCategoryFullName") or "", "공급가": price, "공급 배송비": ship, "묶음배송수량": box_qty(it, ship),
             "반품배송비": ret, "교환배송비": ret * 2, "대표 이미지 주소": imgs[0], "브랜드": "", "제조사": it.get("production") or "",
             "상세 설명": it.get("content") or "", "인증정보": cert(meta), "옵션명": names, "옵션": "|".join(vals), "공급사등급": gnum}
 

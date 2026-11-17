@@ -1,0 +1,28 @@
+name: 오너클랜 묶음배송 수량 채우기 (한 번)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/oc_box.yml", "tools/oc_box_backfill.py"]
+concurrency: { group: oc-box, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 묶음배송 수량 조회·반영
+        run: python3 tools/oc_box_backfill.py
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MAX_MIN: "300"
+      - name: 저장
+        if: always()
+        run: |
+          git config user.name "allchaeum-bot"; git config user.email "bot@users.noreply.github.com"
+          git add warehouse data/oc_box.json
+          git commit -m "오너클랜 묶음배송 수량 반영" || exit 0
+          for i in 1 2 3 4 5 6; do git pull --rebase --autostash -X theirs && git push && break; sleep 20; done
