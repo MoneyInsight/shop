@@ -119,15 +119,13 @@ for p in ps:
     if not f.exists():
         miss_page += 1; continue
     t = f.read_text(encoding="utf-8")
-    if DBMODE:
-        if "item.html?id=" not in t:
-            err(f'product/{p["id"]}.html: 상품 DB 이동 페이지 아님')
+    if DBMODE and "item.html?id=" in t:  # 이동 페이지
         continue
-    bad = [k for k in need_prod if k not in t]
+    bad = [k for k in need_prod if k not in t]  # 검색 노출용 실제 상품 페이지 (DB 모드 상위 상품) 또는 정적 모드 페이지
     m = LEFT.search(t)
     if bad or m:
         err(f'product/{p["id"]}.html: 빠짐 {bad} {m.group(0) if m else ""}')
-    if not (SITE / "p" / f'{p["id"]}.json').exists():
+    if not DBMODE and not (SITE / "p" / f'{p["id"]}.json').exists():
         miss_json += 1
 if miss_page:
     err(f"상품 페이지 없는 상품 {miss_page}개")
