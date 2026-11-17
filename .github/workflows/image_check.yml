@@ -1,7 +1,8 @@
 name: 사진 점검 (깨진 사진 고치기, 매주 + 수동)
 on:
   schedule:
-    - cron: "41 22 * * 0"   # 매주 월요일 오전 7시 41분
+    - cron: "41 22 * * *"   # 매일 오전 7시 41분
+    - cron: "41 10 * * *"   # 매일 오후 7시 41분 (새로 들어온 상품 사진도 하루 두 번 점검)
   workflow_dispatch:
   push:
     branches: [main]

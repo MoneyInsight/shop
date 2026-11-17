@@ -316,10 +316,13 @@
     const t = e.target;
     if (t.tagName === "IMG" && !t.dataset.fb) {
       t.dataset.fb = 1; t.src = ROOT + "noimg.svg";
+      // 목록·순위·자동완성에서는 사진 없는 상품을 아예 숨김 (상세 페이지만 대체 그림)
+      const hide = t.closest(".grid .p-card, .pop-list li, .pop-grid li, .sg-item");
+      if (hide) hide.style.display = "none";
       // 대표 사진이 안 뜨는 상품은 관리자에게 자동 신고 (같은 상품은 한 번만)
       const id = t.closest(".p-card")?.querySelector("[data-wish]")?.dataset.wish || (t.id === "main-img" && $("#buy")?.dataset.id);
       const sent = store.get("broken_sent", []);
-      if (id && API && !sent.includes(id)) { store.set("broken_sent", [...sent, id].slice(-200)); fetch(API + "/track/broken", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {}); }
+      if (id && API && (!sent.includes(id) || hide)) { store.set("broken_sent", [...sent, id].slice(-200)); fetch(API + "/track/broken", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {}); }
     }
   }, true);
 

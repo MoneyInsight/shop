@@ -41,6 +41,17 @@ const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.rep
 const csvCell = (v) => { const s = String(v ?? "").replace(/\r?\n/g, "|"); return /[",]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 const rid = (n = 8) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
 
+async function imgAlive(u) {  // 사진이 실제로 받아지는지 (https 먼저, 안 되면 원래 주소)
+  for (const x of [...new Set([u.replace(/^http:/, "https:"), u])]) {
+    try {
+      const r = await fetch(x, { headers: { Range: "bytes=0-2047", "User-Agent": "Mozilla/5.0" } });
+      const ct = r.headers.get("Content-Type") || "";
+      if ((r.status === 200 || r.status === 206) && ct.startsWith("image/")) return true;
+    } catch (e) {}
+  }
+  return false;
+}
+
 async function kvList(env, prefix) {
   const out = [];
   let cursor;
@@ -1366,6 +1377,14 @@ export async function handle(req, env, path) {
       const d = await req.json().catch(() => ({}));
       const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "").slice(0, 30);
       if (id) { const b = (await env.SHOP.get("broken", "json")) || {}; if (!b[id]) { b[id] = new Date().toISOString(); await env.SHOP.put("broken", JSON.stringify(b)); } }
+      // 서버가 직접 사진을 받아보고 정말 없으면 상품 DB에서 바로 내림 (거짓 신고로 내려가지 않게 확인 후)
+      if (id && env.DB) {
+        const r = await env.DB.prepare("SELECT image FROM products WHERE id = ?").bind(id).first().catch(() => null);
+        if (r && r.image && /^https?:\/\//.test(r.image) && !(await imgAlive(r.image))) {
+          await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run().catch(() => {});
+          return json({ ok: true, removed: true });
+        }
+      }
       return json({ ok: true });
     }
     if (path === "/track/visit") { await stats.visit(env, await req.json().catch(() => ({}))); return json({ ok: true }); }
