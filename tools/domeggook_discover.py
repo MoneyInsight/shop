@@ -162,6 +162,7 @@ def main():
     tree = (api({"ver": "1.0", "mode": "getCategoryList"}).get("domeggook") or {}).get("items") or {}
     cats = []
     leaves(tree, [], cats)
+    print("도매꾹 분류(맨 끝):", len(cats), "개")
     cats = [c for c in cats if not skip_cat(c)]
     # 우선순위: ① 문구·사무·학용품 (기업 거래처용) ② 건강식품 ③ 나머지 — 매일 이 순서로 돌며 새 상품을 채움
     OFFICE = ("문구", "사무", "오피스", "학용품", "필기", "화일", "파일/바인더", "제도", "포장/배송")

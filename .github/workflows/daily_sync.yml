@@ -1,6 +1,7 @@
 name: 새 상품 찾기 (도매꾹 API, 매일)
 on:
   schedule:
+    - cron: "37 15 * * *"   # 한국 시간 밤 0시 37분 — 화장품·건강기능식품 집중 수집 (도매꾹 하루 호출 한도가 새로 찬 뒤)
     - cron: "17 5 * * *"    # 한국 시간 오후 2시 17분 — 기존 상품 품절 점검(1시 17분)이 도매꾹 호출 한도를 먼저 쓰게 한 뒤
   workflow_dispatch:
     inputs:
@@ -35,9 +36,9 @@ jobs:
         env:
           DOMEGGOOK_API_KEY: ${{ secrets.DOMEGGOOK_API_KEY }}
           NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
-          ADD_TARGET: ${{ github.event.inputs.focus && '50000' || '10000' }}  # 오너클랜 전체 수집 완료(약 11만) → 도매매 하루 1만 개로 늘림 (대표님 요청) — 랭킹순 상위 안에서
+          ADD_TARGET: ${{ (github.event.inputs.focus || github.event.schedule == '37 15 * * *') && '50000' || '10000' }}  # 오너클랜 전체 수집 완료(약 11만) → 도매매 하루 1만 개로 늘림 (대표님 요청) — 랭킹순 상위 안에서
           MAX_MIN: "270"
-          FOCUS: ${{ github.event.inputs.focus || '' }}
+          FOCUS: ${{ github.event.inputs.focus || (github.event.schedule == '37 15 * * *' && '1') || '' }}
           FOCUS_PAGES: "50"
       - name: 빌드·손해 점검
         run: |
