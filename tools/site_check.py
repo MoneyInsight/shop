@@ -12,7 +12,7 @@ err = lambda m: errors.append(m)
 
 # 1) 템플릿 찌꺼기: 파이썬 f-string 이 덜 채워진 흔적 ({scripts}, {root} 등)
 LEFT = re.compile(r"\{(scripts|root|body|top|bot|cfg_js|ASSET_V|title|desc|name|gnb|logo|verify|extra_head|canonical|og_img)\}")
-pages = sorted(SITE.glob("*.html")) + sorted((SITE / "category").glob("*.html"))
+pages = [f for f in sorted(SITE.glob("*.html")) if not f.name.startswith(("google", "naver"))] + sorted((SITE / "category").glob("*.html"))  # 검색엔진 확인 파일 제외
 for f in pages:
     t = f.read_text(encoding="utf-8")
     m = LEFT.search(t)
