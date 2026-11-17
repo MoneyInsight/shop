@@ -638,3 +638,16 @@ footer .logo-tag{display:none}
 @media(max-width:900px){.pop-grid{grid-template-columns:repeat(3,1fr);gap:12px}}
 @media(max-width:640px){.pop-grid{grid-template-columns:repeat(2,1fr)}.pop-it{font-size:13px}}
 .pop-list ol,.pop-grid{list-style:none}
+
+/* 상품 찾아드림 */
+.find-hero{background:var(--accent-soft);padding:22px 20px;margin:-4px 0 18px;border-radius:6px}
+.find-hero>b{font-size:20px}.find-hero p{margin-top:6px;color:var(--ink2)}
+.find-steps{list-style:none;display:flex;gap:10px;margin-top:16px}
+.find-steps li{flex:1;background:#fff;padding:12px 8px;text-align:center;font-size:13px;line-height:1.4;border-radius:6px}
+.find-steps span{display:block;margin:0 auto 6px;width:24px;height:24px;line-height:24px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700}
+.find-steps small{color:var(--sub)}
+.find-empty{padding:40px 0}
+.find-cta{max-width:440px;margin:18px auto 0;padding:22px;border:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;gap:8px;align-items:center}
+.find-cta b{font-size:18px;color:var(--ink)}.find-cta span{font-size:14px}
+.find-cta .btn{max-width:240px;width:100%;margin-top:6px}
+.find-bar{display:block;margin:28px 0 8px;padding:16px 18px;border:1px dashed var(--accent);background:var(--accent-soft);text-align:center;font-size:14px}.find-bar b{color:var(--accent);margin-right:6px}

@@ -417,7 +417,7 @@
       if (sort === "sale") sorted.sort((a, b) => (1 - b.price / b.normal_price) - (1 - a.price / a.normal_price));
       if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
       $("#list-count").textContent = sorted.length.toLocaleString() + "개";
-      grid.innerHTML = sorted.length ? "" : `<div class="empty">${mode === "wish" ? "찜한 상품이 없어요." : mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      grid.innerHTML = sorted.length ? "" : mode === "search" ? `<div class="empty find-empty"><p>검색 결과가 없어요.</p><div class="find-cta"><b>찾는 물건이 없나요?</b><span>남겨 주시면 대신 찾아서 담아 드려요. 요청은 무료예요.</span><a class="btn btn-dark" href="${ROOT}find.html?q=${encodeURIComponent(new URLSearchParams(location.search).get("q") || "")}">상품 찾아드림 요청</a></div></div>` : `<div class="empty">${mode === "wish" ? "찜한 상품이 없어요." : "상품을 준비하고 있어요."}</div>`;
       $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === sort));
       // 예전 주소(?page=3)로 들어오면 그 페이지까지 한 번에 보여줌
       for (let i = 0; i < page; i++) more();
@@ -456,7 +456,7 @@
       if (!d) { if (reset) grid.innerHTML = `<div class="empty">상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>`; return; }
       total = d.total;
       $("#list-count").textContent = d.total.toLocaleString() + "개";
-      if (reset && !d.items.length) grid.innerHTML = `<div class="empty">${mode === "search" ? "검색 결과가 없어요. 다른 단어로 찾아보세요." : "상품을 준비하고 있어요."}</div>`;
+      if (reset && !d.items.length) grid.innerHTML = mode === "search" ? `<div class="empty find-empty"><p>검색 결과가 없어요.</p><div class="find-cta"><b>찾는 물건이 없나요?</b><span>남겨 주시면 대신 찾아서 담아 드려요. 요청은 무료예요.</span><a class="btn btn-dark" href="${ROOT}find.html?q=${encodeURIComponent(new URLSearchParams(location.search).get("q") || "")}">상품 찾아드림 요청</a></div></div>` : `<div class="empty">상품을 준비하고 있어요.</div>`;
       grid.insertAdjacentHTML("beforeend", d.items.map(cardHTML).join(""));
       $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === sort));
       const have = grid.querySelectorAll(".p-card").length;
@@ -1112,6 +1112,28 @@
     };
   }
 
+  // ── 상품 찾아드림: 찾는 물건을 남기면 대신 찾아서 담아 줌 (1:1 문의로 접수 → 관리자 알림) ──
+  function initFinder() {
+    if (!$("#finder")) return;
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) $("#fd-product").value = q;
+    const a = store.get("addr", null) || member();
+    if (a) { $("#fd-name").value = a.name || ""; $("#fd-contact").value = a.phone || a.email || ""; }
+    $("#fd-btn").onclick = async () => {
+      const v = (k) => $("#fd-" + k).value.trim();
+      if (v("product").length < 2) { alert("찾는 상품을 적어 주세요."); return; }
+      if (!v("name") || (digits(v("contact")).length < 9 && !/@/.test(v("contact")))) { alert("이름과 연락처(휴대폰 또는 이메일)를 입력해 주세요."); return; }
+      if (!$("#fd-agree").checked) { alert("개인정보 수집·이용에 동의해 주세요."); return; }
+      const text = ["[상품 찾아드림 요청]", `상품: ${v("product")}`, v("detail") && `설명: ${v("detail")}`, v("link") && `참고 링크: ${v("link")}`,
+        `수량: ${v("qty") || 1}개`, v("price") && `희망 가격: ${v("price")}`].filter(Boolean).join("\n");
+      const b = $("#fd-btn"); b.disabled = true;
+      const { ok, d } = await api("/inquiry/add", { name: v("name"), contact: v("contact"), type: "상품찾기", orderId: "", text });
+      b.disabled = false;
+      if (!ok) { alert(d.message); return; }
+      $("#finder").innerHTML = `<div class="done-box"><div class="mark">✓</div><h2>요청이 접수되었어요</h2><p>‘${esc(v("product"))}’을(를) 찾아서 담아 드릴게요.<br>찾으면 남겨 주신 연락처로 바로 알려 드려요. (보통 1~2일)</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="${ROOT}index.html">쇼핑 계속하기</a></div>`;
+    };
+  }
+
   function initCs() {
     const b = $("#inq-btn");
     if (!b) return;
@@ -1162,5 +1184,5 @@
     try { fetch(API + "/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid, path: (/\/item\.html$/.test(location.pathname) && new URLSearchParams(location.search).get("id")) ? "/product/" + new URLSearchParams(location.search).get("id") + ".html" : location.pathname.replace(/^.*\/shop/, ""), ...visitSrc }), keepalive: true }).catch(() => {}); } catch (e) {}
   }
   updateCounts(); markWished(); paintLogin(); handleLoginHash().then(initLogin);
-  initListing(); initRecent(); homeCounts(); initPopular(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
+  initListing(); initRecent(); homeCounts(); initPopular(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk(); initFinder();
 })();

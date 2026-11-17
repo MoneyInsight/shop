@@ -367,7 +367,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     logo = f'<a class="logo" href="{root}index.html" aria-label="{e(name)} 홈"><span class="logo-box"><img class="logo-3d" src="{root}icons/logo3d.png" alt="담고사고(담Go사Go)" width="578" height="148"><span class="logo-tag">담고 사고, 매일 쓰는 생활용품 쇼핑몰</span></span></a>'
     cfg_js = f"<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>"
     top = f'''<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "무료배송 상품 따로 모아보기 · 회원가입 없이 바로 주문"}</span>
-<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
+<nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}find.html"><b>상품 찾아드림</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
 <div class="pop" id="pop" hidden><button class="pop-tick" type="button" aria-expanded="false" aria-label="인기 순위 보기"><span class="pop-lb">인기</span><span class="pop-roll"></span><span class="pop-ar">&#9662;</span></button><div class="pop-list" role="dialog" aria-label="인기 순위 TOP 10"></div></div>
@@ -453,7 +453,7 @@ def listing(title, mode, items, root, cat="", count=None):
     n = len(items) if count is None else count
     return f'''<div class="wrap" id="listing" data-mode="{mode}" data-cat="{cat}">
 <div class="list-head"><h1 id="list-title">{e(title)}<span class="cnt" id="list-count">{n:,}개</span></h1>{SORT_BAR}</div>{PRICE_BAR if mode != "wish" else ""}
-<div class="grid" id="list-grid">{"".join(card(p, root) for p in items[:40])}</div><div class="pager" id="pager"></div></div>'''
+<div class="grid" id="list-grid">{"".join(card(p, root) for p in items[:40])}</div><div class="pager" id="pager"></div>{f'<a class="find-bar" href="{root}find.html"><b>원하는 상품이 안 보이나요?</b> 남겨 주시면 대신 찾아서 담아 드려요 &rsaquo;</a>' if mode in ("search", "cat") else ""}</div>'''
 
 
 # ---------------- 페이지 ----------------
@@ -759,7 +759,8 @@ def build_shop_pages():
 <div>{I_PHONE}<b>{e(BIZ["phone"])}</b>{e(BIZ["cs_hours"])}</div>
 <a href="orders.html">{I_BOX}<b>주문·배송 조회</b>취소·반품·교환 신청</a>
 <a href="#inquiry">{I_CHAT}<b>1:1 문의</b>남겨주시면 답변드립니다</a>
-<a href="bulk.html">{I_BOX}<b>대량 구매 문의</b>기업·단체·사은품 견적</a></div>
+<a href="bulk.html">{I_BOX}<b>대량 구매 문의</b>기업·단체·사은품 견적</a>
+<a href="find.html">{I_SEARCH}<b>상품 찾아드림</b>찾는 물건이 없으면 대신 찾아 드려요</a></div>
 <div class="card"><h2>자주 묻는 질문</h2><div class="faq">{faq}</div></div>
 <div class="card form" id="inquiry"><h2>1:1 문의</h2>
 <div class="row"><input id="inq-name" placeholder="이름" aria-label="이름"><input id="inq-contact" placeholder="연락처 또는 이메일" aria-label="연락처"></div>
@@ -782,6 +783,17 @@ def build_shop_pages():
 <label for="bk-text">요청 사항</label><textarea id="bk-text" style="height:110px" placeholder="옵션(색상·사이즈)별 수량, 배송지가 여러 곳인지 등"></textarea>
 <label class="check"><input type="checkbox" id="bk-agree"><span>견적 안내를 위한 개인정보(이름·연락처·이메일) 수집·이용에 동의합니다.</span></label>
 <button class="btn btn-dark" id="bk-btn" style="margin-top:8px">견적 요청 보내기</button></div></div>''')
+    simple("find.html", "상품 찾아드림", '''<div class="narrow"><div class="card form" id="finder">
+<div class="find-hero"><b>찾는 물건이 없나요?</b><p>원하는 상품을 남겨 주시면 담Go사Go가 국내 도매처에서 대신 찾아<br>사이트에 담아 드리고, 연락처로 바로 알려 드려요. <b>요청은 무료</b>예요.</p>
+<ol class="find-steps"><li><span>1</span>찾는 상품 남기기</li><li><span>2</span>도매처에서 찾기<br><small>보통 1~2일</small></li><li><span>3</span>사이트에 담고<br>알림 보내기</li></ol></div>
+<label for="fd-product">찾는 상품</label><input id="fd-product" placeholder="예) 접이식 원목 캠핑 테이블 120cm">
+<label for="fd-detail">자세한 설명 (색상·크기·용도 등, 선택)</label><textarea id="fd-detail" style="height:96px" placeholder="예) 4인용, 다리 높이 조절, 베이지 계열이면 좋겠어요"></textarea>
+<label for="fd-link">참고 링크 (다른 쇼핑몰 주소·사진 주소, 선택)</label><input id="fd-link" placeholder="https://">
+<div class="row"><div><label for="fd-qty">필요 수량</label><input id="fd-qty" inputmode="numeric" value="1"></div><div><label for="fd-price">희망 가격 (선택)</label><input id="fd-price" placeholder="예) 3만 원 이하"></div></div>
+<div class="row"><div><label for="fd-name">이름</label><input id="fd-name"></div><div><label for="fd-contact">연락처 (휴대폰 또는 이메일)</label><input id="fd-contact" placeholder="010-0000-0000"></div></div>
+<label class="check"><input type="checkbox" id="fd-agree"><span>상품을 찾은 뒤 알려 드리기 위한 개인정보(이름·연락처) 수집·이용에 동의합니다.</span></label>
+<button class="btn btn-dark" id="fd-btn" style="margin-top:8px">찾아 주세요</button>
+<p class="muted" style="margin-top:12px;font-size:13px">의약품·성인용품·식품(건강기능식품 제외)·KC 인증이 없는 전기제품은 찾아 드릴 수 없어요. 국내 도매처에 없는 상품은 못 찾을 수도 있어요.</p></div></div>''')
     write("404.html", layout(f'페이지를 찾을 수 없습니다 — {CFG["shop_name"]}', f'''<div class="wrap page"><div class="done-box"><div class="mark">?</div><h2>페이지를 찾을 수 없습니다</h2>
 <p>주소가 바뀌었거나 판매가 끝난 상품일 수 있습니다.</p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="{BASE}/">홈으로</a></div></div>''', BASE + "/"))
     write("noimg.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f1ed"/><g fill="none" stroke="#c9c5bc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="130" y="145" width="140" height="110"/><circle cx="170" cy="182" r="12"/><path d="M130 235l42-36 34 26 26-20 38 30"/></g></svg>')
@@ -891,7 +903,7 @@ def build_feeds(ps):
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
     # DB 모드의 product/<id>.html 은 이동용 빈 페이지라 검색 등록에서 뺌 (상품 검색 노출은 서버 렌더 상품 페이지로 따로)
-    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps if not CFG.get("catalog_api") or p["id"] in SEO_IDS]
+    urls = ["", "search.html", "cs.html", "bulk.html", "find.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps if not CFG.get("catalog_api") or p["id"] in SEO_IDS]
     today = datetime.date.today().isoformat()
     chunks = [urls[i:i + 45000] for i in range(0, len(urls), 45000)]  # 사이트맵 한 파일 5만 개 제한
     for n, ch in enumerate(chunks):
