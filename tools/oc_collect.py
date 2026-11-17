@@ -113,7 +113,10 @@ def main():
 
     done = False
     while time.time() - t0 < MAX_MIN * 60 and total + len(kept) < TARGET:
-        d = scan(after)
+        try:
+            d = scan(after)
+        except Exception as e:
+            print("수집 중단 (다음 실행에서 이어서):", e); break
         items = d.get("items") or []
         seen += len(items)
         for it in items:
