@@ -472,6 +472,16 @@
   }
 
   // ── 상품 DB 템플릿(product/item.html) 채우기 ──
+  // 배송비 안내 (도매처 배송 규칙 그대로 손님에게)
+  function shipInfo(fee, sn, price, mq) {
+    if (!fee) return "<b>무료배송</b>";
+    let t = esc("배송비 " + won(fee)) + (sn === 1 ? " (1개마다)" : sn > 1 ? ` (${sn}개마다)` : "");
+    t += '<br><small class="muted">' + (sn === 1 ? "부피가 커서 1개씩 따로 보내요 — 수량만큼 배송비가 붙어요" : sn > 1 ? `${sn}개까지는 배송비 한 번 · ${sn}개를 넘으면 ${sn}개마다 추가` : "같은 상품은 몇 개를 사도(옵션을 섞어도) 배송비 한 번") + "</small>";
+    const k = sn === 0 ? 10 : sn >= 5 ? Math.min(sn, 10) : 0;
+    if (k && price < fee) t += `<br><small class="ship-tip">💡 ${k}개 사면 배송비가 개당 ${won(Math.ceil(fee / k / 10) * 10)}꼴이에요</small>`;
+    if (mq > 1) t += `<br><small class="muted">${mq}개부터 구매</small>`;
+    return t;
+  }
   async function fillItem() {
     const box = $("#item-tpl");
     if (!box) return;
@@ -494,8 +504,7 @@
     Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []),
       ship: p.shipping_fee || 0, sn: p.sn || 0, pk: p.pk || 1, mq: p.mq || 1 });  // 배송비 규칙 (서버 결제 검증과 같게)
     const sdd = $(".d-meta dd");
-    if (sdd) sdd.innerHTML = !p.shipping_fee ? "<b>무료배송</b>" : esc("배송비 " + won(p.shipping_fee) + (p.sn === 1 ? " (1개마다)" : p.sn > 1 ? ` (${p.sn}개마다)` : "")) +
-      (!p.sn ? '<br><small class="muted">같은 상품은 수량·옵션을 섞어도 배송비 한 번</small>' : "") + ((p.mq || 1) > 1 ? `<br><small class="muted">${p.mq}개부터 구매</small>` : "");
+    if (sdd) sdd.innerHTML = shipInfo(p.shipping_fee || 0, p.sn || 0, p.price, p.mq || 1);
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
     const qd = $("#qty-deal");
     if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
