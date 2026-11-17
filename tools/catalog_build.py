@@ -68,6 +68,21 @@ def products():
     site = build.BASE.rstrip("/")
     nwh = len(list((ROOT / "warehouse").glob("*.csv.gz")))
     out, unsafe = [], 0
+    import csv as _csv, gzip as _gz, io as _io
+    wh_ids = set()
+    for f in (ROOT / "warehouse").glob("*.csv.gz"):
+        for x in _csv.DictReader(_io.StringIO(_gz.decompress(f.read_bytes()).decode("utf-8-sig"))):
+            c = x.get("상품코드") or ""
+            wh_ids.add(c if c.startswith(("DM", "CH", "W", "OWN")) or not c.isdigit() else "CH" + c)
+
+    def tier(pid):  # 사이트 '추천순' 순서: 자체상품 → 지금까지 고른 사이트 상품 → 인기순으로 새로 찾은 도매매·온채널 → 오너클랜 우수 공급사
+        if pid.startswith("OWN"):
+            return 0
+        if pid not in wh_ids and not re.match(r"^W[0-9A-Z]{6}$", pid):
+            return 1
+        if pid.startswith(("DM", "CH")):
+            return 2
+        return 3
     for i, r in enumerate(build.load_products()):
         pid = str(r["id"])
         cost = int(r.get("cost") or 0)
@@ -78,7 +93,7 @@ def products():
              "name": r["name"], "category": r["category"], "price": int(r["price"]), "normal_price": int(r.get("normal_price") or r["price"]),
              "cost": cost, "image": img, "images": r.get("images") or [], "detail_html": r.get("detail_html", ""),
              "options": r.get("options") or [], "qt": [int(x) for x in (r.get("qt") or [])], "option_name": r.get("option_name", ""),
-             "brand": r.get("brand", ""), "origin": r.get("origin", ""), "soldout": 1 if r.get("soldout") else 0, "rank": i,
+             "brand": r.get("brand", ""), "origin": r.get("origin", ""), "soldout": 1 if r.get("soldout") else 0, "rank": tier(pid) * 10_000_000 + i,
              "shipping_fee": int(r.get("shipping_fee") or 0), "sn": int(r.get("sn") or 0), "mq": int(r.get("mq") or 1), "pk": int(r.get("pk") or 1)}
         if not safe(p, P):
             unsafe += 1; continue  # 손해 가능 상품은 DB에 올리지 않음

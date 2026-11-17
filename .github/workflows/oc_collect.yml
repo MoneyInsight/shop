@@ -24,7 +24,7 @@ jobs:
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           OC_MAX_MIN: "300"
-          OC_TARGET: "500000"
+          OC_TARGET: "3000000"   # 최대한 (우수 공급사 상품 전부)
       - name: 저장
         if: always()
         run: |
