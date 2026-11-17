@@ -59,7 +59,7 @@ def cert(meta):
 
 
 def box_qty(it, ship):
-    """오너클랜 묶음배송 수량(boxQuantity): 2 이상이면 그 개수까지 배송비 1번 (N개마다), 0·1·없음이면 1개마다 (손해 없는 쪽)"""
+    """오너클랜 묶음배송 수량(boxQuantity): 2 이상이면 그 개수까지 배송비 1번 (N개마다), 0·1·없음이면 빈칸 → 주문당 1번 (대표님 확인)"""
     try:
         b = int(it.get("boxQuantity") or 0)
     except (TypeError, ValueError):

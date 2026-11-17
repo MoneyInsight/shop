@@ -228,6 +228,8 @@ def ship_every(code, box, ship, raw=None):
         return int(box) if box else 0
     if code.startswith("DM"):
         return int(box) if box else 0
+    if re.match(r"^W[0-9A-Z]{6}$", code):  # 오너클랜: 묶음 수량 표기가 없으면 주문당 1번 (대표님 확인 2026-11-17 — 장바구니에서 100개도 배송비 1번), 있으면 N개마다
+        return int(box) if box and box > 1 else 0
     return int(box) if box and box > 1 else 1
 
 

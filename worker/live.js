@@ -40,7 +40,7 @@ async function ocItems(env, keys) {
     if (!tok) return {};
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
     const r = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
-      body: JSON.stringify({ query: `query{itemsByKeys(keys:${JSON.stringify(keys)}){key status price shippingFee shippingType options{quantity status price optionAttributes{name value}}}}` }) });
+      body: JSON.stringify({ query: `query{itemsByKeys(keys:${JSON.stringify(keys)}){key status price shippingFee shippingType boxQuantity options{quantity status price optionAttributes{name value}}}}` }) });
     clearTimeout(t);
     const d = await r.json();
     return Object.fromEntries(((d.data || {}).itemsByKeys || []).filter(Boolean).map((x) => [x.key, x]));
@@ -63,7 +63,8 @@ export async function check(env, lines, pricing = { card_fee: 0.034, ops_cost_wo
     }
     const units = l.qty * (l.pk || 1);
     const fee = it.shippingType === "free" ? 0 : n(it.shippingFee);
-    const cost = (n(it.price) + add) * units + fee * units;  // 오너클랜: 1개마다 배송비로 보수적 계산 (사이트도 1개마다 받음)
+    const bq = n(it.boxQuantity), boxes = fee ? (bq > 1 ? Math.ceil(units / bq) : 1) : 0;  // 오너클랜: 묶음 수량 있으면 N개마다, 없으면 주문당 1번 (사이트와 같은 규칙)
+    const cost = (n(it.price) + add) * units + fee * boxes;
     const rev = l.price * l.qty + (l.ship || 0);
     const net = rev - rev * pricing.card_fee - (rev - cost) / 11 - cost - pricing.ops_cost_won;
     if (net < 0) return `${l.name} 상품 가격이 도매처에서 바뀌어 지금은 주문할 수 없어요. 잠시 후 다시 확인해 주세요.`;
