@@ -597,7 +597,7 @@ def product_body(p, related):
 {f'<dt>구매 수량</dt><dd><b>{int(p["mq"])}개부터 구매</b> <small class="muted">(1개 {won(p["price"])} · 상품값 {won(int(p["price"]) * int(p["mq"]))}부터)</small></dd>' if int(p.get("mq") or 1) > 1 else ""}<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
-<div class="d-total"><span>총 상품 금액</span><strong id="d-total">{won(p["price"])}</strong></div>
+<div class="d-total"><span>총 결제 금액<small style="display:block;font-size:12px;color:var(--sub);font-weight:400">배송비 포함</small></span><strong id="d-total">{won(int(p["price"]) + int(p.get("shipping_fee") or 0))}</strong></div>
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}

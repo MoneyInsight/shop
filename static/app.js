@@ -565,7 +565,7 @@
     const c = await apiGet("/catalog/counts");
     if (!c) return;
     const n = (k) => Number(c[k] || 0), f = (x) => x.toLocaleString("ko-KR");
-    const total = Object.entries(c).filter(([k]) => !k.startsWith("_")).reduce((a, [, v]) => a + Number(v || 0), 0);
+    const total = Object.entries(c).filter(([k]) => !k.startsWith("_") && k !== "winter").reduce((a, [, v]) => a + Number(v || 0), 0);
     if (!total) return;
     const rep = [[/상품 [\d,]+개/g, "상품 " + f(total) + "개"], [/무료배송 [\d,]+개/g, "무료배송 " + f(n("_free")) + "개"], [/전체 [\d,]+개 보기/g, "전체 " + f(total) + "개 보기"],
       [/(방한용품) [\d,]+개/g, "$1 " + f(n("winter")) + "개"], [/(문구·사무용품) [\d,]+개/g, "$1 " + f(n("office")) + "개"]];
@@ -610,7 +610,9 @@
       const v = Math.max(mqN, Math.min(99, parseInt(inp.value) || mqN));
       inp.value = v;
       const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
-      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v) + (shipP.shipping_fee ? `<small class="per ship">+ 배송비 ${won(shipFor(shipP, v * pkN))}</small>` : `<small class="per ship free">무료배송</small>`);
+      const shipW = shipP.shipping_fee ? shipFor(shipP, v * pkN) : 0;  // 묶음 수량 칸의 '합계'와 같은 숫자 (배송비 포함 결제 금액)
+      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v + shipW) +
+        (shipW ? `<small class="per ship">상품 ${won(unit * v)} + 배송비 ${won(shipW)}</small>` : `<small class="per ship free">무료배송</small>`);
       $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && (v === 4 || (v >= 5 && !$("#qty-deal [data-q='5']"))))));
     };
     $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
