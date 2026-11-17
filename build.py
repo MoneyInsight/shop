@@ -848,10 +848,16 @@ def build_feeds(ps):
         lines.append("\t".join(clean(x) for x in row))
     write("naver_ep.txt", "\n".join(lines) + "\n")
 
-    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + [f'product/{p["id"]}.html' for p in ps]
+    # DB 모드의 product/<id>.html 은 이동용 빈 페이지라 검색 등록에서 뺌 (상품 검색 노출은 서버 렌더 상품 페이지로 따로)
+    urls = ["", "search.html", "cs.html", "bulk.html"] + [f'category/{c["slug"]}.html' for c in SHOW_CATS] + ([] if CFG.get("catalog_api") else [f'product/{p["id"]}.html' for p in ps])
     today = datetime.date.today().isoformat()
-    write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-          "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+    chunks = [urls[i:i + 45000] for i in range(0, len(urls), 45000)]  # 사이트맵 한 파일 5만 개 제한
+    for n, ch in enumerate(chunks):
+        write("sitemap.xml" if len(chunks) == 1 else f"sitemap-{n + 1}.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+              "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in ch) + "</urlset>\n")
+    if len(chunks) > 1:
+        write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+              "".join(f"<sitemap><loc>{BASE}/sitemap-{n + 1}.xml</loc><lastmod>{today}</lastmod></sitemap>\n" for n in range(len(chunks))) + "</sitemapindex>\n")
     write("edits_ver.txt", EDITS_VER)  # 관리자 수정 반영 확인용
     for fn, body in (CFG.get("verify_files") or {}).items():  # 검색엔진 소유 확인 파일 (구글 등)
         write(fn, body)
