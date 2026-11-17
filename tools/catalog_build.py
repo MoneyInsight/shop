@@ -107,6 +107,10 @@ def products():
     return out, unsafe, nwh
 
 
+def product_import_worker():
+    return json.load(open(ROOT / "config.json", encoding="utf-8"))["worker_url"].rstrip("/")
+
+
 def lit(v):
     if isinstance(v, (list, dict)):
         v = json.dumps(v, ensure_ascii=False)
@@ -129,6 +133,17 @@ def main():
     state = json.loads(stp.read_text(encoding="utf-8")) if stp.exists() else {}
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     cur = {p["id"]: p for p in ps}
+    # 서버가 사진 신고로 바로 내린 상품: 상태에서 빼서, 아직 팔 수 있는 상품(사진 점검 통과)이면 다시 올리고 아니면 그대로 둠
+    try:
+        import urllib.request
+        rm = json.loads(urllib.request.urlopen(product_import_worker() + "/db_removed", timeout=20).read().decode())
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=26)).isoformat()
+        back = [i for i, at in rm.items() if i in state and at >= since]  # 최근 26시간 안에 내린 것만 (계속 다시 올리지 않게)
+        for i in back:
+            state.pop(i, None)
+        print(f"서버가 내린 상품 {len(rm)}개 중 상태 정리 {len(back)}개 (팔 수 있으면 다시 올림)")
+    except Exception as e:
+        print("서버가 내린 상품 목록 못 받음:", e)
     gone = [i for i in state if i not in cur]  # 사이트·창고에서 빠진 상품 (도매처 판매중지·필터) → DB에서도 지움
     # 새 상품보다 '바뀐 상품'(가격·품절)을 먼저 — 손님에게 틀린 정보가 오래 남지 않게
     same = lambda a, b: (a or "").split(":")[0] == b.split(":")[0]

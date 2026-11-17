@@ -41,15 +41,16 @@ const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.rep
 const csvCell = (v) => { const s = String(v ?? "").replace(/\r?\n/g, "|"); return /[",]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 const rid = (n = 8) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
 
-async function imgAlive(u) {  // 사진이 실제로 받아지는지 (https 먼저, 안 되면 원래 주소)
-  for (const x of [...new Set([u.replace(/^http:/, "https:"), u])]) {
+async function imgAlive(u) {  // 사진이 확실히 지워졌을 때(404·410)만 false — 접속 차단·일시 오류는 살아 있는 것으로 (멀쩡한 상품을 내리지 않게)
+  let dead = 0, tries = [...new Set([u.replace(/^http:/, "https:"), u])];
+  for (const x of tries) {
     try {
-      const r = await fetch(x, { headers: { Range: "bytes=0-2047", "User-Agent": "Mozilla/5.0" } });
-      const ct = r.headers.get("Content-Type") || "";
-      if ((r.status === 200 || r.status === 206) && ct.startsWith("image/")) return true;
-    } catch (e) {}
+      const r = await fetch(x, { headers: { Range: "bytes=0-2047", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130 Safari/537.36", Referer: "https://damgosago.com/" } });
+      if (r.status === 404 || r.status === 410) { dead++; continue; }
+      return true;
+    } catch (e) { return true; }
   }
-  return false;
+  return dead < tries.length;
 }
 
 async function kvList(env, prefix) {
@@ -1292,6 +1293,9 @@ export async function handle(req, env, path) {
       return json({ ok: true, n: files.length });
     }
   }
+  if (req.method === "GET" && path === "/db_removed") {  // 사진이 없어 서버가 바로 내린 상품 번호 (상품 DB 채우기·사이트 빌드가 참고)
+    return json((await env.SHOP.get("db_removed", "json")) || {});
+  }
   if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
     return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
   }
@@ -1382,6 +1386,8 @@ export async function handle(req, env, path) {
         const r = await env.DB.prepare("SELECT image FROM products WHERE id = ?").bind(id).first().catch(() => null);
         if (r && r.image && /^https?:\/\//.test(r.image) && !(await imgAlive(r.image))) {
           await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run().catch(() => {});
+          const rm = (await env.SHOP.get("db_removed", "json")) || {}; rm[id] = new Date().toISOString();  // 상품 DB 채우기가 이 목록을 보고 상태를 맞춤
+          await env.SHOP.put("db_removed", JSON.stringify(Object.fromEntries(Object.entries(rm).slice(-5000))));
           return json({ ok: true, removed: true });
         }
       }
