@@ -586,7 +586,7 @@ def product_body(p, related):
 <div class="d-info-box">{f'<div class="d-brand">{e(p["brand"])}</div>' if p["brand"] else ""}<h1 class="d-name">{e(p["name"])}</h1>
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
-<dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else e(ship_text(p))}{'<br><small class="muted">같은 상품은 수량·옵션을 섞어도 배송비 한 번</small>' if p["shipping_fee"] and not int(p.get("sn") or 0) else ""}</dd>
+<dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else e(ship_text(p)) + '<br><small class="muted">' + ("부피가 커서 1개씩 따로 보내요 — 수량만큼 배송비가 붙어요" if int(p.get("sn") or 0) == 1 else f'{int(p["sn"])}개까지는 배송비 한 번 · {int(p["sn"])}개를 넘으면 {int(p["sn"])}개마다 추가' if int(p.get("sn") or 0) > 1 else "같은 상품은 몇 개를 사도(옵션을 섞어도) 배송비 한 번") + "</small>"}</dd>
 {f'<dt>구매 수량</dt><dd><b>{int(p["mq"])}개부터 구매</b> <small class="muted">(1개 {won(p["price"])} · 상품값 {won(int(p["price"]) * int(p["mq"]))}부터)</small></dd>' if int(p.get("mq") or 1) > 1 else ""}<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
