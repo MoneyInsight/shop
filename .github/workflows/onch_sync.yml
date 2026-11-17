@@ -8,7 +8,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
-concurrency: { group: daily-sync, cancel-in-progress: false }
+concurrency: { group: onch-sync, cancel-in-progress: false }
 jobs:
   sync:
     runs-on: ubuntu-latest
