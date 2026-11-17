@@ -586,3 +586,8 @@ footer .logo .logo-mark{width:24px;height:24px}
 .logo-3d{height:40px;width:auto;display:block}
 @media (max-width:640px){.logo-3d{height:32px}}
 footer .logo-3d{height:30px}
+.logo-box{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.logo-tag{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:-.02em;color:#6B6B70;line-height:1;padding-left:2px}
+.logo-3d{height:36px}
+@media (max-width:640px){.logo-3d{height:30px}.logo-tag{font-size:11px}}
+footer .logo-tag{display:none}
