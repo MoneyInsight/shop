@@ -546,7 +546,8 @@
       const ship = (n) => fee * (sn > 1 ? Math.ceil(n / sn) : 1);
       qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; }
       qd.innerHTML = `<p><b>묶음으로 사면 배송비 부담이 줄어요</b> <span class="muted">배송비 ${won(fee)}${sn > 1 ? ` (${sn}개마다)` : "는 한 번만"} · 수량을 골라 보세요</span></p><div class="qty-cells">` +
-        [1, 10, 20, 50].map((n) => `<button type="button" data-q="${n}"><b>${n}개</b><span>합계 ${won(unit(n) * n + ship(n))}</span><em>개당 ${won(Math.round((unit(n) * n + ship(n)) / n))}</em></button>`).join("") + `</div>`;
+        [1, 10, 20, 50].map((n) => { const per = Math.round((unit(n) * n + ship(n)) / n), one = unit(1) + ship(1), off = Math.round((1 - per / one) * 100);
+          return `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(per)}</span><em>${n > 1 && off > 0 ? off + "% 할인" : "기본"}</em><small class="qc-sum">합계 ${won(unit(n) * n + ship(n))}</small></button>`; }).join("") + `</div>`;
     } else if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; };
       qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +

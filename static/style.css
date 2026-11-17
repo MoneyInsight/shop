@@ -655,3 +655,4 @@ footer .logo-tag{display:none}
 .give-note{margin:12px 0 0;padding:10px 12px;background:#fff6f0;border-radius:6px;font-size:13.5px;color:var(--ink2);text-align:center}
 .give-foot{margin-top:8px;font-size:13px;color:var(--accent);font-weight:600}
 .give-band{margin:14px 0 0;padding:11px 14px;background:#fff6f0;border-radius:6px;text-align:center;font-size:14.5px;color:var(--ink2)}.give-band b{color:var(--accent)}
+.qty-cells .qc-sum{display:block;font-size:11.5px;color:var(--sub);margin-top:2px}
