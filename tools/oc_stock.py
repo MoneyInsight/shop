@@ -53,12 +53,19 @@ for i in range(0, len(keys), 100):
             res["cost"][k] = price; why["가격 변동"] += 1
         ours = [o["v"] for o in (p.get("options") or [])]
         if ours and it.get("options"):
-            gone = []
+            gone, live = [], set()
             for o in it["options"]:
                 vals = [norm(a.get("value", "")) for a in (o.get("optionAttributes") or [])]
                 cand = {j.join(vals) for j in ("_", "/", "", "-", ",")}
                 if o.get("status") != "available" or int(o.get("quantity") or 0) <= 0:
                     gone += [v for v in ours if norm(v) in cand]
+                else:
+                    live |= cand
+            matched = [v for v in ours if norm(v) in live or v in gone]
+            if matched:  # 이름 맞추기가 되는 상품만 (형식이 달라 하나도 안 맞으면 건드리지 않음)
+                gone += [v for v in ours if norm(v) not in live and v not in gone]  # 도매처에서 없어진 옵션도 품절 (도매처와 똑같이)
+            if len(gone) >= len(ours):
+                res["soldout"].append(k); why["옵션 품절"] += 1; continue
             if gone:
                 res["opts_soldout"][k] = gone; why["옵션 품절"] += 1
     time.sleep(1)
