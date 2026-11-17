@@ -495,7 +495,7 @@ def build_home(ps):
 <section class="section" id="recent-box" style="display:none"><div class="wrap"><div class="sec-head"><div><h2>최근 본 상품</h2></div></div><div class="grid" id="recent-grid"></div></div></section>
 <div class="section last"></div>'''
     alt = (CFG.get("shop_name_alt") or [""])[0]
-    write("index.html", layout(f'{CFG["shop_name"]}({alt}) — {CFG["slogan"]}' if alt else f'{CFG["shop_name"]} — {CFG["slogan"]}', body, "./", canonical=BASE + "/",
+    write("index.html", layout(f'{CFG["shop_name"]}({alt}) — {CFG["slogan"]}' if alt else f'{CFG["shop_name"]} — {CFG["slogan"]}', body, "./", canonical=BASE + "/", og_img=BASE + "/icons/og.png",
           desc=f'{CFG["shop_name"]}({alt}) 온라인 쇼핑몰 — 생활용품·주방·문구·겨울용품을 담고, 사고. {CFG["slogan"]}',
           extra_head=f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'))
 
