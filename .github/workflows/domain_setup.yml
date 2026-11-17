@@ -23,10 +23,11 @@ jobs:
             add() { curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" -d "$1" | jq -c '{ok:.success, err:[.errors[]?.message]}'; }
             for ip in 185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153; do add "{\"type\":\"A\",\"name\":\"$D\",\"content\":\"$ip\",\"proxied\":false,\"ttl\":1}"; done
             add "{\"type\":\"CNAME\",\"name\":\"www.$D\",\"content\":\"moneyinsight.github.io\",\"proxied\":false,\"ttl\":1}"
-            curl -s -H "Authorization: Bearer $T" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" | jq -c '[.result[]|{type,name,content,proxied}]'
+            curl -s -H "Authorization: Bearer $T" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" | jq -c '[.result[]?|{type,name,content,proxied}]' || true
             break
           done
       - name: 깃허브 Pages 사용자 도메인
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
