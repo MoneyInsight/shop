@@ -11,6 +11,7 @@ import csv, datetime, json, os, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 KEY = os.environ.get("DOMEGGOOK_API_KEY", "")
 LIMIT = int(os.environ.get("LIMIT", "4000"))
 CACHE = ROOT / "data" / "domeme_api_cache.json"
@@ -43,7 +44,18 @@ def summarize(v):
     price = (v.get("price") or {}).get("supply")
     resale = (v.get("price") or {}).get("resale") or {}
     minp = resale.get("minimum") if isinstance(resale, dict) else ""
-    return {"minp": minp or "", "status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
+    opts, oname, so = [], "", v.get("selectOpt")
+    if so:  # 도매처 옵션 그대로 (위탁 판매 가능·숨김 아님·재고 있는 것만)
+        try:
+            so = json.loads(so) if isinstance(so, str) else so
+            oname = " / ".join(x.get("name", "") for x in so.get("set") or [])
+            opts = [[str(o.get("name", "")).replace("|", "/").replace("=", "-"), num(o.get("supPrice"))] for o in (so.get("data") or {}).values()
+                    if o.get("sup") == "1" and o.get("hid") in ("0", 0, None) and num(o.get("qty")) > 0]
+            if not opts:
+                opts = "soldout"
+        except Exception:
+            opts = None
+    return {"opts": opts, "oname": oname, "minp": minp or "", "status": b.get("status", ""), "adult": b.get("adult", ""), "rank": str(sel.get("rank", "")),
             "ship_type": sup.get("type", ""), "ship_fee": sup.get("fee", ""), "ship_raw": json.dumps(sup, ensure_ascii=False)[:300],
             "pay": deli.get("pay", ""), "merge": (deli.get("merge") or {}).get("enable", ""),
             "price": price, "inv": (v.get("qty") or {}).get("inventory", ""), "kw": kw[:12]}
@@ -96,6 +108,18 @@ def main():
                 r["공급가"] = str(num(info.get("price"))); repriced += 1
             if "minp" in info and str(num(info.get("minp")) or "") != str(r.get("공급사최저판매가") or ""):
                 r["공급사최저판매가"] = str(num(info.get("minp")) or ""); repriced += 1
+            if info.get("opts") == "soldout":
+                soldout.append(c); continue
+            if isinstance(info.get("opts"), list) and "옵션" in r:  # 옵션을 도매처와 똑같이 (추가금은 원가 차이만큼 판매가에 반영)
+                from product_import import price_from_cost
+                PR = json.load(open(ROOT / "config.json", encoding="utf-8"))["pricing"]
+                cost0, sh0 = num(r.get("공급가")), num(r.get("공급 배송비"))
+                base = price_from_cost(cost0 + sh0, PR)
+                ol = info["opts"]
+                newo = "|".join(f'{n}={price_from_cost(cost0 + a + sh0, PR) - base if a else 0}' for n, a in ol) if len(ol) > 1 else ""
+                newn = info.get("oname", "") if newo else ""
+                if r.get("옵션", "") != newo or r.get("옵션명", "") != newn:
+                    r["옵션"], r["옵션명"] = newo, newn; changed += 1
             ship = num(r.get("공급 배송비"))
             import dm_ship  # 배송 규칙 해석은 새 상품 찾기·결제 직전 확인과 같은 함수로 (고정 = 주문당 1번, 수량별비례 = N개마다)
             try:

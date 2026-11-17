@@ -58,7 +58,7 @@ export async function check(env, lines, pricing = { card_fee: 0.034, ops_cost_wo
     if (l.option && (it.options || []).length) {
       const want = String(l.option).replace(/\s+/g, "");
       const o = it.options.find((x) => ["_", "/", "", "-", ","].some((j) => (x.optionAttributes || []).map((a) => String(a.value).replace(/\s+/g, "")).join(j) === want));
-      if (o && (o.status !== "available" || n(o.quantity) < l.qty * (l.pk || 1))) return `${l.name} [${l.option}] 옵션이 방금 품절되었어요.`;
+      if (!o || o.status !== "available" || n(o.quantity) < l.qty * (l.pk || 1)) return `${l.name} [${l.option}] 옵션이 방금 품절되었어요.`;  // 도매처에 없는 옵션도 주문 막음
       if (o) add = Math.max(0, n(o.price) - n(it.price));
     }
     const units = l.qty * (l.pk || 1);
