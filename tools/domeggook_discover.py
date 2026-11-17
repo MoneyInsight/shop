@@ -159,7 +159,15 @@ def main():
     wh_rows = []
     pgs = state.setdefault("pg", {})
     kwmap = json.loads(KWF.read_text(encoding="utf-8")) if KWF.exists() else {}
-    tree = (api({"ver": "1.0", "mode": "getCategoryList"}).get("domeggook") or {}).get("items") or {}
+    raw = api({"ver": "1.0", "mode": "getCategoryList"})
+    tree = (raw.get("domeggook") or {}).get("items") or {}
+    CATF = ROOT / "data/domeggook_cats.json"  # 분류 목록은 거의 안 바뀜 → 받아지면 저장, 못 받으면 저장본으로 계속 (API 오류로 수집이 통째로 멈추지 않게)
+    if tree:
+        CATF.write_text(json.dumps(tree, ensure_ascii=False), encoding="utf-8")
+    else:
+        print("분류 목록 못 받음 — 응답:", str(raw)[:300])
+        if CATF.exists():
+            tree = json.loads(CATF.read_text(encoding="utf-8")); print("저장해 둔 분류 목록 사용")
     cats = []
     leaves(tree, [], cats)
     print("도매꾹 분류(맨 끝):", len(cats), "개")
