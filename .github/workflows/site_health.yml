@@ -1,0 +1,14 @@
+name: 사이트 실제 점검 (홈 링크·카테고리·검색·상세)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "47 */2 * * *"   # 2시간마다
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools }
+      - run: python3 tools/site_health.py
