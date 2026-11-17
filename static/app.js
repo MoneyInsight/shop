@@ -488,6 +488,10 @@
       setInterval(() => { if (hold) return; its[k].classList.remove("on"); k = (k + 1) % its.length; its[k].classList.add("on"); }, 3000);
       const open = (v) => { box.classList.toggle("open", v); btn.setAttribute("aria-expanded", v); hold = v; };
       btn.addEventListener("click", (e) => { e.stopPropagation(); open(!box.classList.contains("open")); });
+      if (matchMedia("(hover: hover)").matches) {  // 마우스를 올리면 순위가 펼쳐지고, 벗어나면 닫힘
+        let t; box.addEventListener("mouseenter", () => { clearTimeout(t); open(true); });
+        box.addEventListener("mouseleave", () => { t = setTimeout(() => open(false), 250); });
+      }
       document.addEventListener("click", (e) => { if (!box.contains(e.target)) open(false); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
     }
