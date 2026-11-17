@@ -1028,7 +1028,7 @@
       if (p) {
         $("#bk-product").value = p.name;
         const bi = $("#bulk-item"); bi.hidden = false;
-        bi.innerHTML = `<img src="${esc(img(p.image))}" alt=""><div><b>${esc(p.name)}</b><div class="muted">상품번호 ${esc(p.id)} · 1개 ${won(p.price)}${p.qt?.length ? ` · 10개 이상 개당 ${won(p.qt[p.qt.length - 1])}` : ""}</div></div>`;
+        bi.innerHTML = `<img src="${esc(img(p.image))}" alt=""><div><b>${esc(p.name)}</b><div class="muted">상품번호 ${esc(p.id)} · 1개 ${won(p.price)}</div></div>`;
       }
     }
     const a = store.get("addr", null) || member();

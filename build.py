@@ -470,7 +470,7 @@ def build_home(ps):
         slides.append(("deal", "담을수록 할인", "같은 상품 2개부터<br>자동으로 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
     if rate_m:
         slides.append(("member", "회원 혜택", f"3초 간편가입하면<br>회원 {rate_m}% 더 할인", "가입 없이도 주문할 수 있지만, 회원이면 매번 더 싸게", "login.html", "3초 간편가입", pics("fashion")))
-    slides.append(("bulk", "대량 구매", "10개 이상이면<br>견적으로 더 싸게", "단체·행사·회사 구매 · 로고 인쇄·포장 · 여러 곳 배송", "bulk.html", "견적 요청하기", pics("tools")))
+    slides.append(("bulk", "대량 구매", "단체·기업 구매는<br>대량 문의로 편하게", "단체·행사·회사 구매 · 로고 인쇄·포장 · 여러 곳 배송", "bulk.html", "견적 요청하기", pics("tools")))
     def slide(i, k, tag, h, sub, href, btn, art_):
         hid = "" if i == 0 else ' aria-hidden="true" tabindex="-1"'
         return (f'<div class="mb-slide mb-{k}"{hid}><a class="mb-txt" href="{href}"><span class="mb-tag">{e(tag)}</span><h2>{h}</h2>'
@@ -567,8 +567,8 @@ def product_body(p, related):
 {qty_table(p)}
 <a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
 <span class="bulk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/></svg></span>
-<span class="bulk-txt"><b>대량 구매 · 기업/단체 견적</b><small>수량에 맞춰 더 좋은 가격으로 견적을 보내 드려요</small>
-<span class="bulk-tags"><em>10개 이상</em><em>로고 인쇄·포장</em><em>여러 곳 배송</em></span></span>
+<span class="bulk-txt"><b>대량 구매 문의</b><small>단체·기업 주문은 문의 주시면 빠르게 안내해 드려요</small>
+<span class="bulk-tags"><em>단체·기업</em><em>로고 인쇄·포장</em><em>여러 곳 배송</em></span></span>
 <span class="bulk-go">견적 요청<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></a>
 <div class="d-share"><button id="share-btn">공유하기</button><a href="../cs.html#inquiry">문의하기</a></div>
 </div></div>
