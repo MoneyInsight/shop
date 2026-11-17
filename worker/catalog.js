@@ -89,6 +89,28 @@ async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, 
   return { total, items: rows.map(card), page, size };
 }
 
+// 인기 순위 TOP N: 최근 7일 많이 본 상품 먼저, 모자라면 카테고리별 추천 1위로 채움 (한 종류만 몰리지 않게)
+export async function popular(db, views = {}, n = 10) {
+  const out = [], seen = new Set();
+  const ids = Object.entries(views).sort((a, b) => b[1] - a[1]).map(([id]) => id).slice(0, 40);
+  for (const id of ids) {
+    if (out.length >= n) break;
+    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0`).bind(id).first();
+    if (r && r.image) { out.push({ ...card(r), views: views[id] }); seen.add(r.id); }
+  }
+  const cats = ["winter", "living", "kitchen", "fashion", "digital", "bath", "office", "season", "sleep", "beauty", "furniture", "leisure", "car", "pet", "tools", "kids"];
+  for (let round = 0; out.length < n && round < 3; round++) {
+    for (const c of cats) {
+      if (out.length >= n) break;
+      const w = c === "winter" ? "(w = 1 OR category = 'winter')" : "category = ?";
+      const st = db.prepare(`SELECT ${CARD_COLS} FROM products WHERE ${w} AND soldout = 0 AND image LIKE 'http%' ORDER BY rank LIMIT 1 OFFSET ${round * 7}`);
+      const r = await (c === "winter" ? st : st.bind(c)).first().catch(() => null);
+      if (r && !seen.has(r.id)) { out.push(card(r)); seen.add(r.id); }
+    }
+  }
+  return out.map((x, i) => ({ ...x, rank: i + 1 }));
+}
+
 // 상품 하나 (상세용, 원가 제외)
 export async function item(db, id) {
   const r = await db.prepare("SELECT * FROM products WHERE id = ?").bind(String(id)).first();

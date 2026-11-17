@@ -471,6 +471,32 @@
     render();
   }
 
+  // ── 인기 순위: 검색창 옆 1~10위 롤링 + 펼치면 TOP 10, 홈에는 TOP 10 칸 ──
+  async function initPopular() {
+    const box = $("#pop"), home = $("#pop-home");
+    if (!DBMODE || (!box && !home)) return;
+    let items = [];
+    try { items = ((await fetch(API + "/catalog/popular").then((r) => r.json())) || {}).items || []; } catch (e) { return; }
+    if (!items.length) return;
+    const name = (p) => esc(String(p.name).slice(0, 40));
+    if (box) {
+      const roll = $(".pop-roll", box), list = $(".pop-list", box), btn = $(".pop-tick", box);
+      roll.innerHTML = items.map((p, i) => `<span class="pop-it${i ? "" : " on"}"><b>${i + 1}</b>${name(p)}</span>`).join("");
+      list.innerHTML = `<p class="pop-h">인기 순위 TOP 10</p><ol>` + items.map((p, i) => `<li><a href="${productHref(p.id)}"><b class="${i < 3 ? "top" : ""}">${i + 1}</b><img src="${esc(img(p.image))}" alt="" loading="lazy"><span>${name(p)}<em>${won(p.price)}</em></span></a></li>`).join("") + "</ol>";
+      box.hidden = false;
+      const its = $$(".pop-it", roll); let k = 0, hold = false;
+      setInterval(() => { if (hold) return; its[k].classList.remove("on"); k = (k + 1) % its.length; its[k].classList.add("on"); }, 3000);
+      const open = (v) => { box.classList.toggle("open", v); btn.setAttribute("aria-expanded", v); hold = v; };
+      btn.addEventListener("click", (e) => { e.stopPropagation(); open(!box.classList.contains("open")); });
+      document.addEventListener("click", (e) => { if (!box.contains(e.target)) open(false); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
+    }
+    if (home) {
+      $(".pop-grid", home).innerHTML = items.map((p, i) => `<li><a href="${productHref(p.id)}"><span class="pg-img"><img src="${esc(img(p.image))}" alt="${name(p)}" loading="lazy"><b class="${i < 3 ? "top" : ""}">${i + 1}</b></span><span class="pg-n">${name(p)}</span><em>${won(p.price)}</em></a></li>`).join("");
+      home.hidden = false;
+    }
+  }
+
   // ── 상품 DB 템플릿(product/item.html) 채우기 ──
   // 배송비 안내 (도매처 배송 규칙 그대로 손님에게)
   function shipInfo(fee, sn, price, mq) {
@@ -1126,8 +1152,8 @@
   if (API && !/admin\.html$/.test(location.pathname)) {
     let vid = store.get("vid", "");
     if (!vid) { vid = Math.random().toString(36).slice(2, 12); store.set("vid", vid); }
-    try { fetch(API + "/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid, path: location.pathname.replace(/^.*\/shop/, ""), ...visitSrc }), keepalive: true }).catch(() => {}); } catch (e) {}
+    try { fetch(API + "/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid, path: (/\/item\.html$/.test(location.pathname) && new URLSearchParams(location.search).get("id")) ? "/product/" + new URLSearchParams(location.search).get("id") + ".html" : location.pathname.replace(/^.*\/shop/, ""), ...visitSrc }), keepalive: true }).catch(() => {}); } catch (e) {}
   }
   updateCounts(); markWished(); paintLogin(); handleLoginHash().then(initLogin);
-  initListing(); initRecent(); homeCounts(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
+  initListing(); initRecent(); homeCounts(); initPopular(); fillItem().then((r) => r !== false && initDetail()); initCart(); initCheckout(); initSuccess(); initFail(); initOrders(); initCs(); initBulk();
 })();

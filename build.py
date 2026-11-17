@@ -370,6 +370,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
 <header class="head"><div class="wrap">{logo}
 <form class="search" action="{root}search.html" role="search"><input name="q" placeholder="찾으시는 상품을 검색해 보세요" aria-label="상품 검색"><button aria-label="검색">{I_SEARCH}</button></form>
+<div class="pop" id="pop" hidden><button class="pop-tick" type="button" aria-expanded="false" aria-label="인기 순위 보기"><span class="pop-lb">인기</span><span class="pop-roll"></span><span class="pop-ar">&#9662;</span></button><div class="pop-list" role="dialog" aria-label="인기 순위 TOP 10"></div></div>
 <div class="head-icons"><a class="icon-btn login-link" href="{root}login.html">{I_USER}<span class="login-txt">로그인·가입</span></a><a class="icon-btn" href="{root}orders.html">{I_BOX}주문조회</a>
 <a class="icon-btn" href="{root}wish.html">{I_HEART}찜<span class="count" data-count="wish" style="display:none">0</span></a>
 <a class="icon-btn" href="{root}cart.html">{I_BAG}장바구니<span class="count" data-count="cart" style="display:none">0</span></a></div>
@@ -521,6 +522,7 @@ def build_home(ps):
 <div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
 {sections}
+<section class="section pop-home" id="pop-home" hidden><div class="wrap"><div class="sec-head"><div><h2>인기 순위 TOP 10</h2><p>최근 많이 본 상품과 추천 상품이에요.</p></div></div><ol class="pop-grid"></ol></div></section>
 <section class="section" id="recent-box" style="display:none"><div class="wrap"><div class="sec-head"><div><h2>최근 본 상품</h2></div></div><div class="grid" id="recent-grid"></div></div></section>
 <div class="section last"></div>'''
     alt = (CFG.get("shop_name_alt") or [""])[0]
