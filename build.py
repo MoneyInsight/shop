@@ -353,7 +353,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
     on = lambda c: ' class="on"' if active == c["slug"] else ""
     gnb = "".join(f'<a href="{root}category/{c["slug"]}.html"{on(c)}>{e(c["name"])}</a>' for c in SHOW_CATS)
     word = '담고<sup class="go">Go</sup>사고<sup class="go">Go</sup>'  # 한글 담고사고가 메인, 영어 Go는 작게
-    logo = f'<a class="logo" href="{root}index.html" aria-label="{e(name)} 홈"><span class="logo-box"><img class="logo-3d" src="{root}icons/logo3d.png" alt="담고사고(담Go사Go)" width="566" height="136"><span class="logo-tag">담고 사고, 매일 쓰는 생활용품 쇼핑몰</span></span></a>'
+    logo = f'<a class="logo" href="{root}index.html" aria-label="{e(name)} 홈"><span class="logo-box"><img class="logo-3d" src="{root}icons/logo3d.png" alt="담고사고(담Go사Go)" width="578" height="148"><span class="logo-tag">담고 사고, 매일 쓰는 생활용품 쇼핑몰</span></span></a>'
     cfg_js = f"<script>window.SHOP_CFG={json.dumps(public_cfg, ensure_ascii=False)}</script>"
     top = f'''<div class="util"><div class="wrap"><span>{(f'<a href="{e(SITE.get("notice_link"))}" style="color:inherit"><b>{e(SITE["notice"])}</b></a>' if SITE.get("notice_link") else f'<b>{e(SITE["notice"])}</b>') if SITE.get("notice") else "무료배송 상품 따로 모아보기 · 회원가입 없이 바로 주문"}</span>
 <nav><a href="#" class="install-link" style="display:none">앱 설치</a><a href="{root}login.html"><b>3초 간편가입</b></a><a href="{root}bulk.html">대량 구매</a><a href="{root}orders.html">주문·배송 조회</a><a href="{root}cs.html">고객센터</a><a href="{root}seller.html">공급사 입점</a></nav></div></div>
