@@ -460,6 +460,24 @@ def build_home(ps):
         pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
         step = max(1, len(pool) // (n * 7))
         return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in pool[::step][:n])
+    # 새로 들어온 상품: 한 종류만 몰리지 않게 카테고리마다 돌아가며 1개씩 (사진 있는·품절 아닌 상품, 같은 카테고리 안에서도 비슷한 상품 피하기)
+    pools = [[p for p in by_cat[c["slug"]] if p["image"].startswith("http") and not p.get("soldout")] for c in SHOW_CATS]
+    pools = sorted([pl for pl in pools if pl], key=len, reverse=True)
+    mixed, seen_w = [], set()
+    for rnd in range(30):
+        for pl in pools:
+            if len(mixed) >= 8:
+                break
+            step = max(1, len(pl) // 30)
+            if rnd * step < len(pl):
+                cand = pl[rnd * step]
+                toks = {t for t in re.split(r"[^0-9A-Za-z가-힣]+", cand["name"]) if len(t) >= 2} | ({"가방"} if re.search(r"가방|백|파우치|클러치|케이스", cand["name"]) else set())
+                if toks & seen_w:  # 이미 고른 상품과 겹치는 단어(가방류 등)가 있으면 건너뜀
+                    continue
+                seen_w |= toks; mixed.append(cand)
+        if len(mixed) >= 8:
+            break
+    mixed = mixed or ps[:8]
     rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
     slides = [
         ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
@@ -489,7 +507,7 @@ def build_home(ps):
 <div>{I_SHIELD}<p><b>안전 결제</b><span>토스페이먼츠 구매안전 서비스</span></p></div>
 <div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div></div>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
-<div class="grid">{"".join(card(p, "./") for p in ps[:8])}</div></div></section>
+<div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
 {sections}
 <section class="section" id="recent-box" style="display:none"><div class="wrap"><div class="sec-head"><div><h2>최근 본 상품</h2></div></div><div class="grid" id="recent-grid"></div></div></section>
