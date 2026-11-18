@@ -615,6 +615,7 @@
       // 총 상품 금액 = 고른 수량의 상품값만 (배송비는 따로 표시, 결제 때 더해짐)
       $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v) +
         (shipW ? `<small class="per ship">배송비 ${won(shipW)} 별도</small>` : `<small class="per ship free">무료배송</small>`);
+      { const lb = $(".d-total > span small"); if (lb) lb.textContent = shipW ? "배송비 별도" : "무료배송 상품"; }
       $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && (v === 4 || (v >= 5 && !$("#qty-deal [data-q='5']"))))));
     };
     $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
