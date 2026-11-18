@@ -3,7 +3,8 @@
 // 사용: 이 파일 내용을 그대로 javascript_tool 로 실행 → window.__gsState 가 'done' 이 될 때까지 기다림
 (async () => {
   window.__gsState = "running";
-  const keep = { "001": "장건강", "002": "눈건강", "003": "간건강", "005": "혈행건강", "006": "관절/뼈건강", "007": "다이어트/뷰티", "008": "비타민/미네랄", "009": "건강기능식품기타", "011": "전립선건강", "018": "반려동물용품", "021": "생활/뷰티" };
+  const CMT = /cmtstory/.test(location.host);  // 화장품스토리(같은 회사 건강산의 화장품 도매몰)
+  const keep = CMT ? { "001": "토너/세럼", "002": "마스크/팩", "003": "바디/헤어", "004": "크림", "005": "선케어", "006": "맨즈케어", "007": "클렌징", "008": "홈/프래그런스" } : { "001": "장건강", "002": "눈건강", "003": "간건강", "005": "혈행건강", "006": "관절/뼈건강", "007": "다이어트/뷰티", "008": "비타민/미네랄", "009": "건강기능식품기타", "011": "전립선건강", "018": "반려동물용품", "021": "생활/뷰티" };
   const ids = {};
   for (const [c, n] of Object.entries(keep)) {
     for (let p = 1; p < 40; p++) {
@@ -36,10 +37,10 @@
   window.__gsOut = out;
   await Promise.all(Array.from({ length: 6 }, async () => { while (Q.length) await one(Q.shift()); }));
   const ok = out.filter((x) => !x.err).length;
-  if (ok < 300) { window.__gsState = "fail: 읽은 상품 " + ok + "개 (로그인 확인)"; return; }
+  if (ok < (CMT ? 50 : 300)) { window.__gsState = "fail: 읽은 상품 " + ok + "개 (로그인 확인)"; return; }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: "application/json" }));
-  a.download = "ggsan_products_latest.json";
+  a.download = CMT ? "cmtstory_products_latest.json" : "ggsan_products_latest.json";
   document.body.appendChild(a); a.click();
   window.__gsState = "done " + ok + "/" + out.length;
 })();
