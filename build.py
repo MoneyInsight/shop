@@ -394,7 +394,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
 <p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}{(" · 건강기능식품판매업신고 " + e(BIZ["health_food_no"])) if BIZ.get("health_food_no") else ""} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
-주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
+주소 {e(BIZ["address"])} · 전화 {e(BIZ["phone"])} · 이메일 {e(BIZ["email"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
 {PAY_LINE}<br>
 © {datetime.date.today().year} {name}. All rights reserved.</p>
 </div></footer>
