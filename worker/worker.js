@@ -925,6 +925,9 @@ async function orderCancel(req, env) {
   return fail("지금 상태에서는 취소할 수 없어요. 반품/교환 신청을 이용해 주세요.");
 }
 
+// 단순 변심 반품·교환 편도 배송비: 상품에 정해진 반품 배송비 중 가장 큰 값, 없으면 기본값(사이트 배송비 3,000원)
+const claimShipFee = (env, o) => Math.max(Number(env.RETURN_FEE_DEFAULT) || 3000, ...o.lines.map((l) => Number(l.return_fee) || 0));
+
 async function orderClaim(req, env) {
   const body = await req.json().catch(() => ({}));
   const { orderId, phone, type, reason, kind } = body;
@@ -940,10 +943,19 @@ async function orderClaim(req, env) {
   if (/불량|파손|오배송|누락/.test(String(kind || "")) && !photos.length) return fail("불량·파손·오배송·누락은 사진을 꼭 첨부해 주세요.");
   for (let i = 0; i < photos.length; i++) await env.SHOP.put(`claimimg:${o.orderId}:${i}`, photos[i]);
   o.claim = { type, kind: clip(kind, 30), reason: clip(reason, 500), photos: photos.length, at: new Date().toISOString(), status: "접수" };
+  // 단순 변심: 배송비는 고객 부담 → 반품은 (처음 배송비 + 반품 회수비)를 빼고 환불, 교환은 왕복 배송비를 따로 받음
+  if (/변심/.test(String(kind || ""))) {
+    const one = claimShipFee(env, o);
+    const left = Math.max(0, (o.amount || 0) - (o.refunded || 0));
+    if (type === "반품") { o.claim.deduct = Math.min(left, (o.shipping > 0 ? o.shipping : one) + one); o.claim.refund = left - o.claim.deduct; }
+    else o.claim.deduct = one * 2;
+  }
   setStatus(o, type + "요청");
   await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
   await notify(env, `📦 ${type} 요청 ${o.orderId}\n[${o.claim.kind || "-"}] ${o.claim.reason}${photos.length ? `\n사진 ${photos.length}장 (관리자 › 취소·반품·교환)` : ""}`);
-  return json({ message: `${type} 신청이 접수되었어요. 확인 후 연락드릴게요.`, order: publicOrder(o) });
+  const won_ = (n) => Number(n).toLocaleString() + "원";
+  const extra = o.claim.deduct == null ? "" : type === "반품" ? `\n단순 변심 반품은 배송비 ${won_(o.claim.deduct)}을 뺀 ${won_(o.claim.refund)}이 환불돼요.` : `\n단순 변심 교환은 왕복 배송비 ${won_(o.claim.deduct)}을 고객님이 부담하세요. 입금 방법은 따로 안내드릴게요.`;
+  return json({ message: `${type} 신청이 접수되었어요. 확인 후 연락드릴게요.${extra}`, order: publicOrder(o) });
 }
 
 async function orderConfirmReceipt(req, env) {

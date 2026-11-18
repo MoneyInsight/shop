@@ -1035,7 +1035,7 @@
         ${special ? "" : `<div class="track">${FLOW.map((s, i) => `<div class="${i <= step ? "on" : ""}">${s}</div>`).join("")}</div>`}
         ${trackHTML(o)}
         ${o.receipt ? `<p style="margin:10px 0 0;font-size:13px"><a href="${esc(o.receipt)}" target="_blank" rel="noopener" style="text-decoration:underline">카드 영수증 보기</a></p>` : ""}
-        ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}${o.claim.photos ? ` · 사진 ${o.claim.photos}장` : ""}</div>` : ""}
+        ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}${o.claim.photos ? ` · 사진 ${o.claim.photos}장` : ""}${o.claim.refund != null ? `<br>예상 환불액 <b>${won(o.claim.refund)}</b> (배송비 ${won(o.claim.deduct)} 차감)` : ""}</div>` : ""}
         <div style="margin-top:20px">${o.lines.map((l) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a><div class="muted">${l.qty}개</div>
           ${shipped || o.status === "구매확정" ? `<a class="mini-btn" style="display:inline-block;margin-top:6px" href="${ROOT}product/${encodeURIComponent(l.id)}.html?write=1#review">리뷰 쓰기</a>` : ""}</div><strong>${won(l.price * l.qty)}</strong></div>`).join("")}</div>
         <dl class="kv" style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
@@ -1084,7 +1084,15 @@
         }
       };
       res.onchange = async (e) => {
-        if (e.target.id === "claim-kind") $("#claim-need").textContent = needPhoto() ? "(필수)" : "(선택)";
+        if (e.target.id === "claim-kind") {
+          $("#claim-need").textContent = needPhoto() ? "(필수)" : "(선택)";
+          let n = $("#claim-fee"); if (!n) { n = document.createElement("p"); n.id = "claim-fee"; n.className = "note"; n.style.margin = "8px 0"; $("#claim-extra").appendChild(n); }
+          const one = 3000, left = Math.max(0, o.amount - (o.refunded || 0));
+          const ded = act === "반품" ? Math.min(left, (o.shipping > 0 ? o.shipping : one) + one) : one * 2;
+          n.hidden = !/변심/.test(e.target.value);
+          n.innerHTML = act === "반품" ? `단순 변심 반품은 배송비 <b>${won(ded)}</b>(처음 배송비 + 반품 회수비)을 뺀 <b>${won(left - ded)}</b>이 환불돼요. 상품마다 반품 배송비가 더 높으면 달라질 수 있어요.`
+            : `단순 변심 교환은 왕복 배송비 <b>${won(ded)}</b>을 고객님이 부담하세요.`;
+        }
         if (e.target.id !== "claim-files") return;
         const files = [...e.target.files].slice(0, 3 - photos.length);
         try { for (const f of files) photos.push(await shrink(f)); } catch (x) { alert(x.message); }

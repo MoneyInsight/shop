@@ -28,10 +28,10 @@
       <td>${esc(o.customer?.name)}<br>${esc(o.customer?.phone)}<br><span class="muted">[${esc(o.customer?.zip)}] ${esc(o.customer?.addr)}${o.customer?.memo ? "<br>메모: " + esc(o.customer.memo) : ""}</span></td>
       <td><b>${won(o.amount)}</b>${o.discount ? `<br><span class="muted">쿠폰 ${esc(o.coupon)} −${won(o.discount)}</span>` : ""}${o.refunded ? `<br><span style="color:var(--sale)">환불 ${won(o.refunded)}</span>` : ""}</td>
       <td><select data-f="status">${D.statuses.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("")}</select>
-        ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}</span>${Array.from({ length: o.claim.photos || 0 }, (_, i) => `<br><button class="ghost" data-act="claim-photo" data-id="${esc(o.orderId)}" data-i="${i}">📷 사진 ${i + 1}</button>`).join("")}` : ""}</td>
+        ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}</span>${o.claim.deduct != null ? `<br><b style="color:var(--sale)">배송비 차감 ${won(o.claim.deduct)}${o.claim.refund != null ? ` → 환불 ${won(o.claim.refund)}` : ""}</b>` : ""}${Array.from({ length: o.claim.photos || 0 }, (_, i) => `<br><button class="ghost" data-act="claim-photo" data-id="${esc(o.orderId)}" data-i="${i}">📷 사진 ${i + 1}</button>`).join("")}` : ""}</td>
       <td><select data-f="courier"><option value="">택배사</option>${COURIERS.map((c) => `<option${c === o.courier ? " selected" : ""}>${c}</option>`).join("")}</select><br>
         <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px">${o.track?.stage ? `<br><b style="color:var(--accent)">📦 ${esc(o.track.stage)}</b>` : ""}</td>
-      <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}">환불</button>${["결제완료", "상품준비중"].includes(o.status) ? `<br><button class="ghost" data-act="soldout-cancel" data-id="${esc(o.orderId)}">품절 취소</button>` : ""}</td></tr>`;
+      <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}"${o.claim?.refund != null ? ` data-refund="${o.claim.refund}" data-deduct="${o.claim.deduct}"` : ""}>환불</button>${["결제완료", "상품준비중"].includes(o.status) ? `<br><button class="ghost" data-act="soldout-cancel" data-id="${esc(o.orderId)}">품절 취소</button>` : ""}</td></tr>`;
   }
   const orderTable = (list) => list.length ? `<table class="adm-table"><tr><th>주문</th><th>상품</th><th>받는 분</th><th>결제</th><th>상태</th><th>송장</th><th></th></tr>${list.map(orderRow).join("")}</table>` : `<p class="empty">해당하는 주문이 없어요.</p>`;
 
@@ -468,7 +468,8 @@
         return;
       }
       if (act === "order-refund") {
-        const amt = prompt("환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", "");
+        const sug = b.dataset.refund;  // 단순 변심 반품: 배송비 뺀 금액 미리 채움
+        const amt = prompt(sug != null ? `단순 변심 반품이에요. 배송비 ${Number(b.dataset.deduct).toLocaleString()}원을 뺀 금액이 채워져 있어요. 확인 후 진행하세요. (비우면 전액 환불)` : "환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", sug ?? "");
         if (amt === null) return;
         if (!confirm("결제가 실제로 취소돼요. 진행할까요?")) return;
         await call("/admin/order-cancel", { orderId: id, amount: amt.replace(/\D/g, ""), reason: "판매자 환불" });

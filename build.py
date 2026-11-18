@@ -478,7 +478,7 @@ def build_home(ps):
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
     sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in by_cat[c["slug"]][:4])}</div></div></section>''' for c in top)
-    def pics(cat, n=3):
+    def pics(cat, n=4):
         pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
         step = max(1, len(pool) // (n * 7))
         return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in pool[::step][:n])
