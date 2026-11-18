@@ -394,7 +394,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 '''
     bot = f'''
 <footer><div class="wrap">
-<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p><p class="give-foot">💛 판매금액의 일부는 어려운 이웃을 위한 후원금으로 사용됩니다.</p></div>
+<div class="f-top"><div>{logo}<p>{e(CFG["slogan"])}</p><p class="give-foot">💛 구매하실 때마다 수익의 일부가 어려운 이웃 후원으로 쓰입니다.</p></div>
 <div><h4>고객센터</h4><div class="tel">{e(BIZ["phone"])}</div><p>{e(BIZ["cs_hours"])}<br>{e(BIZ["email"])}</p></div>
 <div><h4>쇼핑 안내</h4><ul><li><a href="{root}orders.html">주문·배송 조회</a></li><li><a href="{root}cs.html">자주 묻는 질문</a></li><li><a href="{root}cs.html#inquiry">1:1 문의</a></li><li><a href="{root}refund.html">교환·환불 안내</a></li></ul></div>
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
@@ -616,7 +616,7 @@ def product_body(p, related):
 <div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
-<p class="give-note">💛 판매금액의 일부는 어려운 이웃을 위한 후원금으로 사용됩니다.</p>
+<p class="give-note">💛 구매하실 때마다 수익의 일부가 어려운 이웃 후원으로 쓰입니다.</p>
 <a class="bulk-box" id="bulk-box" href="../bulk.html?id={e(p["id"])}"{' hidden' if p.get("soldout") else ''}>
 <span class="bulk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/></svg></span>
 <span class="bulk-txt"><b>대량 구매 문의</b><small>단체·기업 주문은 문의 주시면 빠르게 안내해 드려요</small>
@@ -801,6 +801,13 @@ def build_shop_pages():
 <label for="bk-text">요청 사항</label><textarea id="bk-text" style="height:110px" placeholder="옵션(색상·사이즈)별 수량, 배송지가 여러 곳인지 등"></textarea>
 <label class="check"><input type="checkbox" id="bk-agree"><span>견적 안내를 위한 개인정보(이름·연락처·이메일) 수집·이용에 동의합니다.</span></label>
 <button class="btn btn-dark" id="bk-btn" style="margin-top:8px">견적 요청 보내기</button></div></div>''')
+    LINKS = [("winter", "❄️ 겨울 준비, 한 번에 담기", "category/winter.html"), ("free", "🚚 무료배송 상품만 보기", "search.html?free=1"),
+             ("office", "🗂️ 사무실·학교 소모품", "category/office.html"), ("kitchen", "🍳 주방·생활 꿀템", "category/kitchen.html"),
+             ("find", "🔎 찾는 물건이 없으면 – 상품 찾아드림", "find.html"), ("bulk", "📦 대량 구매·견적 문의", "bulk.html"),
+             ("join", "💛 회원가입하면 1% 더 할인", "login.html"), ("home", "🏠 담Go사Go 전체 상품", "index.html")]
+    simple("link.html", "담Go사Go 바로가기", '<div class="narrow"><div class="card" style="text-align:center"><p style="font-size:18px;margin:6px 0 14px"><b>담을수록 싸지는 생활용품몰</b><br><span class="muted">쿠폰 없이 2개부터 자동 할인</span></p>' +
+           "".join(f'<a class="btn btn-dark" style="display:block;margin:10px 0" href="{u}{"&" if "?" in u else "?"}utm_source=bio&utm_campaign={k}">{e(t)}</a>' for k, t, u in LINKS) +
+           '<p class="give-note" style="margin-top:14px">💛 구매하실 때마다 수익의 일부가 어려운 이웃 후원으로 쓰입니다.</p></div></div>')
     simple("find.html", "상품 찾아드림", '''<div class="narrow"><div class="card form" id="finder">
 <div class="find-hero"><b>찾는 물건이 없나요?</b><p>원하는 상품을 남겨 주시면 담Go사Go가 국내 도매처에서 대신 찾아<br>사이트에 담아 드리고, 연락처로 바로 알려 드려요. <b>요청은 무료</b>예요.</p>
 <ol class="find-steps"><li><span>1</span>찾는 상품 남기기</li><li><span>2</span>도매처에서 찾기<br><small>보통 1~2일</small></li><li><span>3</span>사이트에 담고<br>알림 보내기</li></ol></div>
