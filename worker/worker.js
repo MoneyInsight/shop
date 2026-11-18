@@ -113,8 +113,11 @@ async function adminCustomers(env) {
     if (o.paidAt > c.last) { c.last = o.paidAt; c.name = o.customer?.name || c.name; }
   }
   const blocked = (await env.SHOP.get("blocklist", "json")) || {};
-  // 가입 회원 (네이버·카카오·구글 간편가입)
-  const members = (await kvList(env, "user:")).map((u) => ({ uid: u.uid, provider: u.provider || String(u.uid || "").split(":")[0], name: u.name || "", email: u.email || "", phone: u.phone || "",
+  // 가입 회원 (네이버·카카오·구글 간편가입) — 가입 때 이메일·연락처를 못 받았으면 저장한 배송지·주문서에 적은 값으로 채움
+  const byUid = {};
+  for (const o of await kvList(env, "order:")) if (o.uid && (!byUid[o.uid] || o.paidAt > byUid[o.uid].paidAt)) byUid[o.uid] = o;
+  const members = (await kvList(env, "user:")).map((u) => ({ uid: u.uid, provider: u.provider || String(u.uid || "").split(":")[0], name: u.name || "",
+    email: u.email || u.addr?.email || byUid[u.uid]?.customer?.email || "", phone: u.phone || u.addr?.phone || byUid[u.uid]?.customer?.phone || "",
     joinedAt: u.joinedAt || "", lastLogin: u.lastLogin || "", orders: (u.orders || []).length })).sort((a, b) => String(b.joinedAt).localeCompare(String(a.joinedAt)));
   return json({ customers: Object.values(by).sort((a, b) => b.last.localeCompare(a.last)).slice(0, 1000), blocked, members });
 }
