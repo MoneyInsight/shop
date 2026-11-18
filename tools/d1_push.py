@@ -9,7 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME = os.environ.get("D1_NAME", "allchaeum")
-LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "3000000"))  # 유료 플랜(2026-11-17~): 월 5천만 줄 포함 — 하루 300만 줄까지 (무료로 돌아가면 85000)  # 무료 10만 줄 — 집계가 몇 분 늦게 잡혀 여유를 둠
+LIMIT = int(os.environ.get("D1_WRITE_LIMIT", "8000000"))  # 하루(UTC) 한도 — 대표님 확인 2026-11-18: 유료 플랜 월 5천만 줄 포함 안에서 빨리 올림
+MONTH_LIMIT = int(os.environ.get("D1_MONTH_LIMIT", "35000000"))  # 이번 달(UTC) 우리가 센 합계 한도 — 11월은 기록 전에 이미 약 1천만 줄 써서 포함량 5천만 줄을 넘지 않게 3,500만으로
+LIMIT_OLD = 3000000  # 유료 플랜(2026-11-17~): 월 5천만 줄 포함 — 하루 300만 줄까지 (무료로 돌아가면 85000)  # 무료 10만 줄 — 집계가 몇 분 늦게 잡혀 여유를 둠
 STATE = Path(os.environ.get("D1_STATE", ROOT / "dist/d1_state.json"))
 D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
@@ -113,12 +115,24 @@ def main():
     done, stop, cum = [], "", 0
     now = time.time()
     day0 = now - now % 86400  # D1 하루 한도는 UTC 0시(한국 오전 9시)에 초기화
-    log = [x for x in (json.loads(LOG.read_text()) if LOG.exists() else []) if x[0] >= day0]
-    mine = sum(x[1] for x in log) * PER  # 오늘(UTC) 우리가 쓴 양 (직접 셈)
+    t = time.gmtime(now)
+    month0 = time.mktime((t.tm_year, t.tm_mon, 1, 0, 0, 0, 0, 0, 0)) - time.timezone  # 이번 달 1일 UTC 0시
+    full = [x for x in (json.loads(LOG.read_text()) if LOG.exists() else []) if x[0] >= month0]
+    # 기록은 실행마다 [시각, 그 실행에서 올린 누적 상품 수]가 쌓임 → 실행별 마지막 값만 합산
+    def total(xs):
+        last = {}
+        for ts, n in xs:
+            last[ts] = n
+        return sum(last.values())
+    log = [x for x in full if x[0] >= day0]
+    mine = total(log) * PER  # 오늘(UTC) 우리가 쓴 양 (직접 셈)
+    month_mine = total(full) * PER
     for f in files:
         n = len(plan[f])
         w = mine + cum * PER  # 직접 센 오늘 쓰기량 (Cloudflare 집계는 최근 24시간 기준·지연이 있어 쓰지 않음)
         est = n * max(PER, per or 0)
+        if month_mine + cum * PER + est > MONTH_LIMIT:
+            stop = f"이번 달 쓰기 {month_mine + cum * PER:,}줄 + 예상 {est:,}줄 > 월 한도 {MONTH_LIMIT:,} (추가 요금 방지)"; break
         if w is not None and w + est > LIMIT:
             stop = f"최근 24시간 쓰기 {w:,}줄 + 다음 파일 예상 {est:,}줄 > 한도 {LIMIT:,}"; break
         if w is None and (cum + n) * 8 > LIMIT:  # 쓰기량을 못 읽으면 보수적으로 (상품 1개 = 8줄)
@@ -127,7 +141,7 @@ def main():
         if not ok:
             stop = f"{f} 실패: {err[-300:]}"; break
         done.append(f); cum += n
-        LOG.write_text(json.dumps(log + [[now, cum]]), encoding="utf-8")
+        LOG.write_text(json.dumps(full + [[now, cum]]), encoding="utf-8")
         w2 = written_24h()
         if w0 is not None and w2 is not None and w2 > w0:
             per = max(PER, (w2 - w0) / cum)  # 오늘 올린 전체 평균 (집계가 몇 분 늦게 잡혀서 파일 하나로 재면 들쭉날쭉)
