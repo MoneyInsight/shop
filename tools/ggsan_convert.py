@@ -15,7 +15,19 @@ CAT = {"눈건": "눈건강", "간건": "간건강", "건강": "건강기능식�
 SUPP = {"눈건", "간건", "건강", "혈행", "비타", "전립", "관절", "장건", "다이"}
 
 
+def from_full(path):
+    """ggsan_crawl.js 결과(가격·최저가·임박 포함) → 이 스크립트가 쓰는 세 파일로 갱신"""
+    items = [d for d in json.loads(Path(path).read_text(encoding="utf-8")) if not d.get("err")]
+    short = {v: k for k, v in CAT.items()}
+    (ROOT / "data/ggsan_prices.txt").write_text(";".join(f'{str(d["no"])[-5:]},{short.get(d["cat"], d["cat"][:2])},{d.get("fixed", 0)},{d.get("price", 0)},{d.get("ship", 0)},200000,{1 if d.get("so") else 0}' for d in items), encoding="utf-8")
+    (ROOT / "data/ggsan_minprice.txt").write_text(",".join(f'{str(d["no"])[-5:]}:{d.get("min", 0)}' + (":i" if d.get("imm") else "") for d in items if not d.get("so") and d.get("price")), encoding="utf-8")
+    (ROOT / "data/ggsan_products.json").write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
+    print(f"건강산 최신 정보 {len(items)}개 반영")
+
+
 def main():
+    if len(sys.argv) > 1:
+        from_full(sys.argv[1])
     prices = {x.split(",")[0]: x.split(",") for x in (ROOT / "data/ggsan_prices.txt").read_text(encoding="utf-8").strip().split(";") if x}
     mins = {}
     for x in (ROOT / "data/ggsan_minprice.txt").read_text(encoding="utf-8").strip().split(","):
