@@ -749,12 +749,12 @@ def build_shop_pages():
            scripts=('<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>' if use_po else '<script src="https://js.tosspayments.com/v2/standard"></script>') + '<script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
     simple("success.html", "주문 완료", '<div class="card done-box" id="success">결제를 확인하고 있습니다.</div>', heading=False)
     simple("fail.html", "결제 실패", '<div class="card done-box" id="fail"><h2>결제가 완료되지 않았습니다</h2><p id="fail-msg"></p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="cart.html">장바구니로</a></div>', heading=False)
-    simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted">주문번호와 주문하실 때 입력한 연락처로 조회하실 수 있습니다. 취소·반품·교환도 여기에서 신청합니다.</p>
-<label for="o-id">주문번호</label><input id="o-id" placeholder="예) T261112-AB12CD">
-<label for="o-phone">연락처</label><input id="o-phone" inputmode="tel" placeholder="010-0000-0000">
-<button class="btn btn-dark" id="o-btn" style="margin-top:18px">조회하기</button>
-<details class="find-order"><summary>주문번호를 잊으셨나요?</summary><p class="muted">주문할 때 입력한 받는 분 이름과 연락처로 최근 6개월 주문을 찾아 드려요.</p>
-<div class="row"><input id="f-name" placeholder="받는 분 이름"><input id="f-phone" inputmode="tel" placeholder="010-0000-0000"></div><button class="btn btn-line" id="f-btn" style="margin-top:10px">주문 찾기</button><div id="f-result"></div></details></div>
+    simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted"><b>회원가입 없이</b> 주문할 때 적은 <b>받는 분 이름과 연락처</b>만으로 주문을 조회할 수 있어요. 취소·반품·교환도 여기에서 신청합니다.</p>
+<label for="f-name">받는 분 이름</label><input id="f-name" placeholder="예) 홍길동" autocomplete="name">
+<label for="f-phone">연락처</label><input id="f-phone" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
+<button class="btn btn-dark" id="f-btn" style="margin-top:18px">주문 조회하기</button><div id="f-result"></div>
+<details class="find-order"><summary>주문번호로 조회하기</summary>
+<div class="row"><input id="o-id" placeholder="주문번호 예) T261112-AB12CD"><input id="o-phone" inputmode="tel" placeholder="010-0000-0000"></div><button class="btn btn-line" id="o-btn" style="margin-top:10px">조회하기</button></details></div>
 <div class="card" id="my-orders" style="display:none"></div></div>
 <div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
 ''')

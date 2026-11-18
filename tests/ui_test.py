@@ -82,7 +82,7 @@ async def main():
         amt = opt["price"] + opt["options"][0]["add"] + plain["price"]
         r = post("/confirm", {"paymentKey": "pk", "orderId": "T-UI-1", "amount": amt, "items": [{"id": opt["id"], "qty": 1, "opt": 0}, {"id": plain["id"], "qty": 1}], "customer": cust}); ok("주문 생성", r.get("ok"), r)
         post("/confirm", {"paymentKey": "pk", "orderId": "T-UI-2", "amount": plain["price"], "items": [{"id": plain["id"], "qty": 1}], "customer": cust})
-        await pg.goto(S + "orders.html"); await pg.fill("#o-id", "T-UI-2"); await pg.fill("#o-phone", "01012345678"); await pg.click("#o-btn")
+        await pg.goto(S + "orders.html"); await pg.evaluate("document.querySelector('.find-order').open=true"); await pg.fill("#o-id", "T-UI-2"); await pg.fill("#o-phone", "01012345678"); await pg.click("#o-btn")
         await pg.wait_for_selector("#order-result .track")
         await pg.click('button[data-act="cancel"]'); await pg.fill("#act-reason", "테스트 취소"); await pg.click("#act-send"); await pg.wait_for_timeout(700)
         ok("고객 주문 취소", "취소완료" in await pg.locator("#order-result h2").inner_text())
@@ -94,7 +94,7 @@ async def main():
         await row.locator('[data-act="order-save"]').click(); await pg.wait_for_timeout(700)
         await pg.screenshot(path="/tmp/s_admin_orders.png")
         # 고객: 배송 추적 · 리뷰 · 반품
-        await pg.goto(S + "orders.html"); await pg.fill("#o-id", "T-UI-1"); await pg.fill("#o-phone", "010-1234-5678"); await pg.click("#o-btn")
+        await pg.goto(S + "orders.html"); await pg.evaluate("document.querySelector('.find-order').open=true"); await pg.fill("#o-id", "T-UI-1"); await pg.fill("#o-phone", "010-1234-5678"); await pg.click("#o-btn")
         await pg.wait_for_selector("#order-result .track")
         ok("송장 표시", "123456789" in await pg.locator("#order-result").inner_text())
         await pg.screenshot(path="/tmp/s_order.png", full_page=True)
@@ -106,7 +106,7 @@ async def main():
         await pg.goto(S + "cs.html"); await pg.fill("#inq-name", "홍길동"); await pg.fill("#inq-contact", "010-1234-5678"); await pg.fill("#inq-text", "세금계산서 발행 부탁드립니다."); await pg.check("#inq-agree"); await pg.click("#inq-btn"); await pg.wait_for_timeout(600)
         ok("1:1 문의 접수", any("접수" in d for d in dialogs), dialogs[-2:])
         await pg.screenshot(path="/tmp/s_cs.png", full_page=True)
-        await pg.goto(S + "orders.html?id=T-UI-1"); await pg.fill("#o-phone", "01012345678"); await pg.click("#o-btn"); await pg.wait_for_selector('button[data-act="반품"]')
+        await pg.goto(S + "orders.html?id=T-UI-1"); await pg.evaluate("document.querySelector('.find-order').open=true"); await pg.fill("#o-phone", "01012345678"); await pg.click("#o-btn"); await pg.wait_for_selector('button[data-act="반품"]')
         await pg.click('button[data-act="반품"]'); await pg.fill("#act-reason", "색상이 달라요"); await pg.click("#act-send"); await pg.wait_for_timeout(700)
         ok("반품 요청", "반품요청" in await pg.locator("#order-result h2").inner_text())
         await pg.goto(S + "admin.html"); await pg.wait_for_selector("#adm-view .stat"); await pg.click('[data-tab="claims"]')

@@ -1007,8 +1007,8 @@
       box.innerHTML = `<div class="mark"><svg class="ico" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2>주문이 완료되었습니다</h2>
         <p style="margin-top:6px">${esc(order.customer.name)}님, 주문해 주셔서 감사합니다.</p>
         <dl class="kv narrow" style="margin-top:26px;text-align:left;border-top:1px solid var(--ink);padding-top:18px">
-          <dt>주문번호</dt><dd><b>${esc(orderId)}</b></dd><dt>결제 금액</dt><dd>${won(amount)}</dd><dt>배송지</dt><dd>${esc(order.customer.addr)}</dd></dl>
-        <p class="muted" style="margin-top:18px">영업일 기준 1~3일 안에 출고돼요. 주문번호와 연락처로 언제든 배송 상황을 확인할 수 있어요.</p>
+          <dt>주문번호</dt><dd><b>${esc(orderId)}</b> <button class="mini-btn" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(orderId)}');this.textContent='복사됨'">복사</button></dd><dt>결제 금액</dt><dd>${won(amount)}</dd><dt>배송지</dt><dd>${esc(order.customer.addr)}</dd></dl>
+        <p class="muted" style="margin-top:18px">영업일 기준 1~3일 안에 출고돼요. 회원가입 없이도 <b>주문·배송 조회</b>에서 <b>받는 분 이름과 연락처</b>만 넣으면 언제든 배송 상황을 확인할 수 있어요.</p>
         ${msg ? `<div class="note narrow" style="margin-top:16px">${esc(msg)}</div>` : ""}
         <div style="margin-top:6px">${pushBtn(order.customer.phone, "배송 알림 받기")}</div>
         <div class="act-row" style="justify-content:center;margin-top:26px"><a class="btn btn-dark sm" href="${ROOT}orders.html?id=${encodeURIComponent(orderId)}">주문 조회</a><a class="btn btn-line sm" href="${ROOT}index.html">쇼핑 계속하기</a></div>`;
@@ -1076,11 +1076,15 @@
     $("#o-btn").onclick = () => lookup($("#o-id").value.trim(), $("#o-phone").value.trim());
     if ($("#f-btn")) $("#f-btn").onclick = async () => {
       const box = $("#f-result"); box.innerHTML = `<p class="muted">찾고 있어요…</p>`;
+      if (!$("#f-name").value.trim() || digits($("#f-phone").value).length < 9) { box.innerHTML = `<p class="muted" style="margin-top:10px">받는 분 이름과 연락처를 입력해 주세요.</p>`; return; }
       const { ok, d } = await api("/order/find", { name: $("#f-name").value.trim(), phone: $("#f-phone").value.trim() });
-      if (!ok) { box.innerHTML = `<p class="muted">${esc(d.message)}</p>`; return; }
+      if (!ok) { box.innerHTML = `<p class="muted" style="margin-top:10px">${esc(d.message)}</p>`; return; }
+      if (d.orders.length === 1) { box.innerHTML = ""; render(d.orders[0], d.orders[0].phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); return; }
       box.innerHTML = d.orders.map((o, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(o.lines[0].name)}${o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""}</div><div class="muted">${esc(o.orderId)} · ${date(o.paidAt)} · <b>${esc(o.status)}</b></div></div><button class="mini-btn" data-fi="${i}">보기</button></div>`).join("");
-      box.onclick = (e) => { const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone); res.scrollIntoView({ behavior: "smooth" }); } };
+      box.onclick = (e) => { const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); } };
     };
+    ["f-name", "f-phone"].forEach((k) => $("#" + k)?.addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-btn").click(); }));
+    { const a = store.get("addr", null) || member(); if (a && $("#f-name") && !$("#f-name").value) { $("#f-name").value = a.name || ""; $("#f-phone").value = a.phone || ""; } }  // 이 기기에 저장된 배송지로 미리 채움
     if (token()) (async () => {  // 회원: 내 주문 전체
       const r = await api("/me/orders", { token: token() });
       if (!r.ok || !r.d.orders.length) return;
@@ -1134,7 +1138,7 @@
       });
     }
     const qid = new URLSearchParams(location.search).get("id");
-    if (qid) { const m = mine.find((x) => x.orderId === qid); $("#o-id").value = qid; if (m) { $("#o-phone").value = m.phone; lookup(qid, m.phone); } }
+    if (qid) { const m = mine.find((x) => x.orderId === qid); $("#o-id").value = qid; const dt = $("#o-id").closest("details"); if (dt) dt.open = true; if (m) { $("#o-phone").value = m.phone; lookup(qid, m.phone); } }
   }
 
   // ── 고객센터 1:1 문의 ──

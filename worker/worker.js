@@ -863,7 +863,7 @@ async function orderFind(req, env) {
   const { name, phone } = await req.json();
   if (!clip(name, 20) || digits(phone).length < 10) return fail("받는 분 이름과 연락처를 정확히 입력해 주세요.");
   const since = new Date(Date.now() - 183 * 86400e3).toISOString();
-  const list = (await kvList(env, "order:")).filter((o) => o.paidAt >= since && digits(o.customer?.phone) === digits(phone) && String(o.customer?.name || "").trim() === String(name).trim())
+  const list = (await kvList(env, "order:")).filter((o) => o.paidAt >= since && digits(o.customer?.phone) === digits(phone) && String(o.customer?.name || "").replace(/\s/g, "") === String(name).replace(/\s/g, ""))
     .sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 20);
   if (!list.length) return fail("일치하는 주문이 없어요. 주문할 때 입력한 받는 분 이름과 연락처를 확인해 주세요.", 404);
   return json({ orders: list.map((o) => ({ ...publicOrder(o), phone: o.customer?.phone || "" })) });
@@ -1512,7 +1512,7 @@ export async function handle(req, env, path) {
     if (path === "/seller/product") return await sellerProduct(req, env);
     if (path === "/report-price") return await reportPrice(req, env);
     if (path === "/order/lookup") return await orderLookup(req, env);
-    if (path === "/order/find") { if (await overLimit(env, "find:" + ipOf(req), 10, 3600)) return fail("잠시 후 다시 시도해 주세요.", 429); return await orderFind(req, env); }
+    if (path === "/order/find") { if (await overLimit(env, "find:" + ipOf(req), 30, 3600)) return fail("잠시 후 다시 시도해 주세요.", 429); return await orderFind(req, env); }
     if (path === "/order/cancel") return await orderCancel(req, env);
     if (path === "/order/claim") return await orderClaim(req, env);
     if (path === "/order/confirm-receipt") return await orderConfirmReceipt(req, env);
