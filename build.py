@@ -13,6 +13,11 @@ ROOT = Path(__file__).parent
 ASSET_V = hashlib.md5(b"".join((ROOT / "static" / f).read_bytes() for f in ("style.css", "app.js"))).hexdigest()[:8]
 OUT = ROOT / "site"
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+_PO = bool(CFG.get("portone_store_id") and CFG.get("portone_channel_key"))
+PAY_LINE = "결제는 KG이니시스(포트원)를 통해 안전하게 처리됩니다." if _PO else "고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다."
+PAY_SHORT = "KG이니시스 안전 결제" if _PO else "토스페이먼츠 구매안전 서비스"
+PAY_FAQ = ("신용·체크카드와 간편결제(카카오페이·네이버페이·토스페이·페이코 등)를 이용하실 수 있습니다. 결제는 KG이니시스(포트원)를 통해 안전하게 처리됩니다." if _PO
+           else "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다.")
 BIZ = CFG["business"]
 BASE = CFG["base_url"].rstrip("/")
 CATS = CFG["categories"]
@@ -390,7 +395,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
 <div><h4>회사</h4><ul><li><a href="{root}terms.html">이용약관</a></li><li><a href="{root}privacy.html"><b>개인정보처리방침</b></a></li><li><a href="{root}seller.html">공급사 입점</a></li><li><a href="#" class="install-link" style="display:none">앱 설치하기</a></li></ul></div></div>
 <p>상호 {e(BIZ["company"])} · 대표 {e(BIZ["ceo"])} · 사업자등록번호 {e(BIZ["biz_no"])} · 통신판매업신고 {e(BIZ["mail_order_no"])}{(" · 건강기능식품판매업신고 " + e(BIZ["health_food_no"])) if BIZ.get("health_food_no") else ""} <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no={"".join(ch for ch in BIZ["biz_no"] if ch.isdigit())}" target="_blank" rel="noopener" style="text-decoration:underline">사업자정보 확인</a><br>
 주소 {e(BIZ["address"])} · 개인정보보호책임자 {e(BIZ["privacy_officer"])} · 호스팅 제공 GitHub, Inc.<br>
-고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다.<br>
+{PAY_LINE}<br>
 © {datetime.date.today().year} {name}. All rights reserved.</p>
 </div></footer>
 <nav class="tabbar" aria-label="하단 메뉴"><a href="{root}index.html">{I_HOME}홈</a><a href="{root}search.html">{I_MENU}전체</a><a href="{root}orders.html">{I_BOX}주문조회</a>
@@ -521,7 +526,7 @@ def build_home(ps):
 <div class="benefits"><div class="wrap">
 <div>{I_TRUCK}<p><b><a href="search.html?free=1" style="color:inherit">무료배송 {sum(1 for x in ps if not x["shipping_fee"]):,}개</a></b><span>같은 상품은 여러 개 사도 배송비 한 번</span></p></div>
 <div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>
-<div>{I_SHIELD}<p><b>안전 결제</b><span>토스페이먼츠 구매안전 서비스</span></p></div>
+<div>{I_SHIELD}<p><b>안전 결제</b><span>{PAY_SHORT}</span></p></div>
 <div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div><div class="wrap"><p class="give-band">💛 담Go사Go에서 사시면 <b>판매금액의 일부는 어려운 이웃을 위한 후원금으로 사용됩니다.</b></p></div></div>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
@@ -702,7 +707,7 @@ FAQ = [
     ("주문을 취소하고 싶어요.", "주문·배송 조회에서 직접 취소하실 수 있습니다. 상품 준비 전에는 즉시 취소·환불되며, 이미 출고된 경우에는 반품으로 진행됩니다."),
     ("교환이나 반품은 어떻게 하나요?", "상품을 받으신 날부터 7일 이내에 주문·배송 조회에서 신청해 주세요. 상품은 출고지에서 바로 보내드리기 때문에 직접 보내지 마시고, 신청하시면 택배 기사님이 방문해 회수합니다. 단순 변심은 상품 페이지에 적힌 반품 배송비를 부담하셔야 하며, 불량·오배송은 무료로 처리해 드립니다."),
     ("환불은 언제 되나요?", "취소는 즉시, 반품은 상품이 도착해 확인된 뒤 3영업일 안에 결제하신 수단으로 환불됩니다. 카드사 사정에 따라 3~7영업일이 더 걸릴 수 있습니다."),
-    ("어떤 결제 수단을 쓸 수 있나요?", "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다."),
+    ("어떤 결제 수단을 쓸 수 있나요?", PAY_FAQ),
     ("현금영수증을 받을 수 있나요?", "현금영수증은 결제 단계에서 신청하실 수 있습니다. 카드 결제는 카드 매출전표가 증빙이 됩니다."),
     ("여러 개 사면 할인되나요?", "네. 같은 상품을 2개 이상 담으시면 개당 가격이 자동으로 내려갑니다(옵션이 달라도 합산). 할인율은 상품 페이지의 ‘많이 살수록 개당 가격이 내려가요’ 표에서 확인하세요. 기업·단체 대량 구매는 ‘대량 구매 문의’로 견적을 요청하시면 됩니다."),
     ("쿠폰은 어디에 입력하나요?", "주문서의 결제 금액 영역에서 쿠폰 코드를 입력하고 적용 버튼을 누르시면 됩니다."),
