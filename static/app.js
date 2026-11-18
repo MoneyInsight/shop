@@ -1003,7 +1003,7 @@
     if (ok) {
       if (order.fromCart) setCart([]);
       store.set("pending_order", null);
-      store.set("my_orders", [{ orderId, phone: order.customer.phone, at: new Date().toISOString(), name: order.orderName, items: order.items.map((x) => x.id) }, ...store.get("my_orders", [])].slice(0, 30));
+      store.set("my_orders", [{ orderId, phone: order.customer.phone, rname: order.customer.name, at: new Date().toISOString(), name: order.orderName, items: order.items.map((x) => x.id) }, ...store.get("my_orders", [])].slice(0, 30));
       box.innerHTML = `<div class="mark"><svg class="ico" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2>주문이 완료되었습니다</h2>
         <p style="margin-top:6px">${esc(order.customer.name)}님, 주문해 주셔서 감사합니다.</p>
         <dl class="kv narrow" style="margin-top:26px;text-align:left;border-top:1px solid var(--ink);padding-top:18px">
@@ -1079,12 +1079,20 @@
       if (!$("#f-name").value.trim() || digits($("#f-phone").value).length < 9) { box.innerHTML = `<p class="muted" style="margin-top:10px">받는 분 이름과 연락처를 입력해 주세요.</p>`; return; }
       const { ok, d } = await api("/order/find", { name: $("#f-name").value.trim(), phone: $("#f-phone").value.trim() });
       if (!ok) { box.innerHTML = `<p class="muted" style="margin-top:10px">${esc(d.message)}</p>`; return; }
-      if (d.orders.length === 1) { box.innerHTML = ""; render(d.orders[0], d.orders[0].phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); return; }
-      box.innerHTML = d.orders.map((o, i) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(o.lines[0].name)}${o.lines.length > 1 ? ` 외 ${o.lines.length - 1}건` : ""}</div><div class="muted">${esc(o.orderId)} · ${date(o.paidAt)} · <b>${esc(o.status)}</b></div></div><button class="mini-btn" data-fi="${i}">보기</button></div>`).join("");
+      // 구매 내역: 주문마다 산 상품 전부 + 금액·상태
+      box.innerHTML = `<h2 style="margin:22px 0 4px">구매 내역 <span class="muted" style="font-size:14px;font-weight:400">${d.orders.length}건 · 최근 6개월</span></h2>` + d.orders.map((o, i) => `<div class="c-row" style="grid-template-columns:1fr auto;align-items:start;padding:14px 0">
+        <div><div class="muted" style="font-size:13px">${date(o.paidAt)} · ${esc(o.orderId)} · <b style="color:var(--ink)">${esc(o.status)}</b></div>
+        ${o.lines.map((l) => `<div class="nm" style="margin-top:4px"><a href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a> <span class="muted">× ${l.qty}</span></div>`).join("")}
+        <div style="margin-top:4px"><b>${won(o.amount)}</b></div></div>
+        <button class="mini-btn" data-fi="${i}">자세히 · 취소/반품</button></div>`).join("");
       box.onclick = (e) => { const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); } };
     };
     ["f-name", "f-phone"].forEach((k) => $("#" + k)?.addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-btn").click(); }));
-    { const a = store.get("addr", null) || member(); if (a && $("#f-name") && !$("#f-name").value) { $("#f-name").value = a.name || ""; $("#f-phone").value = a.phone || ""; } }  // 이 기기에 저장된 배송지로 미리 채움
+    {  // 이 기기에서 주문한 적 있으면 이름·연락처 채우고 구매 내역 바로 보여 줌 (로그인 불필요)
+      const a = store.get("addr", null) || member() || (mine[0] && mine[0].rname ? { name: mine[0].rname, phone: mine[0].phone } : null);
+      if (a && $("#f-name") && !$("#f-name").value) { $("#f-name").value = a.name || ""; $("#f-phone").value = a.phone || ""; }
+      if (!new URLSearchParams(location.search).get("id") && $("#f-name")?.value && digits($("#f-phone").value).length >= 10) $("#f-btn").click();
+    }
     if (token()) (async () => {  // 회원: 내 주문 전체
       const r = await api("/me/orders", { token: token() });
       if (!r.ok || !r.d.orders.length) return;
