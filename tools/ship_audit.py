@@ -12,7 +12,7 @@ for f in glob.glob('data/*.csv'):
         if r.get('공급가'):
             rows[r['상품코드']] = r
 prods = {p['id']: p for p in json.load(open('site/products.json'))}
-VERIFIED = ("CH", "DM")
+VERIFIED = ("CH", "DM", "GS", "W")  # 배송 규칙 확인됨: 온채널·도매매(도매처 정보), 건강산(주문당 3,000원), 오너클랜(장바구니 확인 — 묶음 표기 없으면 주문당 1번, 대표님 2026-11-17)
 
 
 def net(rev, cost):
