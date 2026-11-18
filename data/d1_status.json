@@ -1,16 +1,16 @@
 {
- "at": "2026-11-17 23:17 UTC",
+ "at": "2026-11-18 00:26 UTC",
  "db": "allchaeum",
- "in_db": 582982,
+ "in_db": 580313,
  "site_and_warehouse_total": 1477107,
- "uploaded_today": 0,
- "left": 902285,
- "files_ok": 0,
+ "uploaded_today": 453507,
+ "left": 904954,
+ "files_ok": 102,
  "files_planned": 501,
  "rows_written_24h_before": 4228192,
- "rows_written_24h_after": 4228192,
- "writes_per_product": null,
+ "rows_written_24h_after": 6444106,
+ "writes_per_product": 4.5,
  "unsafe_skipped": 0,
  "warehouse_files": 46,
- "stopped": "최근 24시간 쓰기 2,995,087.5줄 + 다음 파일 예상 20,250.0줄 > 한도 3,000,000"
+ "stopped": "0103.sql 실패: \u001b[1m⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\u001b[0m\n\n\n\u001b[31m✘ \u001b[41;31m[\u001b[41;97mERROR\u001b[41;31m]\u001b[0m \u001b[1mstatement too long: SQLITE_TOOBIG\u001b[0m\n\n\n🪵  Logs were written to \"/home/runner/.config/.wrangler/logs/wrangler-2026-11-18_00-25-18_887.log\"\n"
 }
