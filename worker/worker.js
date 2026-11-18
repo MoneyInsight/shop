@@ -193,9 +193,27 @@ function suggestPrice(env, supply) {
 }
 
 // ---------- 결제 승인 ----------
+// 결제 승인: 토스(paymentKey) 또는 포트원(pg:"portone", paymentId=orderId)
+// 포트원은 결제창에서 돈이 먼저 빠져나가므로, 확인에 실패하면 바로 자동 취소(환불)
 async function confirm(req, env) {
-  const { paymentKey, orderId, amount, items, customer, coupon, token, src } = await req.json();
-  if (!paymentKey || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
+  const body = await req.json().catch(() => ({}));
+  const r = await confirmCore(body, env);
+  // 자동 취소는 이 사이트 결제창에서 시작된 결제(사전 확인 기록 있음)만 — 남의 결제번호로 취소시키는 악용 차단
+  if (body.pg === "portone" && !body.dry && body.paymentId && body.paymentId === body.orderId && r.status !== 200 && (await env.SHOP.get("po_pre:" + body.orderId))) {
+    const done = await env.SHOP.get("order:" + body.orderId, "json");
+    if (!done || done.paymentKey !== body.paymentId) {
+      const c = await portoneCancel(env, body.paymentId, "주문 확인 실패로 자동 취소").catch(() => ({ ok: false }));
+      await notify(env, `↩️ 포트원 결제 자동 취소 ${body.orderId} (${c.ok ? "환불됨" : "취소 실패 — 직접 확인 필요"})`).catch(() => {});
+    }
+  }
+  return r;
+}
+
+async function confirmCore(body, env) {
+  const { orderId, amount, items, customer, coupon, token, src, pg, paymentId, dry } = body;
+  let { paymentKey } = body;
+  if (pg === "portone" && !dry && paymentId !== orderId) return fail("잘못된 요청이에요.");
+  if (!(paymentKey || paymentId || dry) || !orderId || !Array.isArray(items) || !items.length) return fail("잘못된 요청이에요.");
   if (await env.SHOP.get("order:" + orderId)) return fail("이미 처리된 주문이에요.");
   if (customer?.phone && (await isBlocked(env, customer.phone))) {  // 차단된 연락처: 결제 승인 안 함 (돈이 빠져나가지 않음)
     return fail("주문이 제한된 연락처예요. 고객센터로 문의해 주세요.");
@@ -276,16 +294,32 @@ async function confirm(req, env) {
     }
   }
 
-  const r = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
-    method: "POST",
-    headers: { Authorization: "Basic " + btoa(env.TOSS_SECRET_KEY + ":"), "Content-Type": "application/json" },
-    body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
-  });
-  const pay = await r.json();
-  if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
+  if (dry) { await env.SHOP.put("po_pre:" + orderId, String(amount), { expirationTtl: 86400 }); return json({ ok: true }); }  // 결제창 열기 전 사전 확인 (돈 안 빠짐)
+  let pay;
+  if (pg === "portone") {
+    if (!env.PORTONE_API_SECRET) return fail("결제 서버 설정이 아직 안 됐어요.", 500);
+    const r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId), { headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET } });
+    const p = await r.json().catch(() => ({}));
+    if (!r.ok) return fail(p.message || "결제 정보를 확인하지 못했어요.", 502);
+    if (p.status !== "PAID") return fail("결제가 완료되지 않았어요.");
+    if (Number(p.amount?.total) !== Number(amount)) return fail("결제 금액이 주문 금액과 달라요.");
+    if (env.PORTONE_STORE_ID && p.storeId && p.storeId !== env.PORTONE_STORE_ID) return fail("잘못된 결제예요.");
+    const m = p.method || {};
+    const METHOD = { PaymentMethodCard: "카드", PaymentMethodEasyPay: "간편결제", PaymentMethodTransfer: "계좌이체", PaymentMethodVirtualAccount: "가상계좌", PaymentMethodMobile: "휴대폰" };
+    pay = { method: (m.provider ? m.provider + " " : "") + (METHOD[m.type] || "결제"), receipt: { url: p.receiptUrl || "" } };
+    paymentKey = paymentId;
+  } else {
+    const r = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
+      method: "POST",
+      headers: { Authorization: "Basic " + btoa(env.TOSS_SECRET_KEY + ":"), "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
+    });
+    pay = await r.json();
+    if (!r.ok) return fail(pay.message || "결제 승인 실패", r.status);
+  }
 
   const now = new Date().toISOString();
-  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, receipt: pay.receipt?.url || "",
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, pg: pg === "portone" ? "portone" : "toss", receipt: pay.receipt?.url || "",
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
@@ -741,6 +775,18 @@ async function adminKakaoTest(env) {
   return sent ? json({ ok: true, message: "카카오톡 ‘나와의 채팅’으로 보냈어요." }) : fail("보내지 못했어요. 카카오톡 연결을 다시 해 주세요.");
 }
 
+async function portoneCancel(env, paymentId, reason, amount) {
+  const r = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}/cancel`, {
+    method: "POST",
+    headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: reason || "고객 요청", ...(amount ? { amount } : {}), ...(env.PORTONE_STORE_ID ? { storeId: env.PORTONE_STORE_ID } : {}) }),
+  });
+  const d = await r.json().catch(() => ({}));
+  return r.ok ? { ok: true } : { ok: false, message: d.message || "결제 취소 실패" };
+}
+// 주문의 결제사에 맞게 취소 (예전 주문은 토스)
+const payCancel = (env, o, reason, amount) => o.pg === "portone" ? portoneCancel(env, o.paymentKey, reason, amount) : tossCancel(env, o.paymentKey, reason, amount);
+
 async function tossCancel(env, paymentKey, reason, amount) {
   const r = await fetch(`https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`, {
     method: "POST",
@@ -827,7 +873,7 @@ async function orderCancel(req, env) {
   const o = await findOrder(env, orderId, phone);
   if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
   if (o.status === "결제완료" && !o.poSheetAt) {  // 출고 준비 전(도매처 주문서도 안 받음): 즉시 자동 취소·환불
-    const c = await tossCancel(env, o.paymentKey, clip(reason, 100) || "고객 주문 취소");
+    const c = await payCancel(env, o, clip(reason, 100) || "고객 주문 취소");
     if (!c.ok) return fail(c.message);
     setStatus(o, "취소완료", { reason: clip(reason, 200) });
     await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
@@ -1027,7 +1073,7 @@ async function adminSoldoutCancel(req, env) {
   if (!o) return fail("주문을 찾을 수 없어요.");
   if (!["결제완료", "상품준비중"].includes(o.status)) return fail("출고 전 주문만 품절 취소할 수 있어요.");
   const left = o.amount - (o.refunded || 0);
-  const c = await tossCancel(env, o.paymentKey, "상품 품절로 인한 주문 취소");
+  const c = await payCancel(env, o, "상품 품절로 인한 주문 취소");
   if (!c.ok) return fail(c.message);
   o.refunded = (o.refunded || 0) + left;
   setStatus(o, "취소완료", { reason: "도매처 품절" });
@@ -1052,7 +1098,7 @@ async function adminOrderCancel(req, env) {
   if (o.status === "취소완료" || o.status === "반품완료") return fail("이미 환불된 주문이에요.");
   const amt = parseInt(amount) || 0;
   if (amt && amt > o.amount - (o.refunded || 0)) return fail("환불 금액이 결제 금액보다 커요.");
-  const c = await tossCancel(env, o.paymentKey, clip(reason, 100) || "판매자 취소", amt || undefined);
+  const c = await payCancel(env, o, clip(reason, 100) || "판매자 취소", amt || undefined);
   if (!c.ok) return fail(c.message);
   o.refunded = (o.refunded || 0) + (amt || o.amount - (o.refunded || 0));
   setStatus(o, amt && o.refunded < o.amount ? o.status : (o.status.startsWith("반품") ? "반품완료" : "취소완료"), { refund: amt || "전액", reason: clip(reason, 200) });
@@ -1210,7 +1256,7 @@ export async function handle(req, env, path) {
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
-      kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음" });
+      kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음", portone: env.PORTONE_API_SECRET ? "켜짐" : "없음" });
   }
   if (req.method === "POST" && path === "/oc/scan") {  // 오너클랜 상품 목록 한 쪽 (깃허브 대량 수집용, 관리자 비밀번호 필요)
     const pw = String(env.ADMIN_PASSWORD || "").trim(), got = String(req.headers.get("x-admin-pass") || "").trim();

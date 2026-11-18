@@ -359,7 +359,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "remote_ship")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "portone_store_id", "portone_channel_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "remote_ship")}
     public_cfg["member_rate"] = (CFG.get("member_discount") or {}).get("rate", 0)  # 비율만 공개 (마진 값은 서버에만)
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
@@ -715,7 +715,9 @@ def build_shop_pages():
     write("wish.html", layout(f'찜한 상품 — {CFG["shop_name"]}', listing("찜한 상품", "wish", [], "./", count=0), "./"))
     simple("cart.html", "장바구니", '''<div class="steps"><b>장바구니</b><span>›</span><span>주문/결제</span><span>›</span><span>주문 완료</span></div>
 <div class="main"><div class="card"><div id="cart-box"></div></div><div class="sticky"><div class="card" id="cart-sum"></div></div></div>''')
-    test = "" if not CFG["toss_client_key"].startswith("test_") else \
+    use_po = bool(CFG.get("portone_store_id") and CFG.get("portone_channel_key"))
+    is_test = CFG.get("portone_test", True) if use_po else CFG["toss_client_key"].startswith("test_")
+    test = "" if not is_test else \
         '<div class="note">지금은 <b>테스트 결제</b> 모드입니다. 실제로 결제되지 않습니다.</div>'
     simple("checkout.html", "주문/결제", f'''<div class="steps"><span>장바구니</span><span>›</span><b>주문/결제</b><span>›</span><span>주문 완료</span></div>{test}
 <div class="main" id="checkout"><div>
@@ -739,7 +741,7 @@ def build_shop_pages():
 <label class="check"><input type="checkbox" class="agree-req"><span>[필수] 개인정보 수집·이용에 동의합니다. <a href="privacy.html" target="_blank">보기</a></span></label>
 <label class="check"><input type="checkbox" class="agree-req">[필수] 배송을 위한 개인정보 제3자(택배사·공급사) 제공에 동의합니다.</label></div>
 <button class="btn btn-dark" id="pay-btn" style="margin-top:14px">결제하기</button></div></div></div>''',
-           scripts='<script src="https://js.tosspayments.com/v2/standard"></script><script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
+           scripts=('<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>' if use_po else '<script src="https://js.tosspayments.com/v2/standard"></script>') + '<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
     simple("success.html", "주문 완료", '<div class="card done-box" id="success">결제를 확인하고 있습니다.</div>', heading=False)
     simple("fail.html", "결제 실패", '<div class="card done-box" id="fail"><h2>결제가 완료되지 않았습니다</h2><p id="fail-msg"></p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="cart.html">장바구니로</a></div>', heading=False)
     simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted">주문번호와 주문하실 때 입력한 연락처로 조회하실 수 있습니다. 취소·반품·교환도 여기에서 신청합니다.</p>

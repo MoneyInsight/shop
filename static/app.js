@@ -882,17 +882,23 @@
     };
 
     await paint();
-    if (typeof TossPayments === "undefined") {
+    const usePO = !!(CFG.portone_store_id && CFG.portone_channel_key);  // 포트원(KG이니시스 등) 사용 여부
+    if (usePO ? typeof PortOne === "undefined" : typeof TossPayments === "undefined") {
       $("#payment-method").innerHTML = `<p class="note" style="margin:0">결제 모듈을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 새로고침해 주세요.</p>`;
       $("#pay-btn").disabled = true; return;
     }
-    const tp = TossPayments(CFG.toss_client_key);
-    widgets = tp.widgets({ customerKey: TossPayments.ANONYMOUS });
-    await widgets.setAmount({ currency: "KRW", value: sums.total });
-    await Promise.all([
-      widgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" }),
-      widgets.renderAgreement({ selector: "#agreement", variantKey: "AGREEMENT" }),
-    ]);
+    if (usePO) {
+      $("#payment-method").innerHTML = `<label class="po-m"><input type="radio" name="pom" value="CARD" checked> <b>신용·체크카드 / 간편결제</b></label>
+        <p class="muted" style="font-size:13px;margin:8px 0 0">결제창에서 카드 또는 카카오페이·네이버페이·토스페이·페이코 등 간편결제를 고를 수 있어요.</p>`;
+    } else {
+      const tp = TossPayments(CFG.toss_client_key);
+      widgets = tp.widgets({ customerKey: TossPayments.ANONYMOUS });
+      await widgets.setAmount({ currency: "KRW", value: sums.total });
+      await Promise.all([
+        widgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" }),
+        widgets.renderAgreement({ selector: "#agreement", variantKey: "AGREEMENT" }),
+      ]);
+    }
 
     $("#pay-btn").onclick = async () => {
       const f = (id) => $("#" + id).value.trim();
@@ -909,6 +915,24 @@
       const order = { orderId, orderName, amount: sums.total, items: cart, coupon, fromCart: !now,
         customer: { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr: f("addr1") + " " + f("addr2"), addr1: f("addr1"), addr2: f("addr2"), memo: f("memo") } };
       store.set("pending_order", order);
+      if (usePO) {  // 결제창 열기 전 서버에서 금액·재고·적자 여부를 미리 확인 (돈 안 빠짐)
+        const b = $("#pay-btn"); b.disabled = true;
+        try {
+          const dr = await api("/confirm", { pg: "portone", dry: true, orderId, amount: sums.total, items: cart, customer: order.customer, coupon, token: token() || undefined });
+          if (!dr.ok) { alert(dr.d.message || "주문을 확인하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
+          const res = await PortOne.requestPayment({
+            storeId: CFG.portone_store_id, channelKey: CFG.portone_channel_key,
+            paymentId: orderId, orderName, totalAmount: sums.total, currency: "CURRENCY_KRW", payMethod: "CARD",
+            customer: { fullName: order.customer.name, phoneNumber: digits(order.customer.phone), email: order.customer.email || undefined },
+            redirectUrl: new URL(ROOT + "success.html?pg=portone", location.href).href,
+          });
+          if (!res) return;
+          if (res.code != null) { if (!/취소|cancel/i.test(res.message || res.code)) alert(res.message || "결제가 완료되지 않았어요."); return; }
+          location.href = ROOT + "success.html?pg=portone&paymentId=" + encodeURIComponent(res.paymentId || orderId);
+        } catch (e) { alert(e.message || "결제창을 열지 못했어요."); }
+        finally { b.disabled = false; }
+        return;
+      }
       {  // 결제창 열기 전 도매처 실시간 재고 확인 (서버 연결 안 됨·미지원이면 건너뜀 — 결제 확인 때 서버가 다시 확인)
         const sc = await api("/stock/check", { items: cart, phone: f("phone") });
         const m = (sc.d && sc.d.message) || "";
@@ -938,14 +962,18 @@
     const box = $("#success");
     if (!box) return;
     const q = new URLSearchParams(location.search);
-    const paymentKey = q.get("paymentKey"), orderId = q.get("orderId"), amount = Number(q.get("amount"));
+    const po = q.get("pg") === "portone", paymentId = q.get("paymentId");
+    if (po && q.get("code")) {  // 모바일 결제창에서 취소·실패하고 돌아온 경우
+      box.innerHTML = `<h2>결제가 완료되지 않았어요</h2><p>${esc(q.get("message") || "결제가 취소되었어요.")}</p><a class="btn btn-dark sm" style="margin:22px auto 0;max-width:220px" href="${ROOT}cart.html">장바구니로</a>`; return;
+    }
     const order = store.get("pending_order", null);
+    const paymentKey = q.get("paymentKey"), orderId = po ? paymentId : q.get("orderId"), amount = po ? order?.amount : Number(q.get("amount"));
     if (!order || order.orderId !== orderId || order.amount !== amount) {
       box.innerHTML = `<h2>주문 정보를 확인할 수 없어요</h2><p>고객센터로 문의해 주세요. (주문번호 ${esc(orderId || "-")})</p>`; return;
     }
     let ok = false, msg = "";
     if (API) {
-      const r = await api("/confirm", { paymentKey, orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined, src: visitSrc });
+      const r = await api("/confirm", { ...(po ? { pg: "portone", paymentId } : { paymentKey }), orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined, src: visitSrc });
       ok = r.ok; msg = ok ? "" : r.d.message || "결제 승인에 실패했어요.";
     } else { ok = true; msg = "테스트 모드: 결제 승인 서버가 연결되지 않아 실제 결제는 이루어지지 않았어요."; }
     if (ok) {

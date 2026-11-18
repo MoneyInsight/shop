@@ -22,6 +22,7 @@ jobs:
       NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      PORTONE_API_SECRET: ${{ secrets.PORTONE_API_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -97,7 +98,7 @@ jobs:
           [ -n "$DOMEGGOOK_API_KEY" ] && printf '%s' "$DOMEGGOOK_API_KEY" | npx -y wrangler@4 secret put DOMEGGOOK_API_KEY  # 결제 직전 실시간 재고 확인
           [ -n "$OWNERCLAN_ID" ] && printf '%s' "$OWNERCLAN_ID" | npx -y wrangler@4 secret put OWNERCLAN_ID
           [ -n "$OWNERCLAN_PW" ] && printf '%s' "$OWNERCLAN_PW" | npx -y wrangler@4 secret put OWNERCLAN_PW
-          for k in KAKAO_REST_KEY KAKAO_CLIENT_SECRET NAVER_CLIENT_ID NAVER_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do v="${!k}"; [ -n "$v" ] && printf '%s' "$v" | npx -y wrangler@4 secret put $k; done  # 간편가입(카카오·네이버·구글)
+          for k in KAKAO_REST_KEY KAKAO_CLIENT_SECRET NAVER_CLIENT_ID NAVER_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET PORTONE_API_SECRET; do v="${!k}"; [ -n "$v" ] && printf '%s' "$v" | npx -y wrangler@4 secret put $k; done  # 간편가입(카카오·네이버·구글)
           true
       - name: 오너클랜 연결 시험 (서버에서)
         if: steps.chk.outputs.skip != '1'
