@@ -923,7 +923,7 @@
           const res = await PortOne.requestPayment({
             storeId: CFG.portone_store_id, channelKey: CFG.portone_channel_key,
             paymentId: orderId, orderName, totalAmount: sums.total, currency: "CURRENCY_KRW", payMethod: "CARD",
-            customer: { fullName: order.customer.name, phoneNumber: digits(order.customer.phone), email: order.customer.email || undefined },
+            customer: { fullName: order.customer.name, phoneNumber: digits(order.customer.phone), email: order.customer.email || "order@damgosago.com" },  // 이니시스는 이메일 필수 → 안 적으면 가게 대표 주소
             redirectUrl: new URL(ROOT + "success.html?pg=portone", location.href).href,
           });
           if (!res) return;
