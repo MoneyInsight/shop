@@ -196,16 +196,79 @@
       <p class="muted" style="margin-top:6px">고친 내용은 서버에 저장되고, 30분 안에 사이트에 자동으로 반영돼요. 가격은 손해를 막기 위해 공급사 최저가·순마진 8% 아래로는 내려가지 않아요.</p>
       <div id="p-res" style="margin-top:10px"></div></div>
       <div class="card form" id="p-edit" style="display:none"></div>
+      <div class="card form"><h2>SEO 일괄 수정 (엑셀)</h2>
+        <p class="muted">① 상품 목록을 내려받아 엑셀에서 <b>상품명·검색키워드·요약설명</b>을 고치고 ② 저장한 CSV를 올리면 돼요. 상품코드·기존 상품명 칸은 고치지 마세요.<br>
+        검색키워드는 쉼표(,)로 구분, 요약설명은 150자 안. 올린 내용은 30분 안에 사이트·상품 DB에 반영돼요. (엑셀은 한 파일에 100만 줄까지라 30만 개씩 나눠서 받아요)</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <select id="seo-cat"><option value="">전체 상품</option>${Object.entries((window.SHOP_CFG || {}).cat_names || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("")}</select>
+          <button data-act="seo-down">목록 내려받기 (CSV)</button>
+          <label class="ghost" style="cursor:pointer;border:1px solid var(--line);padding:6px 12px">수정본 올리기 (CSV)<input type="file" id="seo-file" accept=".csv,text/csv" hidden></label></div>
+        <div id="seo-msg" class="muted" style="margin-top:8px"></div></div>
       <div class="card form"><h2>여러 상품 한 번에</h2>
         <textarea id="pb-ids" rows="3" placeholder="상품코드를 띄어쓰기·쉼표·줄바꿈으로 구분해 넣어 주세요. 도매매는 숫자 번호만 넣어도 돼요. (예: DM20067843, 65114578)" style="width:100%"></textarea>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="pb" data-a="hide">숨기기(판매 중지)</button><button data-act="pb" data-a="soldout">품절로 표시</button><button class="ghost" data-act="pb" data-a="show">다시 판매</button><button class="ghost" data-act="pb" data-a="reset">고친 내용 모두 되돌리기</button></div></div>
       <div class="card"><h2>고친 상품 <small id="p-cnt"></small></h2><div id="p-edited"><p class="muted">불러오는 중…</p></div></div>`;
+  }
+  // ── SEO 일괄 수정: CSV 내려받기·올리기 ──
+  const csvCell = (v) => { v = String(v ?? ""); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  function parseCSV(t) {
+    const rows = []; let row = [], cur = "", q = false;
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; continue; }
+      if (c === '"') q = true; else if (c === ",") { row.push(cur); cur = ""; } else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; } else if (c !== "\r") cur += c;
+    }
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+  const SEO_HEAD = ["상품코드", "기존 상품명(수정 금지)", "상품명", "검색키워드(쉼표로 구분)", "요약설명(150자)", "카테고리", "판매가(참고)", "상품 링크"];
+  async function seoDownload() {
+    const msg = $("#seo-msg"), cat = $("#seo-cat").value, catN = cat ? $("#seo-cat").selectedOptions[0].text : "전체";
+    let after = "", part = 1, buf = [], total = 0;
+    const save = () => {
+      if (!buf.length) return;
+      const blob = new Blob(["\ufeff" + [SEO_HEAD, ...buf].map((r) => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `담고사고_SEO_${catN.replace(/[\/·]/g, "_")}_${part}.csv`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000); part++; buf = [];
+    };
+    try {
+      do {
+        const r = await call("/admin/catalog-export", { cat, after, limit: 20000 });
+        for (const [id, name, kw, sum, c, price] of r.rows) buf.push([id, name, name, kw, sum, ((window.SHOP_CFG || {}).cat_names || {})[c] || c, price, `https://damgosago.com/product/item.html?id=${id}`]);
+        total += r.rows.length; after = r.next;
+        msg.textContent = `내려받는 중… ${total.toLocaleString()}개`;
+        if (buf.length >= 300000) save();
+      } while (after);
+      save(); msg.textContent = `완료: ${total.toLocaleString()}개 (${part - 1}개 파일)`;
+    } catch (e) { msg.textContent = "실패: " + e.message; }
+  }
+  async function seoUploadFile(f) {
+    const msg = $("#seo-msg");
+    const rows = parseCSV(await f.text()); const head = (rows.shift() || []).map((h) => h.replace(/^\ufeff/, "").trim());
+    const ix = (k) => head.findIndex((h) => h.startsWith(k));
+    const iId = ix("상품코드"), iOld = ix("기존 상품명"), iName = head.findIndex((h) => h === "상품명"), iKw = ix("검색키워드"), iSum = ix("요약설명");
+    if (iId < 0 || iName < 0) { alert("상품코드·상품명 칸을 찾지 못했어요. 내려받은 파일 그대로 고쳐서 올려 주세요."); return; }
+    const out = [];
+    for (const r of rows) {
+      const id = (r[iId] || "").trim(); if (!id) continue;
+      const name = (r[iName] || "").trim(), old = iOld >= 0 ? (r[iOld] || "").trim() : "", kw = iKw >= 0 ? (r[iKw] || "").trim() : "", sum = iSum >= 0 ? (r[iSum] || "").trim() : "";
+      const e = { id }; if (name && name !== old) e.name = name; if (kw) e.kw = kw; if (sum) e.summary = sum;
+      if (e.name || e.kw || e.summary) out.push(e);
+    }
+    if (!out.length) { msg.textContent = "바뀐 내용이 없어요."; return; }
+    if (!confirm(`${out.length.toLocaleString()}개 상품의 SEO 정보를 저장할까요?`)) return;
+    let done = 0;
+    try {
+      for (let i = 0; i < out.length; i += 3000) { await call("/admin/seo-upload", { rows: out.slice(i, i + 3000) }); done = Math.min(out.length, i + 3000); msg.textContent = `올리는 중… ${done.toLocaleString()} / ${out.length.toLocaleString()}`; }
+      msg.textContent = `완료: ${done.toLocaleString()}개 저장. 30분 안에 사이트에 반영돼요.`;
+    } catch (e) { msg.textContent = `실패 (${done.toLocaleString()}개까지 저장됨): ` + e.message; }
   }
   async function prodInit() {
     if (!PIDX) PIDX = await fetch("idx/list.json?t=" + Date.now()).then((r) => r.json())
       .then((L) => Promise.all(L.map((c) => fetch(`idx/${c}.json?t=${Date.now()}`).then((r) => r.json()))))
       .then((a) => ({ ...a[0], items: a.flatMap((d) => d.items) })).catch(() => null);
     PEDITS = await call("/admin/product-edits").catch(() => ({ items: {} }));
+    const sf = $("#seo-file"); if (sf) sf.onchange = () => { if (sf.files[0]) seoUploadFile(sf.files[0]); sf.value = ""; };
     const q = $("#p-q"); if (!q) return;
     q.oninput = () => { clearTimeout(q._t); q._t = setTimeout(prodSearch, 200); };
     prodEdited(); if (PSEL) prodForm(PSEL.id);
@@ -417,6 +480,7 @@
         if (act === "bl-del" && !confirm("차단을 풀까요?")) return;
         alert((await call("/admin/block", { phone, reason, block: act !== "bl-del" })).message); CUST = null; return paint();
       }
+      if (act === "seo-down") { seoDownload(); return; }
       if (act === "pb") {
         const ids = $("#pb-ids").value; if (!ids.trim()) { alert("상품코드를 넣어 주세요."); return; }
         if (!confirm("선택한 작업을 적용할까요?")) return;

@@ -53,6 +53,8 @@ def tags(p, limit=12):
         k = w.lower()
         if w and k not in seen and len(w) <= 20:
             seen.add(k); out.append(w)
+    for w in str(p.get("kw") or "").replace("#", " ").replace(";", ",").split(","):  # 관리자 SEO 키워드가 맨 앞
+        add(w)
     toks = _tokens(p.get("name", ""))
     for w in toks:
         add(w)
@@ -83,6 +85,8 @@ def title(p, shop):
 
 
 def description(p, max_deal=0, member_rate=0):
+    if p.get("seo_desc"):  # 관리자 SEO 요약 설명이 있으면 그걸 씀
+        return str(p["seo_desc"])[:150]
     price = f'{int(p["price"]):,}원'
     parts = [f'{p["name"]} {price}' + (", 무료배송." if not int(p.get("shipping_fee") or 0) else ".")]
     if max_deal:

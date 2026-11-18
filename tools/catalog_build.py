@@ -107,7 +107,7 @@ def products():
         if not safe(p, P) or placeholder_price(p):
             unsafe += 1; continue  # 손해 가능 상품·'가격은 문의' 같은 가짜 가격 상품은 DB에 올리지 않음 (이미 있으면 지움)
         body = json.dumps({**{k: v for k, v in p.items() if k != "rank"}, "tier": p["rank"] // 10_000_000}, ensure_ascii=False, sort_keys=True)  # 정렬 단계가 바뀌면 다시 올림
-        tt = " ".join(terms(p["name"] + " " + p["brand"]))
+        tt = " ".join(terms(p["name"] + " " + p["brand"] + " " + str(r.get("kw") or "").replace(",", " ")))  # 관리자 SEO 키워드도 검색어로
         p["terms"] = tt
         p["h"] = hashlib.sha1(body.encode()).hexdigest()[:16] + ":" + hashlib.sha1(tt.encode()).hexdigest()[:6]  # 내용:검색어
         out.append(p)

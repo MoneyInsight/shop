@@ -132,6 +132,47 @@ async function adminSiteSave(req, env) {  // 사이트 공지 띠 문구 (빌드
   return json({ ok: true, message: "저장했어요. 30분 안에 사이트에 반영돼요." });
 }
 
+// ---------- SEO 일괄 수정 (상품명·검색 키워드·요약 설명) ----------
+// 상품이 많아(150만) 한 값에 다 못 넣음 → 상품코드로 64칸에 나눠 KV "seo:<칸>"에 저장. 사이트 빌드·상품 DB 반영 때 읽어 감
+const SEO_B = 64;
+const seoBucket = (id) => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % SEO_B; };
+async function seoUpload(req, env) {
+  const d = await req.json().catch(() => ({}));
+  const rows = (Array.isArray(d.rows) ? d.rows : []).slice(0, 5000);
+  const by = {};
+  let n = 0;
+  for (const r of rows) {
+    const id = String(r.id || "").replace(/[^0-9A-Za-z_-]/g, "");
+    if (!id) continue;
+    const e = {};
+    if (r.name) e.name = String(r.name).replace(/\s+/g, " ").trim().slice(0, 100);
+    if (r.kw) e.kw = String(r.kw).replace(/\s+/g, " ").trim().slice(0, 300);
+    if (r.summary) e.summary = String(r.summary).replace(/\s+/g, " ").trim().slice(0, 160);
+    (by[seoBucket(id)] ||= {})[id] = Object.keys(e).length ? e : null;
+    n++;
+  }
+  for (const [b, items] of Object.entries(by)) {
+    const cur = (await env.SHOP.get("seo:" + b, "json")) || {};
+    for (const [id, e] of Object.entries(items)) { if (e) cur[id] = e; else delete cur[id]; }
+    await env.SHOP.put("seo:" + b, JSON.stringify(cur));
+  }
+  await env.SHOP.put("seo_ver", String(Date.now()));
+  return json({ ok: true, saved: n, message: `${n.toLocaleString()}개 상품을 저장했어요.` });
+}
+async function catalogExport(req, env) {  // 상품 목록 내려받기 (상품코드 순서로 나눠서)
+  if (!env.DB) return fail("상품 DB가 없어요.", 500);
+  const d = await req.json().catch(() => ({}));
+  const lim = Math.min(20000, Math.max(1, parseInt(d.limit) || 20000)), after = String(d.after || ""), cat = String(d.cat || "");
+  const where = ["id > ?"], args = [after];
+  if (cat === "winter") where.push("(w = 1 OR category = 'winter')"); else if (cat) { where.push("category = ?"); args.push(cat); }
+  const rs = await env.DB.prepare(`SELECT id, name, category, brand, price FROM products WHERE ${where.join(" AND ")} ORDER BY id LIMIT ${lim}`).bind(...args).all().catch(async () =>
+    env.DB.prepare(`SELECT id, name, category, brand, price FROM products WHERE ${where.filter((w) => !w.includes("w = 1")).join(" AND ")} ORDER BY id LIMIT ${lim}`).bind(...args).all());
+  const rows = rs.results || [];
+  const need = new Set(rows.map((r) => seoBucket(r.id))), seo = {};
+  await Promise.all([...need].map(async (b) => { seo[b] = (await env.SHOP.get("seo:" + b, "json")) || {}; }));
+  return json({ rows: rows.map((r) => { const e = seo[seoBucket(r.id)][r.id] || {}; return [r.id, e.name || r.name, e.kw || "", e.summary || "", r.category, r.price]; }), next: rows.length === lim ? rows[rows.length - 1].id : null });
+}
+
 // ---------- 관리자 상품 수정 (이름·가격·카테고리·숨김·품절·소개·표시) ----------
 // KV "product_edits"에 저장 → 사이트 빌드 때 반영 (30분마다 확인, 깃허브 토큰이 있으면 바로 다시 배포)
 const EDIT_FIELDS = { name: 100, price: 0, category: 30, hidden: 0, soldout: 0, summary: 80, badge: 10 };
@@ -1403,8 +1444,15 @@ export async function handle(req, env, path) {
     for (const [id, at] of Object.entries(b)) if (at >= "2026-11-17T10:00" && at < "2026-11-17T14:00" && !rm[id]) rm[id] = new Date().toISOString().slice(0, 10) + "T00:00:00+00:00";
     return json(rm);
   }
-  if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영)
-    return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
+  if (req.method === "GET" && path === "/edits/seo") {  // SEO 수정본 한 칸 (사이트 빌드·상품 DB 반영용)
+    const b = parseInt(new URL(req.url).searchParams.get("b"));
+    if (!(b >= 0 && b < SEO_B)) return json({ n: SEO_B, ver: (await env.SHOP.get("seo_ver")) || "0" });
+    return new Response((await env.SHOP.get("seo:" + b)) || "{}", { headers: { "Content-Type": "application/json; charset=utf-8" } });
+  }
+  if (req.method === "GET" && path === "/edits") {  // 관리자 상품 수정 내역 (사이트 빌드 때 반영) — ver에 SEO 수정 시각도 합쳐서, SEO만 바뀌어도 다시 배포
+    const ed = (await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} };
+    const sv = await env.SHOP.get("seo_ver");
+    return json(sv ? { ...ed, ver: `${ed.ver}-${sv}` } : ed);
   }
   if (req.method === "GET" && path.startsWith("/catalog/")) {  // 상품 DB 조회 (공개, 1분 캐시)
     if (!env.DB) return fail("상품 DB가 아직 연결되지 않았어요.", 503);
@@ -1559,7 +1607,7 @@ export async function handle(req, env, path) {
       const ip = ipOf(req);
       if (await overLimit(env, "adminfail:" + ip, 5, 900, false)) return fail("비밀번호를 여러 번 틀려서 15분 동안 막았어요. 잠시 후 다시 시도해 주세요.", 429);
       if (got.trim() !== want) { await overLimit(env, "adminfail:" + ip, 5, 900); return fail("비밀번호가 틀렸어요.", 401); }
-      const READ_ONLY = ["/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
+      const READ_ONLY = ["/admin/catalog-export", "/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
       if (!READ_ONLY.includes(path)) await adminLog(env, path, ip, "").catch(() => {});
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
@@ -1585,6 +1633,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/portone-sync") return json(await portoneSync(env));
       if (path === "/admin/claim-photo") { const b = await req.json().catch(() => ({})); const d = await env.SHOP.get(`claimimg:${b.orderId}:${parseInt(b.i) || 0}`); return d ? json({ data: d }) : fail("사진이 없어요.", 404); }
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
+      if (path === "/admin/catalog-export") return await catalogExport(req, env);
+      if (path === "/admin/seo-upload") return await seoUpload(req, env);
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
       if (path === "/admin/product-bulk") return await adminProductBulk(req, env);

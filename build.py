@@ -198,6 +198,23 @@ def apply_edits(ps):
         print("상품 수정 내역을 못 받음(이번엔 건너뜀):", ex); return ps
     global SITE
     EDITS_VER = str(data.get("ver", 0)); items = data.get("items") or {}
+    try:  # SEO 일괄 수정본 (상품명·검색 키워드·요약 설명) — 서버에 64칸으로 나눠 저장
+        meta = json.loads(urllib.request.urlopen(url + "/seo", timeout=15).read().decode("utf-8"))
+        seo_items = {}
+        for b in range(int(meta.get("n", 0))):
+            seo_items.update(json.loads(urllib.request.urlopen(f"{url}/seo?b={b}", timeout=30).read().decode("utf-8")))
+        n_seo = 0
+        for p in ps:
+            e = seo_items.get(p["id"])
+            if e:
+                n_seo += 1
+                if e.get("name"): p["name"] = e["name"]
+                if e.get("kw"): p["kw"] = e["kw"]
+                if e.get("summary"): p["summary"] = e["summary"]; p["seo_desc"] = e["summary"]
+        if seo_items:
+            print(f"SEO 수정 반영: {n_seo}개 (저장 {len(seo_items)}개)")
+    except Exception as ex:
+        print("SEO 수정본을 못 받음(이번엔 건너뜀):", ex)
     SITE = data.get("site") or {}
     if not items:
         return ps
