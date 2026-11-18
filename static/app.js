@@ -901,6 +901,9 @@
 
     await paint();
     const usePO = !!(CFG.portone_store_id && CFG.portone_channel_key);  // 포트원(KG이니시스 등) 사용 여부
+    // 결제대행사 고르기: 주소에 ?pg=kpn 이 붙으면 한국결제네트웍스 채널 (카드사 심사 캡처용), 기본은 KG이니시스
+    { const q = new URLSearchParams(location.search).get("pg"); if (q) sessionStorage.setItem("po_pg", q); }
+    const poChannel = () => (sessionStorage.getItem("po_pg") === "kpn" && CFG.portone_channel_key_kpn) || CFG.portone_channel_key;
     if (usePO ? typeof PortOne === "undefined" : typeof TossPayments === "undefined") {
       $("#payment-method").innerHTML = `<p class="note" style="margin:0">결제 모듈을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 새로고침해 주세요.</p>`;
       $("#pay-btn").disabled = true; return;
@@ -939,7 +942,7 @@
           const dr = await api("/confirm", { pg: "portone", dry: true, orderId, amount: sums.total, items: cart, customer: order.customer, coupon, token: token() || undefined, src: visitSrc, fromCart: !now });
           if (!dr.ok) { alert(dr.d.message || "주문을 확인하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
           const res = await PortOne.requestPayment({
-            storeId: CFG.portone_store_id, channelKey: CFG.portone_channel_key,
+            storeId: CFG.portone_store_id, channelKey: poChannel(),
             paymentId: orderId, orderName, totalAmount: sums.total, currency: "CURRENCY_KRW", payMethod: "CARD",
             customer: { fullName: order.customer.name, phoneNumber: digits(order.customer.phone), email: order.customer.email || "order@damgosago.com" },  // 이니시스는 이메일 필수 → 안 적으면 가게 대표 주소
             redirectUrl: new URL(ROOT + "success.html?pg=portone", location.href).href,

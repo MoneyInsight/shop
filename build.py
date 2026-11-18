@@ -364,7 +364,7 @@ def layout(title, body, root="./", desc="", canonical="", extra_head="", scripts
         verify += f'<meta name="naver-site-verification" content="{e(CFG["naver_site_verification"])}">'
     if CFG.get("google_site_verification"):
         verify += f'<meta name="google-site-verification" content="{e(CFG["google_site_verification"])}">'
-    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "portone_store_id", "portone_channel_key", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "remote_ship")}
+    public_cfg = {k: CFG.get(k) for k in ("toss_client_key", "portone_store_id", "portone_channel_key", "portone_channel_key_kpn", "worker_url", "free_shipping_over", "shop_name", "catalog_api", "remote_ship")}
     public_cfg["member_rate"] = (CFG.get("member_discount") or {}).get("rate", 0)  # 비율만 공개 (마진 값은 서버에만)
     if os.environ.get("CATALOG_API"):  # 테스트용: 설정을 안 바꾸고 DB 모드로 빌드
         public_cfg["catalog_api"] = CFG["catalog_api"] = True
