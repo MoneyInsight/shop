@@ -536,7 +536,7 @@
         $("#trk-result").textContent = r.message; return load();
       }
       if (act === "kakao-connect") {
-        location.href = "https://kauth.kakao.com/oauth/authorize?" + new URLSearchParams({ client_id: D.kakaoMe.clientId, redirect_uri: kakaoRedirect(), response_type: "code", scope: "talk_message" });
+        location.href = (await call("/admin/kakao-start")).url;
         return;
       }
       if (act === "kakao-test") { alert((await call("/admin/kakao-test")).message); return; }
@@ -594,6 +594,7 @@
     } catch (e) { box.textContent = "서버에 연결하지 못했어요: " + API; }
   })();
   // 카카오 로그인 후 돌아왔을 때: 인증 코드로 연결 마무리
+  { const km = new URLSearchParams(location.search).get("kakao"); if (km) { history.replaceState(null, "", location.pathname); setTimeout(() => alert(km === "ok" ? "카카오톡 알림이 연결됐어요. ‘나와의 채팅’에 테스트 알림을 보냈어요." : km), 300); } }
   const kcode = new URLSearchParams(location.search).get("code");
   if (kcode) history.replaceState(null, "", location.pathname);
   if (PW && API) load().then(async () => {

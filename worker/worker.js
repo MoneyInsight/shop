@@ -1486,6 +1486,21 @@ export async function handle(req, env, path) {
     const base = env.API_URL ? String(env.API_URL).replace(/\/$/, "") : req.url.split("?")[0].slice(0, -path.length);  // API_URL: 서버 공개 주소(선택)
     if (path === "/auth/start") return await auth.start(req, env, base);
     const m = path.match(/^\/auth\/callback\/(naver|kakao|google)$/);
+    // 관리자 카카오톡 알림 연결: 이미 등록된 카카오 로그인 주소로 돌아옴 (주소를 따로 등록하지 않아도 되게)
+    const st0 = new URL(req.url).searchParams.get("state") || "";
+    if (m && m[1] === "kakao" && st0.startsWith("adm_")) {
+      const site = (env.SITE_URL || "https://damgosago.com").replace(/\/$/, "");
+      const ok = await env.SHOP.get("kadm:" + st0);
+      const code = new URL(req.url).searchParams.get("code");
+      if (!ok || !code) return Response.redirect(site + "/admin.html?kakao=" + encodeURIComponent(ok ? "취소했어요." : "시간이 지났어요. 다시 눌러 주세요."), 302);
+      await env.SHOP.delete("kadm:" + st0);
+      let msg = "ok";
+      try {
+        await kakaoToken(env, { grant_type: "authorization_code", redirect_uri: `${base}/auth/callback/kakao`, code });
+        if (!(await kakaoMemo(env, "✅ 담Go사Go 알림이 연결되었습니다. 이제 주문·가격 제안·문의가 들어오면 이 채팅으로 알려드려요."))) msg = "연결은 됐는데 테스트 알림을 못 보냈어요. 동의항목 ‘카카오톡 메시지 전송’을 확인해 주세요.";
+      } catch (e) { msg = "카카오 연결 실패: " + e.message; }
+      return Response.redirect(site + "/admin.html?kakao=" + encodeURIComponent(msg), 302);
+    }
     if (m) return await auth.callback(req, env, base, m[1]);
     return fail("Not found", 404);
   }
@@ -1611,6 +1626,13 @@ export async function handle(req, env, path) {
       if (!READ_ONLY.includes(path)) await adminLog(env, path, ip, "").catch(() => {});
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
+      if (path === "/admin/kakao-start") {  // 카카오톡 알림 연결 시작 주소 (로그인용으로 이미 등록된 돌아올 주소 사용)
+        if (!env.KAKAO_REST_KEY) return fail("서버에 KAKAO_REST_KEY가 아직 없어요.");
+        const st = "adm_" + crypto.randomUUID().replace(/-/g, "");
+        await env.SHOP.put("kadm:" + st, "1", { expirationTtl: 600 });
+        const base = env.API_URL ? String(env.API_URL).replace(/\/$/, "") : new URL(req.url).origin;
+        return json({ url: "https://kauth.kakao.com/oauth/authorize?" + new URLSearchParams({ client_id: env.KAKAO_REST_KEY, redirect_uri: `${base}/auth/callback/kakao`, response_type: "code", scope: "talk_message", state: st }) });
+      }
       if (path === "/admin/kakao-test") return await adminKakaoTest(env);
       if (path === "/admin/push-subscribe") return await pushSubscribe(env, (await req.json()).sub, "admin");
       if (path === "/admin/push-test") { const n = await pushTo(env, "admin", { title: "담Go사Go 관리자", body: "🔔 테스트 알림입니다.", url: siteLink(env, "admin.html") }); return n ? json({ ok: true, message: `${n}대 기기로 보냈어요.` }) : fail("알림을 켠 기기가 없어요."); }
