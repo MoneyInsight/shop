@@ -4,7 +4,7 @@
 생성물: 메인·카테고리·상품상세·검색·장바구니·주문결제·완료/실패·약관·공급사·관리자 페이지,
         products.json, naver_ep.txt(네이버쇼핑 EP 3.0), sitemap.xml, robots.txt
 """
-import os, re, csv, json, html, shutil, datetime, hashlib, urllib.parse
+import os, re, csv, json, html, shutil, datetime, hashlib, urllib.parse, urllib.request, urllib.error
 import notice, seo
 from pathlib import Path
 
@@ -489,6 +489,21 @@ def listing(title, mode, items, root, cat="", count=None):
 
 
 # ---------------- 페이지 ----------------
+_IN_DB = {}
+def in_db(pid):
+    """홈에 거는 상품이 상품 DB(D1)에 실제로 있는지 (아직 DB에 안 올라간 새 상품이면 홈 링크가 '상품 없음'이 됨). 확인 못 하면 있다고 봄"""
+    if pid not in _IN_DB:
+        try:
+            u = CFG["worker_url"].rstrip("/") + "/catalog/item?id=" + urllib.parse.quote(pid)
+            urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "allchaeum-d1"}), timeout=10).read()
+            _IN_DB[pid] = True
+        except urllib.error.HTTPError as ex:
+            _IN_DB[pid] = ex.code != 404
+        except Exception:
+            _IN_DB[pid] = True
+    return _IN_DB[pid]
+
+
 def build_home(ps):
     # 수량 할인 최대 비율 (상품 중 가장 많이 내려가는 값, 내림)
     max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
@@ -499,11 +514,15 @@ def build_home(ps):
     tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{len(by_cat[c["slug"]]):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
     sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
-<div class="grid">{"".join(card(p, "./") for p in by_cat[c["slug"]][:4])}</div></div></section>''' for c in top)
+<div class="grid">{"".join(card(p, "./") for p in [x for x in by_cat[c["slug"]][:12] if in_db(x["id"])][:4])}</div></div></section>''' for c in top)
     def pics(cat, n=4):
         pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
         step = max(1, len(pool) // (n * 7))
-        return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in pool[::step][:n])
+        picked = []
+        for p in pool[::step][:n * 3]:
+            if len(picked) < n and in_db(p["id"]):
+                picked.append(p)
+        return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in picked)
     # 새로 들어온 상품: 한 종류만 몰리지 않게 카테고리마다 돌아가며 1개씩 (사진 있는·품절 아닌 상품, 같은 카테고리 안에서도 비슷한 상품 피하기)
     pools = [[p for p in by_cat[c["slug"]] if p["image"].startswith("http") and not p.get("soldout")] for c in SHOW_CATS]
     pools = sorted([pl for pl in pools if pl], key=len, reverse=True)
@@ -516,7 +535,7 @@ def build_home(ps):
             if rnd * step < len(pl):
                 cand = pl[rnd * step]
                 toks = {t for t in re.split(r"[^0-9A-Za-z가-힣]+", cand["name"]) if len(t) >= 2} | ({"가방"} if re.search(r"가방|백|파우치|클러치|케이스", cand["name"]) else set())
-                if toks & seen_w:  # 이미 고른 상품과 겹치는 단어(가방류 등)가 있으면 건너뜀
+                if toks & seen_w or not in_db(cand["id"]):  # 이미 고른 상품과 겹치는 단어(가방류 등)가 있거나 아직 DB에 없으면 건너뜀
                     continue
                 seen_w |= toks; mixed.append(cand)
         if len(mixed) >= 8:
