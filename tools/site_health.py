@@ -25,7 +25,14 @@ st, home = get(SITE + "/")
 if st != 200:
     bad.append(f"홈 {st}")
 ids = sorted(set(re.findall(r'product/([A-Za-z0-9_-]+)\.html', home)) | set(urllib.parse.unquote(x) for x in re.findall(r'item\.html\?id=([^"&]+)', home)))
+_, rmb = get(API + "/db_removed")  # 사진이 없어 서버가 막 내린 상품: 홈 카드도 사진 오류로 자동으로 숨겨지고 다음 빌드에서 빠짐
+try:
+    removed = set(json.loads(rmb))
+except Exception:
+    removed = set()
 for i in ids:
+    if i in removed:
+        continue
     s, b = get(API + "/catalog/item?id=" + urllib.parse.quote(i))
     if s != 200:
         bad.append(f"홈 상품 {i}: {s}")
