@@ -109,6 +109,8 @@ def build_row(no, v):
         return None, "도매매 배송정보 없음"
     import dm_ship
     ship, box = dm_ship.parse(sup)  # 고정배송비 = 주문당 1번(빈칸), 수량별비례 = N개마다, 차등 = 첫 구간마다
+    if ship and str((deli.get("merge") or {}).get("enable", "")).lower() in ("n", "c"):
+        box = 1  # 묶음배송 불가(조건부 포함) → 1개마다 택배비 (대표님 확인)
     if num((v.get("qty") or {}).get("supplyUnit")) > 1:
         return None, "묶음 판매 단위"
     if ship > MAX_SHIP:

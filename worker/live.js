@@ -89,7 +89,8 @@ export async function check(env, lines, pricing = { card_fee: 0.034, ops_cost_wo
     }
     const sup = v.deli?.supply || {};  // 도매매(위탁) 배송정보만 — 도매꾹 도매 배송정보로 대신하지 않음
     const units = l.qty * (l.pk || 1);
-    const [fee, every] = dmShip(sup, l.ship_fee);
+    let [fee, every] = dmShip(sup, l.ship_fee);
+    if (fee && ["n", "c"].includes(String(v.deli?.merge?.enable || "").toLowerCase())) every = 1;  // 묶음배송 불가 → 1개마다 택배비
     const boxes = fee ? (every ? Math.ceil(units / every) : 1) : 0;
     const cost = (supPrice(v.price?.supply, units) + add) * units + fee * boxes;
     const rev = l.price * l.qty + (l.ship || 0);  // 손님이 낸 상품값 + 배송비

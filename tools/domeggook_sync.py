@@ -137,6 +137,8 @@ def main():
                 fee2, box = num(info.get("ship_fee")), "1"
             if info.get("pay", "선결제") != "선결제":
                 box = "1"  # 착불 등은 1개마다 (손해 방지)
+            if str(info.get("merge", "")).lower() in ("n", "c"):
+                box = "1"  # 묶음배송 불가 → 1개마다 택배비 (대표님 확인)
             if fee2 and fee2 != ship:
                 r["공급 배송비"] = str(fee2); ship = fee2; repriced += 1
             if ship and "묶음배송수량" in r:
