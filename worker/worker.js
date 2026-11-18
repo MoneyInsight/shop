@@ -780,6 +780,34 @@ async function adminKakaoTest(env) {
   return sent ? json({ ok: true, message: "카카오톡 ‘나와의 채팅’으로 보냈어요." }) : fail("보내지 못했어요. 카카오톡 연결을 다시 해 주세요.");
 }
 
+// 포트원 결제 맞추기 (10분마다): 결제는 됐는데 주문이 없는 건 → 맡겨 둔 주문서가 있으면 주문 저장, 없으면 자동 환불
+async function portoneSync(env) {
+  if (!env.PORTONE_API_SECRET) return { checked: 0 };
+  const now = Date.now();
+  const q = { page: { number: 0, size: 100 }, filter: { from: new Date(now - 3 * 86400e3).toISOString(), until: new Date(now).toISOString(), status: ["PAID"] } };
+  const r = await fetch("https://api.portone.io/payments?requestBody=" + encodeURIComponent(JSON.stringify(q)), { headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.message || r.status };
+  const out = { checked: 0, saved: [], refunded: [] };
+  for (const p of d.items || []) {
+    if (p.status !== "PAID" || !p.id) continue;
+    out.checked++;
+    const at = Date.parse(p.paidAt || p.requestedAt || p.updatedAt || 0);
+    if (at && now - at < 5 * 60e3) continue;  // 방금 결제는 손님 화면이 처리 중일 수 있어 다음 차례에
+    if (await env.SHOP.get("order:" + p.id)) continue;
+    const pre = await env.SHOP.get("po_pre:" + p.id, "json").catch(() => null);
+    if (pre && typeof pre === "object" && Array.isArray(pre.items)) {
+      const res = await confirm(new Request("https://x/confirm", { method: "POST", body: JSON.stringify({ pg: "portone", paymentId: p.id, orderId: p.id }) }), env);
+      (res.status === 200 ? out.saved : out.refunded).push(p.id);  // 실패하면 confirm이 자동 환불
+    } else {
+      const c = await portoneCancel(env, p.id, "주문 정보 없음 — 자동 환불");
+      out.refunded.push(p.id + (c.ok ? "" : " (실패: " + c.message + ")"));
+      await notify(env, `↩️ 포트원 결제 자동 환불 ${p.id} ${p.amount?.total || ""}원 — 주문 정보 없음${c.ok ? "" : " · 취소 실패, 직접 확인 필요"}`).catch(() => {});
+    }
+  }
+  return out;
+}
+
 async function portoneCancel(env, paymentId, reason, amount) {
   const r = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}/cancel`, {
     method: "POST",
@@ -1529,6 +1557,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/answer") return await adminAnswer(req, env);
       if (path === "/admin/delete") return await adminDelete(req, env);
       if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
+      if (path === "/admin/portone-sync") return json(await portoneSync(env));
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
@@ -1567,4 +1596,4 @@ function retryDB(db) {
   const wrap = (st) => ({ bind: (...a) => wrap(st.bind(...a)), first: (...a) => again(() => st.first(...a)), all: () => again(() => st.all()), run: () => again(() => st.run()), raw: (...a) => again(() => st.raw(...a)), __st: st });
   return { __retry: true, prepare: (sql) => wrap(db.prepare(sql)), batch: (list) => again(() => db.batch(list.map((x) => x.__st || x))), exec: (q) => db.exec(q), dump: () => db.dump() };
 }
-export default { fetch: (req, env) => handle(req, env.DB ? { ...env, DB: retryDB(env.DB) } : env), scheduled: (ev, env, ctx) => ctx.waitUntil(trackSweep(env)) };  // 정기 실행: 배송 단계 확인
+export default { fetch: (req, env) => handle(req, env.DB ? { ...env, DB: retryDB(env.DB) } : env), scheduled: (ev, env, ctx) => ctx.waitUntil(ev.cron === "*/10 * * * *" ? portoneSync(env) : trackSweep(env)) };  // 정기 실행: 배송 단계 확인

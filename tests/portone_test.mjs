@@ -4,11 +4,12 @@ const mem = new Map();
 const SHOP = { get: async (k, t) => (mem.has(k) ? (t === "json" ? JSON.parse(mem.get(k)) : mem.get(k)) : null), put: async (k, v) => void mem.set(k, v), delete: async (k) => void mem.delete(k),
   list: async ({ prefix }) => ({ keys: [...mem.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) };
 const products = [{ id: "B1", name: "단품", price: 5000, shipping_fee: 0, options: [] }];
-let pay = {}; const cancels = [];
+let pay = {}, list = []; const cancels = [];
 globalThis.fetch = async (url, o) => {
   const u = String(url);
   if (u.endsWith("/products.json")) return new Response(JSON.stringify(products));
   if (u.includes("api.portone.io") && u.endsWith("/cancel")) { cancels.push(u); return new Response("{}"); }
+  if (u.includes("api.portone.io/payments?")) return new Response(JSON.stringify({ items: list }));
   if (u.includes("api.portone.io/payments/")) return new Response(JSON.stringify(pay), { status: pay.status ? 200 : 404 });
   return new Response("{}");
 };
@@ -43,4 +44,11 @@ r = await call("/confirm", { pg: "portone", paymentId: "M1", orderId: "M1" }); o
 await call("/confirm", { ...base, dry: true, orderId: "W1", amount: 10000 });
 r = await call("/portone/webhook", { type: "Transaction.Paid", data: { paymentId: "W1" } }); ok("웹훅으로 주문 저장", r.s === 200 && mem.has("order:W1"), r);
 r = await call("/portone/webhook", { type: "Transaction.Paid", data: { paymentId: "W1" } }); ok("웹훅 중복 무시", r.s === 200, r);
+// 10분 맞추기: 주문서 없는 결제는 환불, 있는 결제는 주문 저장
+await call("/confirm", { ...base, dry: true, orderId: "S1", amount: 10000 });
+const old = new Date(Date.now() - 600e3).toISOString();
+list = [{ id: "S1", status: "PAID", paidAt: old }, { id: "ORPHAN", status: "PAID", paidAt: old, amount: { total: 4130 } }, { id: "W1", status: "PAID", paidAt: old }, { id: "NEW", status: "PAID", paidAt: new Date().toISOString() }];
+const c0 = cancels.length;
+r = await call("/admin/portone-sync", {}, true);
+ok("맞추기: 저장·환불", r.d.saved?.includes("S1") && r.d.refunded?.length === 1 && cancels.slice(c0).some((u) => u.includes("ORPHAN")) && !cancels.slice(c0).some((u) => u.includes("NEW") || u.includes("W1")), { r, c: cancels.slice(c0) });
 console.log(`portone: ${pass} pass, ${failn} fail`); if (failn) process.exit(1);
