@@ -741,7 +741,7 @@ def build_shop_pages():
 <label class="check"><input type="checkbox" class="agree-req"><span>[필수] 개인정보 수집·이용에 동의합니다. <a href="privacy.html" target="_blank">보기</a></span></label>
 <label class="check"><input type="checkbox" class="agree-req">[필수] 배송을 위한 개인정보 제3자(택배사·공급사) 제공에 동의합니다.</label></div>
 <button class="btn btn-dark" id="pay-btn" style="margin-top:14px">결제하기</button></div></div></div>''',
-           scripts=('<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>' if use_po else '<script src="https://js.tosspayments.com/v2/standard"></script>') + '<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
+           scripts=('<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>' if use_po else '<script src="https://js.tosspayments.com/v2/standard"></script>') + '<script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>')
     simple("success.html", "주문 완료", '<div class="card done-box" id="success">결제를 확인하고 있습니다.</div>', heading=False)
     simple("fail.html", "결제 실패", '<div class="card done-box" id="fail"><h2>결제가 완료되지 않았습니다</h2><p id="fail-msg"></p><a class="btn btn-dark sm" style="max-width:220px;margin:24px auto 0" href="cart.html">장바구니로</a></div>', heading=False)
     simple("orders.html", "주문·배송 조회", '''<div class="narrow"><div class="card form"><p class="muted">주문번호와 주문하실 때 입력한 연락처로 조회하실 수 있습니다. 취소·반품·교환도 여기에서 신청합니다.</p>
