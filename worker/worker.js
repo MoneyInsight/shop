@@ -303,7 +303,9 @@ async function confirmCore(body, env) {
   let pay;
   if (pg === "portone") {
     if (!env.PORTONE_API_SECRET) return fail("결제 서버 설정이 아직 안 됐어요.", 500);
-    const r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId) + poStore(env), { headers: { Authorization: "PortOne " + String(env.PORTONE_API_SECRET).trim() } });
+    const H = { headers: { Authorization: "PortOne " + String(env.PORTONE_API_SECRET).trim() } };
+    let r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId) + poStore(env), H);
+    if (r.status === 401 || r.status === 403) r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId), H);  // 상점 지정 없이 한 번 더
     const p = await r.json().catch(() => ({}));
     if (!r.ok) return fail(`결제 정보를 확인하지 못했어요. (${p.type || r.status}${p.message ? ": " + p.message : ""})`, 502);
     if (p.status !== "PAID") return fail("결제가 완료되지 않았어요.");
