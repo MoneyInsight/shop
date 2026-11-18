@@ -165,6 +165,11 @@ def load_products():
         print(f"오너클랜 상품 {before - len(out)}개 정적 사이트에서 제외")
     if not os.environ.get("WITH_WAREHOUSE") and CFG.get("catalog_api") and (ROOT / "data/db_skip.json").exists():  # 상품 DB에 없는 상품은 사이트에서도 뺌 (없는 상품 링크 방지)
         skip = set(json.loads((ROOT / "data/db_skip.json").read_text(encoding="utf-8")))
+        try:  # 서버가 방금 내린 상품(사진 깨짐 신고 등)도 바로 빼기 — 홈에 없는 상품 링크가 생기지 않게
+            import urllib.request
+            skip |= set(json.loads(urllib.request.urlopen(urllib.request.Request(CFG["worker_url"].rstrip("/") + "/db_removed", headers={"User-Agent": "allchaeum-d1"}), timeout=20).read().decode()))
+        except Exception as ex:
+            print("서버에서 내린 상품 목록을 못 받음(건너뜀):", ex)
         before = len(out); out = [p for p in out if str(p["id"]) not in skip]
         if before - len(out):
             print(f"상품 DB에 없는 상품 {before - len(out)}개 정적 사이트에서 제외")
