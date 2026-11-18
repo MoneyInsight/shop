@@ -303,9 +303,9 @@ async function confirmCore(body, env) {
   let pay;
   if (pg === "portone") {
     if (!env.PORTONE_API_SECRET) return fail("결제 서버 설정이 아직 안 됐어요.", 500);
-    const r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId), { headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET } });
+    const r = await fetch("https://api.portone.io/payments/" + encodeURIComponent(paymentId) + poStore(env), { headers: { Authorization: "PortOne " + String(env.PORTONE_API_SECRET).trim() } });
     const p = await r.json().catch(() => ({}));
-    if (!r.ok) return fail(p.message || "결제 정보를 확인하지 못했어요.", 502);
+    if (!r.ok) return fail(`결제 정보를 확인하지 못했어요. (${p.type || r.status}${p.message ? ": " + p.message : ""})`, 502);
     if (p.status !== "PAID") return fail("결제가 완료되지 않았어요.");
     if (Number(p.amount?.total) !== Number(amount)) return fail("결제 금액이 주문 금액과 달라요.");
     if (env.PORTONE_STORE_ID && p.storeId && p.storeId !== env.PORTONE_STORE_ID) return fail("잘못된 결제예요.");
@@ -781,11 +781,12 @@ async function adminKakaoTest(env) {
 }
 
 // 포트원 결제 맞추기 (10분마다): 결제는 됐는데 주문이 없는 건 → 맡겨 둔 주문서가 있으면 주문 저장, 없으면 자동 환불
+const poStore = (env, more) => { const id = env.PORTONE_STORE_ID || "store-cb55780c-ba44-43ef-afa5-98e8ac79216b"; return (more ? "&" : "?") + "storeId=" + encodeURIComponent(id); };
 async function portoneSync(env) {
   if (!env.PORTONE_API_SECRET) return { checked: 0 };
   const now = Date.now();
   const q = { page: { number: 0, size: 100 }, filter: { from: new Date(now - 3 * 86400e3).toISOString(), until: new Date(now).toISOString(), status: ["PAID"] } };
-  const r = await fetch("https://api.portone.io/payments?requestBody=" + encodeURIComponent(JSON.stringify(q)), { headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET } });
+  const r = await fetch("https://api.portone.io/payments?requestBody=" + encodeURIComponent(JSON.stringify(q)) + poStore(env, true), { headers: { Authorization: "PortOne " + String(env.PORTONE_API_SECRET).trim() } });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) return { error: d.message || r.status };
   const out = { checked: 0, saved: [], refunded: [] };
@@ -811,11 +812,11 @@ async function portoneSync(env) {
 async function portoneCancel(env, paymentId, reason, amount) {
   const r = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}/cancel`, {
     method: "POST",
-    headers: { Authorization: "PortOne " + env.PORTONE_API_SECRET, "Content-Type": "application/json" },
-    body: JSON.stringify({ reason: reason || "고객 요청", ...(amount ? { amount } : {}), ...(env.PORTONE_STORE_ID ? { storeId: env.PORTONE_STORE_ID } : {}) }),
+    headers: { Authorization: "PortOne " + String(env.PORTONE_API_SECRET).trim(), "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: reason || "고객 요청", ...(amount ? { amount } : {}), storeId: env.PORTONE_STORE_ID || "store-cb55780c-ba44-43ef-afa5-98e8ac79216b" }),
   });
   const d = await r.json().catch(() => ({}));
-  return r.ok ? { ok: true } : { ok: false, message: d.message || "결제 취소 실패" };
+  return r.ok ? { ok: true } : { ok: false, message: (d.type ? d.type + " " : "") + (d.message || "결제 취소 실패") };
 }
 // 주문의 결제사에 맞게 취소 (예전 주문은 토스)
 const payCancel = (env, o, reason, amount) => o.pg === "portone" ? portoneCancel(env, o.paymentKey, reason, amount) : tossCancel(env, o.paymentKey, reason, amount);
