@@ -24,7 +24,7 @@ for f in pages:
 # 2) 페이지별 꼭 있어야 하는 것
 NEED = {
     "admin.html": ["admin.js", 'id="admin-body"'],
-    "checkout.html": ["js.tosspayments.com", "postcode.v2.js"],
+    "checkout.html": ["postcode.v2.js"],
     "index.html": ["mb-track", "SHOP_CFG"],
     "cart.html": ["SHOP_CFG"],
     "orders.html": ["SHOP_CFG"],
@@ -39,6 +39,11 @@ for page, keys in NEED.items():
     for k in keys:
         if k not in t:
             err(f"{page}: '{k}' 없음")
+
+# 결제 모듈: 포트원 또는 토스 중 하나는 꼭 있어야 함
+_co = SITE / "checkout.html"
+if _co.exists() and not any(k in _co.read_text(encoding="utf-8") for k in ("cdn.portone.io/v2/browser-sdk.js", "js.tosspayments.com")):
+    err("checkout.html: 결제 모듈(포트원·토스) 없음")
 
 # 3) 공용 파일
 ch = SITE / "chrome.js"
