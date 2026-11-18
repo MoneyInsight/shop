@@ -1,16 +1,16 @@
 {
- "at": "2026-11-18 01:47 UTC",
+ "at": "2026-11-18 02:37 UTC",
  "db": "allchaeum",
- "in_db": 582181,
- "site_and_warehouse_total": 1477552,
- "uploaded_today": 2377,
- "left": 895624,
- "files_ok": 1,
+ "in_db": 791419,
+ "site_and_warehouse_total": 1478053,
+ "uploaded_today": 209252,
+ "left": 686638,
+ "files_ok": 93,
  "files_planned": 399,
- "rows_written_24h_before": 6360718,
- "rows_written_24h_after": 6373715,
- "writes_per_product": null,
+ "rows_written_24h_before": 6373715,
+ "rows_written_24h_after": 7472193,
+ "writes_per_product": 5.2,
  "unsafe_skipped": 0,
- "warehouse_files": 46,
- "stopped": "0002.sql 실패: \u001b[1m⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\u001b[0m\n\n\n\u001b[31m✘ \u001b[41;31m[\u001b[41;97mERROR\u001b[41;31m]\u001b[0m \u001b[1mstatement too long: SQLITE_TOOBIG\u001b[0m\n\n\n🪵  Logs were written to \"/home/runner/.config/.wrangler/logs/wrangler-2026-11-18_01-46-03_471.log\"\n"
+ "warehouse_files": 47,
+ "stopped": "최근 24시간 쓰기 2,993,112.0줄 + 다음 파일 예상 11,811.478504387056줄 > 한도 3,000,000"
 }
