@@ -864,7 +864,23 @@
       $("#order-items").insertAdjacentHTML("afterend", `<p class="note" style="margin-top:12px">가격 제안이 수락된 주문이에요. 제안을 보낸 연락처로 주문해 주셔야 제안 가격이 적용돼요.</p>`);
     }
     $("#memo-sel").onchange = (e) => { const v = e.target.value; $("#memo").style.display = v === "직접 입력" ? "" : "none"; $("#memo").value = v === "직접 입력" ? "" : v; };
-    $("#find-addr").onclick = () => new daum.Postcode({ oncomplete: (d) => { $("#zip").value = d.zonecode; $("#addr1").value = d.roadAddress || d.jibunAddress; $("#addr2").focus(); paint(); } }).open();
+    // 주소 찾기: 새 창(팝업 차단에 막힘) 대신 화면 안에 띄움
+    $("#find-addr").onclick = () => {
+      if (typeof daum === "undefined" || !daum.Postcode) { alert("주소 검색을 불러오지 못했어요. 새로고침 후 다시 눌러 주세요."); return; }
+      let lay = $("#addr-layer");
+      if (!lay) {
+        lay = document.createElement("div"); lay.id = "addr-layer";
+        lay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center";
+        lay.innerHTML = `<div style="background:#fff;width:min(500px,94vw);height:min(560px,86vh);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee"><b>주소 찾기</b><button type="button" id="addr-close" style="border:0;background:none;font-size:22px;cursor:pointer" aria-label="닫기">×</button></div>
+          <div id="addr-embed" style="flex:1"></div></div>`;
+        document.body.appendChild(lay);
+        lay.addEventListener("click", (e) => { if (e.target === lay || e.target.id === "addr-close") lay.style.display = "none"; });
+      }
+      lay.style.display = "flex"; $("#addr-embed").innerHTML = "";
+      new daum.Postcode({ width: "100%", height: "100%",
+        oncomplete: (d) => { $("#zip").value = d.zonecode; $("#addr1").value = d.roadAddress || d.jibunAddress; lay.style.display = "none"; $("#addr2").focus(); paint(); } }).embed($("#addr-embed"));
+    };
     ["zip", "addr1", "addr2"].forEach((k) => $("#" + k).addEventListener("change", () => paint()));
     // 약관 전체 동의
     const reqs = $$(".agree-req");
