@@ -14,9 +14,9 @@ ASSET_V = hashlib.md5(b"".join((ROOT / "static" / f).read_bytes() for f in ("sty
 OUT = ROOT / "site"
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 _PO = bool(CFG.get("portone_store_id") and CFG.get("portone_channel_key"))
-PAY_LINE = "결제는 KG이니시스(포트원)를 통해 안전하게 처리됩니다." if _PO else "고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다."
-PAY_SHORT = "KG이니시스 안전 결제" if _PO else "토스페이먼츠 구매안전 서비스"
-PAY_FAQ = ("신용·체크카드와 간편결제(카카오페이·네이버페이·토스페이·페이코 등)를 이용하실 수 있습니다. 결제는 KG이니시스(포트원)를 통해 안전하게 처리됩니다." if _PO
+PAY_LINE = "결제는 포트원(PortOne) 전자결제대행 서비스를 통해 안전하게 처리됩니다." if _PO else "고객님의 안전한 거래를 위해 토스페이먼츠 구매안전(에스크로) 서비스를 이용하실 수 있습니다."
+PAY_SHORT = "PG 안전 결제" if _PO else "토스페이먼츠 구매안전 서비스"
+PAY_FAQ = ("신용·체크카드와 간편결제(카카오페이·네이버페이·토스페이·페이코 등)를 이용하실 수 있습니다. 결제는 포트원(PortOne) 전자결제대행 서비스를 통해 안전하게 처리됩니다." if _PO
            else "신용·체크카드, 계좌이체, 가상계좌, 간편결제(토스페이 등)를 이용하실 수 있습니다. 결제는 토스페이먼츠를 통해 안전하게 처리됩니다.")
 BIZ = CFG["business"]
 BASE = CFG["base_url"].rstrip("/")
