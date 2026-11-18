@@ -17,7 +17,7 @@ D = ROOT / "dist/d1"
 WD = ROOT / "dist/d1cfg"  # wrangler 설정 (DB 이름·id만)
 STATUS = ROOT / "data/d1_status.json"
 LOG = ROOT / "data/d1_log.json"  # 최근 올린 기록 [시각, 상품 수] — 쓰기 집계가 늦게 잡혀도 한도를 넘지 않게 직접 셈
-PER = float(os.environ.get("D1_PER", "4.5"))  # 상품 1개당 쓰기 줄 수 (실측 3.3~4.1, 여유 포함)
+PER = float(os.environ.get("D1_PER", "5.5"))  # 상품 1개당 쓰기 줄 수 (실측 5.2 — 2026-11-18, 여유 포함)
 
 
 def wr(*args, check=True, timeout=900):
