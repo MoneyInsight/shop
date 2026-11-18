@@ -934,7 +934,7 @@
       if (usePO) {  // 결제창 열기 전 서버에서 금액·재고·적자 여부를 미리 확인 (돈 안 빠짐)
         const b = $("#pay-btn"); b.disabled = true;
         try {
-          const dr = await api("/confirm", { pg: "portone", dry: true, orderId, amount: sums.total, items: cart, customer: order.customer, coupon, token: token() || undefined });
+          const dr = await api("/confirm", { pg: "portone", dry: true, orderId, amount: sums.total, items: cart, customer: order.customer, coupon, token: token() || undefined, src: visitSrc, fromCart: !now });
           if (!dr.ok) { alert(dr.d.message || "주문을 확인하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
           const res = await PortOne.requestPayment({
             storeId: CFG.portone_store_id, channelKey: CFG.portone_channel_key,
@@ -982,13 +982,21 @@
     if (po && q.get("code")) {  // 모바일 결제창에서 취소·실패하고 돌아온 경우
       box.innerHTML = `<h2>결제가 완료되지 않았어요</h2><p>${esc(q.get("message") || "결제가 취소되었어요.")}</p><a class="btn btn-dark sm" style="margin:22px auto 0;max-width:220px" href="${ROOT}cart.html">장바구니로</a>`; return;
     }
-    const order = store.get("pending_order", null);
+    let order = store.get("pending_order", null);
+    if (po && paymentId && (!order || order.orderId !== paymentId)) {  // 다른 브라우저로 돌아온 경우: 서버에 맡긴 주문서로 처리
+      box.innerHTML = `<h2>결제를 확인하고 있어요…</h2>`;
+      const r = await api("/confirm", { pg: "portone", paymentId, orderId: paymentId });
+      if (!r.ok) { box.innerHTML = `<h2>결제가 완료되지 않았어요</h2><p>${esc(r.d.message || "")}</p><p class="muted">결제된 금액이 있다면 자동으로 취소돼요. (주문번호 ${esc(paymentId)})</p><a class="btn btn-dark sm" style="margin:22px auto 0;max-width:220px" href="${ROOT}cart.html">장바구니로</a>`; return; }
+      order = { orderId: paymentId, amount: r.d.amount, orderName: r.d.orderName, fromCart: r.d.fromCart, items: (r.d.items || []).map((id) => ({ id })), customer: { name: r.d.name, phone: r.d.phone, addr: r.d.addr } };
+      store.set("pending_order", order); order.__done = true;
+    }
     const paymentKey = q.get("paymentKey"), orderId = po ? paymentId : q.get("orderId"), amount = po ? order?.amount : Number(q.get("amount"));
     if (!order || order.orderId !== orderId || order.amount !== amount) {
       box.innerHTML = `<h2>주문 정보를 확인할 수 없어요</h2><p>고객센터로 문의해 주세요. (주문번호 ${esc(orderId || "-")})</p>`; return;
     }
     let ok = false, msg = "";
-    if (API) {
+    if (order.__done) ok = true;
+    else if (API) {
       const r = await api("/confirm", { ...(po ? { pg: "portone", paymentId } : { paymentKey }), orderId, amount, items: order.items, customer: order.customer, coupon: order.coupon, token: token() || undefined, src: visitSrc });
       ok = r.ok; msg = ok ? "" : r.d.message || "결제 승인에 실패했어요.";
     } else { ok = true; msg = "테스트 모드: 결제 승인 서버가 연결되지 않아 실제 결제는 이루어지지 않았어요."; }

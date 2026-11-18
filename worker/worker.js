@@ -210,6 +210,11 @@ async function confirm(req, env) {
 }
 
 async function confirmCore(body, env) {
+  // 포트원: 휴대폰에서 네이버·카카오 앱을 거쳐 다른 브라우저로 돌아오면 주문서(로컬 저장)가 없음 → 결제창 열기 전 서버에 맡겨 둔 주문서로 처리
+  if (body.pg === "portone" && !body.dry && body.paymentId && !Array.isArray(body.items)) {
+    const pre = await env.SHOP.get("po_pre:" + body.paymentId, "json").catch(() => null);
+    if (pre && typeof pre === "object") body = { ...pre, ...body, items: pre.items, customer: pre.customer, coupon: pre.coupon, amount: pre.amount, token: pre.token, src: pre.src, fromCart: pre.fromCart, orderId: body.paymentId };
+  }
   const { orderId, amount, items, customer, coupon, token, src, pg, paymentId, dry } = body;
   let { paymentKey } = body;
   if (pg === "portone" && !dry && paymentId !== orderId) return fail("잘못된 요청이에요.");
@@ -294,7 +299,7 @@ async function confirmCore(body, env) {
     }
   }
 
-  if (dry) { await env.SHOP.put("po_pre:" + orderId, String(amount), { expirationTtl: 86400 }); return json({ ok: true }); }  // 결제창 열기 전 사전 확인 (돈 안 빠짐)
+  if (dry) { await env.SHOP.put("po_pre:" + orderId, JSON.stringify({ orderId, amount: Number(amount), items, customer, coupon, token, src, fromCart: !!body.fromCart }), { expirationTtl: 3 * 86400 }); return json({ ok: true }); }  // 결제창 열기 전 사전 확인 (돈 안 빠짐)
   let pay;
   if (pg === "portone") {
     if (!env.PORTONE_API_SECRET) return fail("결제 서버 설정이 아직 안 됐어요.", 500);
@@ -333,7 +338,7 @@ async function confirmCore(body, env) {
   await alertCustomer(env, "ORDER_DONE", { phone: customer?.phone, email: customer?.email }, { 고객명: customer?.name, 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 링크: siteLink(env, "orders.html?id=" + orderId) });
   await kakao(env, "ADMIN_ORDER", env.ADMIN_PHONE, { 주문번호: orderId, 상품명: itemName, 결제금액: won0(amount), 고객명: customer?.name, 링크: siteLink(env, "admin.html") });
   await notify(env, `🛒 새 주문 ${Number(amount).toLocaleString()}원\n${orderId}\n${lines.map((l) => `- ${l.name.slice(0, 30)} × ${l.qty}`).join("\n")}\n받는 분 ${customer?.name || ""}`);
-  return json({ ok: true, orderId });
+  return json({ ok: true, orderId, amount: Number(amount), name: customer?.name || "", addr: customer?.addr || "", phone: customer?.phone || "", orderName: itemName, items: items.map((x) => x.id), fromCart: !!body.fromCart });
 }
 
 // ---------- 공급사 ----------
@@ -1393,6 +1398,14 @@ export async function handle(req, env, path) {
     if (RL[path] && (await overLimit(env, "rl2:" + path + ":" + ipOf(req), RL[path], 3600)))
       return fail("짧은 시간에 너무 많이 시도했어요. 잠시 후 다시 시도해 주세요.", 429);
     if (path === "/confirm") return await confirm(req, env);
+    if (path === "/portone/webhook") {  // 포트원 결제 알림: 손님이 결제 후 사이트로 안 돌아와도 주문 저장(결제 상태는 포트원 API로 다시 확인)
+      const b = await req.json().catch(() => ({}));
+      const pid = b?.data?.paymentId || b?.payment_id || b?.paymentId;
+      if (pid && /Paid|paid/.test(String(b.type || b.status || "Paid")) && !(await env.SHOP.get("order:" + pid)) && (await env.SHOP.get("po_pre:" + pid))) {
+        await confirm(new Request("https://x/confirm", { method: "POST", body: JSON.stringify({ pg: "portone", paymentId: pid, orderId: pid }) }), env);
+      }
+      return json({ ok: true });
+    }
     if (path === "/stock/check") {  // 결제창 열기 전 재고 확인 (손님 화면용)
       const d = await req.json().catch(() => ({}));
       if (d.phone && (await isBlocked(env, d.phone))) return fail("주문이 제한된 연락처예요. 고객센터로 문의해 주세요.");

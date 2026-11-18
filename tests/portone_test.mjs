@@ -36,4 +36,11 @@ r = await call("/confirm", { ...base, orderId: "P5", paymentId: "OTHER", amount:
 const n2 = cancels.length;
 r = await call("/confirm", { ...base, items: [{ id: "ZZ", qty: 1 }], orderId: "X9", paymentId: "X9", amount: 10000 }); ok("사전 확인 없는 결제는 자동 취소 안 함", r.s === 400 && cancels.length === n2, cancels);
 r = await call("/order/cancel", { orderId: "P4", phone: cust.phone, reason: "변심" }); ok("고객 취소 → 포트원 환불", r.s === 200 && cancels.some((u) => u.includes("/payments/P4/cancel")), { r, cancels });
+// 휴대폰 앱 결제 후 다른 브라우저로 돌아온 경우: 서버에 맡긴 주문서로 처리
+await call("/confirm", { ...base, dry: true, orderId: "M1", amount: 10000 });
+pay = { status: "PAID", amount: { total: 10000 }, method: { type: "PaymentMethodEasyPay", provider: "NAVERPAY" } };
+r = await call("/confirm", { pg: "portone", paymentId: "M1", orderId: "M1" }); ok("주문서 없이 결제번호만으로 승인", r.s === 200 && r.d.amount === 10000 && r.d.name === "홍길동", r);
+await call("/confirm", { ...base, dry: true, orderId: "W1", amount: 10000 });
+r = await call("/portone/webhook", { type: "Transaction.Paid", data: { paymentId: "W1" } }); ok("웹훅으로 주문 저장", r.s === 200 && mem.has("order:W1"), r);
+r = await call("/portone/webhook", { type: "Transaction.Paid", data: { paymentId: "W1" } }); ok("웹훅 중복 무시", r.s === 200, r);
 console.log(`portone: ${pass} pass, ${failn} fail`); if (failn) process.exit(1);
