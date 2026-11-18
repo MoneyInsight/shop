@@ -293,7 +293,8 @@ async function confirmCore(body, env) {
     for (const l of lines) supCost += ((Number(l.cost) || 0) * (l.pk || 1) + (l.opt_add || 0)) * l.qty;  // 옵션 추가금은 전부 원가로 (보수적)
     const supShip = Object.values(shipBy).reduce((a, b) => a + b, 0) + remote.fee;  // 도매처에 내는 배송비 = 손님에게 받는 배송비 규칙과 같음
     const net = paid - paid * pr.card_fee - Math.max(0, paid - supCost - supShip) / 11 - supCost - supShip - pr.ops_cost_won;
-    if (!(supCost > 0) || net < 0) {
+    const fakePrice = lines.some((l) => (Number(l.cost) || 0) < 1000 && !(Number(shipProd[l.id]?.shipping_fee) || 0));  // 1천원 미만 무료배송 = 도매처 표시용 가격
+    if (!(supCost > 0) || net < 0 || fakePrice) {
       await notify(env, `⚠️ 적자 주문 차단: ${lines.map((l) => l.name + "×" + l.qty).join(", ")} · 결제 ${paid}원 · 원가 ${supCost}원 · 배송비 ${supShip}원 · 순이익 ${Math.round(net)}원`).catch(() => {});
       return fail("지금은 이 상품을 주문할 수 없어요. 가격을 확인한 뒤 다시 열어 드릴게요.");
     }

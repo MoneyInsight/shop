@@ -75,6 +75,13 @@ def products():
             c = x.get("상품코드") or ""
             wh_ids.add(c if c.startswith(("DM", "CH", "W", "OWN")) or not c.isdigit() else "CH" + c)
 
+    INQ = re.compile(r"가격\s*(은|는)?\s*(전화|문의|협의)|전화\s*(로|로만)?\s*(요청|문의|상담)\s*(주시|바랍|부탁)")
+    def placeholder_price(p):  # 도매처 표시가가 실제 판매가가 아닌 상품 (주문 받으면 손해)
+        if p["cost"] and p["cost"] < 1000 and not p["shipping_fee"]:
+            return True  # 1천원 미만인데 무료배송 → 표시용 가격
+        txt = re.sub(r"<[^>]+>", " ", p.get("detail_html") or "")[:6000] + " " + p["name"]
+        return bool(INQ.search(txt))
+
     def tier(pid):  # 사이트 '추천순': 자체상품 → 오너클랜(반품 적고 품질 좋음) → 온채널 → 도매매(반품 많음) — 같은 단계 안에서는 사이트에서 고른 순서·인기순
         if pid.startswith("OWN"):
             return 0
@@ -97,8 +104,8 @@ def products():
              "shipping_fee": int(r.get("shipping_fee") or 0), "sn": int(r.get("sn") or 0), "mq": int(r.get("mq") or 1), "pk": int(r.get("pk") or 1)}
         if r.get("winter"):
             p["w"] = 1  # 겨울용품 카테고리에도 보임 (겨울 아닌 상품은 키를 안 넣어 지문이 그대로 → 다시 올리지 않음)
-        if not safe(p, P):
-            unsafe += 1; continue  # 손해 가능 상품은 DB에 올리지 않음
+        if not safe(p, P) or placeholder_price(p):
+            unsafe += 1; continue  # 손해 가능 상품·'가격은 문의' 같은 가짜 가격 상품은 DB에 올리지 않음 (이미 있으면 지움)
         body = json.dumps({**{k: v for k, v in p.items() if k != "rank"}, "tier": p["rank"] // 10_000_000}, ensure_ascii=False, sort_keys=True)  # 정렬 단계가 바뀌면 다시 올림
         tt = " ".join(terms(p["name"] + " " + p["brand"]))
         p["terms"] = tt

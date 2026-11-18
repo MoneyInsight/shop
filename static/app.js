@@ -546,8 +546,8 @@
       const ship = (n) => fee * (sn > 1 ? Math.ceil(n / sn) : 1);
       qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; }
       qd.innerHTML = `<p><b>묶음으로 사면 배송비 부담이 줄어요</b> <span class="muted">배송비 ${won(fee)}${sn > 1 ? ` (${sn}개마다)` : "는 한 번만"} · 수량을 골라 보세요</span></p><div class="qty-cells">` +
-        [1, 10, 20, 50].map((n) => { const per = Math.round((unit(n) * n + ship(n)) / n), one = unit(1) + ship(1), off = Math.round((1 - per / one) * 100);
-          return `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(per)}</span><em>${n > 1 && off > 0 ? off + "% 할인" : "기본"}</em><small class="qc-sum">합계 ${won(unit(n) * n + ship(n))}</small></button>`; }).join("") + `</div>`;
+        [1, 10, 20, 50].map((n) => { const per = unit(n), off = Math.round((1 - per / unit(1)) * 100);  // 배송비 빼고 상품값만
+          return `<button type="button" data-q="${n}"><b>${n}개</b><span>개당 ${won(per)}</span><em>${n > 1 && off > 0 ? off + "% 할인" : "기본"}</em><small class="qc-sum">합계 ${won(per * n)}</small></button>`; }).join("") + `</div>`;
     } else if (qd && (p.qt || []).length >= 3 && !p.soldout && p.qt[2] <= p.qt[0] * 0.97) {
       qd.hidden = false; { const ob = $(".offer-box"); if (ob) ob.hidden = true; };
       qd.innerHTML = `<p><b>많이 살수록 개당 가격이 내려가요</b> <span class="muted">2개부터 자동 할인 · 옵션이 달라도 같은 상품이면 합산돼요</span></p><div class="qty-cells">` +
@@ -612,8 +612,9 @@
       inp.value = v;
       const o = optIdx(), unit = unitAt(v) + (o != null ? adds[o] : 0);
       const shipW = shipP.shipping_fee ? shipFor(shipP, v * pkN) : 0;  // 묶음 수량 칸의 '합계'와 같은 숫자 (배송비 포함 결제 금액)
-      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v + shipW) +
-        (shipW ? `<small class="per ship">상품 ${won(unit * v)} + 배송비 ${won(shipW)}</small>` : `<small class="per ship free">무료배송</small>`);
+      // 총 상품 금액 = 고른 수량의 상품값만 (배송비는 따로 표시, 결제 때 더해짐)
+      $("#d-total").innerHTML = (qt.length && v > 1 && unitAt(v) < base ? `<small class="per">개당 ${won(unit)} · ${won((unitAt(1) - unitAt(v)) * v)} 할인</small>` : "") + won(unit * v) +
+        (shipW ? `<small class="per ship">배송비 ${won(shipW)} 별도</small>` : `<small class="per ship free">무료배송</small>`);
       $$("#qty-deal [data-q]").forEach((b) => b.classList.toggle("on", +b.dataset.q === v || (+b.dataset.q === 5 && v >= 5) || (+b.dataset.q === 3 && (v === 4 || (v >= 5 && !$("#qty-deal [data-q='5']"))))));
     };
     $$("#qty-deal [data-q]").forEach((b) => (b.onclick = () => { inp.value = b.dataset.q; sync(); }));
