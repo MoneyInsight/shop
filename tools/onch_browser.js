@@ -12,13 +12,41 @@ const ONCH_GROUPS = {
 };
 // 대량 수집(상품 창고 → 상품 DB): 실시간 판매순위 전체 + 상품센터 목록. 매일 점검(ONCH("all"))에는 안 들어감
 const ONCH_BULK_GROUP = { codes: "onch_codes_bulk.json", lists: ["datalab", "orderby=agree_desc"], pages: 2500 };
+// 온채널 전체 상품 코드 모으기: 목록은 250쪽(1만 개)까지만 보여서 → 대분류 × 가격대를 잘게 나눠 250쪽이 안 넘게 훑음 (식품·도서는 사이트 기준상 제외)
+window.ONCH_ALLCODES = async (log = () => {}) => {
+  const cats = ["가구/인테리어", "디지털/가전", "생활/건강", "스포츠/레저", "여가/생활편의", "출산/육아", "패션의류", "패션잡화", "화장품/미용"];
+  const page = async (q, p) => { for (let t = 0; t < 3; t++) { try { return [...new Set((await (await fetch(`/dbcenter_renewal/index.php?${q}&page=${p}`)).text()).match(/value="(CH\d+)"/g) || [])].map((x) => x.slice(7, -1)); } catch (e) { await new Promise((ok) => setTimeout(ok, 3000)); } } return []; };
+  const S = new Set(), slices = [];
+  for (const c of cats) {
+    const stack = [[0, 3000000]];
+    while (stack.length) {
+      const [a, b] = stack.pop(), q = `cate_f=${encodeURIComponent(c)}&sprice=${a}&eprice=${b}`;
+      if ((await page(q, 250)).length && b - a > 10) { const m = Math.floor((a + b) / 2); stack.push([m + 1, b], [a, m]); continue; }
+      slices.push(q);
+    }
+    log(`${c}: 구간 ${slices.length}개`);
+  }
+  for (let i = 0; i < slices.length; i++) {
+    const q = slices[i];
+    for (let k = 0; k < 250; k += 10) {
+      const rs = await Promise.all([...Array(10)].map((_, j) => page(q, k + j + 1)));
+      let found = 0; rs.forEach((r) => { found += r.length; r.forEach((x) => S.add(x)); });
+      if (found < 400) break;  // 마지막 쪽까지 옴
+    }
+    if (i % 5 === 0) log(`구간 ${i + 1}/${slices.length} · 코드 ${S.size.toLocaleString()}개`);
+  }
+  return [...S];
+};
 window.ONCH = async (step, group = "office") => {
   const LS = localStorage, now = Date.now(), G = ONCH_GROUPS[group] || (group === "bulk" ? ONCH_BULK_GROUP : null), K = (x) => `__oc_${group}_${x}`;
   if (step === "collect") {
     const mine = await (await fetch("https://damgosago.com/" + G.codes + "?" + now)).json().catch(() => []);
     const S = new Set(mine), other = new Set();
     for (const [g, o] of Object.entries(ONCH_GROUPS)) if (g !== group) (await (await fetch("https://damgosago.com/" + o.codes + "?" + now)).json().catch(() => [])).forEach((c) => other.add(c));
-    for (const q of G.lists) {
+    if (group === "bulk") {  // 대량 수집: 온채널 전체 (대분류×가격대)
+      (await ONCH_ALLCODES((m) => { LS.__onchlog = new Date().toISOString().slice(11, 19) + " [bulk] collect " + m; })).forEach((c) => { if (!other.has(c)) S.add(c); });
+    }
+    for (const q of group === "bulk" ? [] : G.lists) {
       const url = (k) => q === "datalab" ? `/dbcenter_renewal/onch_datalab.html?page=${k + 1}` : `/dbcenter_renewal/index.php?${q}&page=${k + 1}`;
       const pages = q === "datalab" ? 40 : G.pages;
       for (let k = 0; k < pages; k += 10) {  // 10쪽씩 (온채널 서버 부담 줄이기)
