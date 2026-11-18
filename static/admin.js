@@ -20,7 +20,7 @@
     return d;
   };
 
-  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "고객·차단"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
+  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "회원·고객"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -78,6 +78,12 @@
       return `<div class="card form"><h2>주문 차단</h2><p class="muted">장난 주문·악성 고객의 연락처를 막으면, 그 번호로는 결제 단계로 넘어가지 못해요(돈이 빠져나가지 않아요).</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="bl-phone" placeholder="연락처 (숫자만)" style="max-width:200px"><input id="bl-reason" placeholder="사유 (예: 상습 반품)" style="flex:1"><button data-act="bl-add">차단</button></div>
         ${bl.length ? `<table class="adm-table" style="margin-top:12px"><tr><th>연락처</th><th>사유</th><th>차단일</th><th></th></tr>${bl.map(([ph, v]) => `<tr><td>${esc(ph)}</td><td>${esc(v.reason)}</td><td class="muted">${dt(v.at)}</td><td><button class="ghost" data-act="bl-del" data-phone="${esc(ph)}">차단 풀기</button></td></tr>`).join("")}</table>` : `<p class="muted" style="margin-top:8px">차단한 연락처가 없어요.</p>`}</div>
+        ${(() => { const M = CUST.members || [], PN = { naver: "네이버", kakao: "카카오", google: "구글" }, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+          const by = (k) => M.filter((m) => m.provider === k).length, newT = M.filter((m) => String(m.joinedAt).slice(0, 10) === today).length;
+          return `<div class="card"><h2>가입 회원 <small>${M.length.toLocaleString()}명</small></h2>
+            <p class="muted" style="margin-bottom:10px">오늘 가입 ${newT}명 · 네이버 ${by("naver")} · 카카오 ${by("kakao")} · 구글 ${by("google")}</p>
+            <input id="m-q" placeholder="이름·이메일·연락처로 찾기" style="width:100%;margin-bottom:10px">
+            <div id="m-list">${memTable(M)}</div></div>`; })()}
         <div class="card"><h2>고객 <small>${CUST.customers.length}명</small></h2><input id="c-q" placeholder="이름·연락처로 찾기" style="width:100%;margin-bottom:10px">
         <div id="c-list">${custTable(CUST.customers)}</div></div>`;
     }
@@ -188,6 +194,7 @@
   let PIDX = null, PEDITS = null, PSEL = null, OSEARCH = null, OQ = "", CUST = null, ALOG = null;
   const BADGES = ["", "NEW", "BEST", "SALE", "추천", "특가"];
   const LOGNAME = { "/admin/order-update": "주문 상태·송장 저장", "/admin/order-cancel": "주문 취소·환불", "/admin/soldout-cancel": "품절 취소", "/admin/product-save": "상품 수정", "/admin/product-bulk": "상품 여러 개 수정", "/admin/block": "주문 차단 변경", "/admin/site-save": "공지 띠 변경", "/admin/coupon-save": "쿠폰 저장", "/admin/answer": "문의 답변", "/admin/delete": "삭제", "/admin/po-done": "발주 완료", "/admin/po-mark": "도매처 주문서 받기", "/admin/tracking-import": "송장 한 번에 넣기", "/admin/offer-reply": "가격 제안 답변", "/admin/approve-seller": "공급사 승인", "/admin/approve-product": "상품 승인", "/admin/reject-product": "상품 반려" };
+  const memTable = (list) => list.length ? `<table class="adm-table"><tr><th>가입일</th><th>이름</th><th>가입 방법</th><th>이메일</th><th>연락처</th><th>주문</th><th>최근 로그인</th></tr>${list.slice(0, 500).map((m) => `<tr><td class="muted">${m.joinedAt ? dt(m.joinedAt) : ""}</td><td>${esc(m.name || "-")}</td><td>${esc({ naver: "네이버", kakao: "카카오", google: "구글" }[m.provider] || m.provider)}</td><td>${esc(m.email || "-")}</td><td>${esc(m.phone || "-")}</td><td>${m.orders}</td><td class="muted">${m.lastLogin ? dt(m.lastLogin) : ""}</td></tr>`).join("")}</table>${list.length > 500 ? `<p class="muted" style="margin-top:8px">최근 500명만 보여요. 검색으로 찾아 주세요.</p>` : ""}` : `<p class="empty">아직 가입한 회원이 없어요.</p>`;
   const custTable = (list) => list.length ? `<table class="adm-table"><tr><th>이름</th><th>연락처</th><th>주문</th><th>구매액</th><th>취소/반품</th><th>최근 주문</th><th></th></tr>${list.slice(0, 300).map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${c.orders}</td><td>${won(c.total)}</td><td>${c.cancels}/${c.claims}</td><td class="muted">${c.last ? dt(c.last) : ""}</td>
     <td><button class="ghost" data-act="c-orders" data-phone="${esc(c.phone)}">주문 보기</button> ${(CUST.blocked || {})[c.phone] ? `<button class="ghost" data-act="bl-del" data-phone="${esc(c.phone)}">차단 풀기</button>` : `<button class="ghost" data-act="bl-quick" data-phone="${esc(c.phone)}">차단</button>`}</td></tr>`).join("")}</table>` : `<p class="muted">아직 고객이 없어요.</p>`;
   function prodShell() {
@@ -467,6 +474,7 @@
   }
 
   document.addEventListener("input", (ev) => {
+    if (ev.target.id === "m-q" && CUST) { const v = ev.target.value.trim().toLowerCase(), dv = v.replace(/\D/g, ""); $("#m-list").innerHTML = memTable((CUST.members || []).filter((m) => (m.name || "").toLowerCase().includes(v) || (m.email || "").toLowerCase().includes(v) || (dv && (m.phone || "").replace(/\D/g, "").includes(dv)))); }
     if (ev.target.id === "c-q" && CUST) { const v = ev.target.value.trim(), dv = v.replace(/\D/g, ""); $("#c-list").innerHTML = custTable(CUST.customers.filter((c) => c.name.includes(v) || (dv && c.phone.includes(dv)))); }
   });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.id === "o-q") $('[data-act="o-search"]')?.click(); });

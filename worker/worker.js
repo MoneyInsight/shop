@@ -113,7 +113,10 @@ async function adminCustomers(env) {
     if (o.paidAt > c.last) { c.last = o.paidAt; c.name = o.customer?.name || c.name; }
   }
   const blocked = (await env.SHOP.get("blocklist", "json")) || {};
-  return json({ customers: Object.values(by).sort((a, b) => b.last.localeCompare(a.last)).slice(0, 1000), blocked });
+  // 가입 회원 (네이버·카카오·구글 간편가입)
+  const members = (await kvList(env, "user:")).map((u) => ({ uid: u.uid, provider: u.provider || String(u.uid || "").split(":")[0], name: u.name || "", email: u.email || "", phone: u.phone || "",
+    joinedAt: u.joinedAt || "", lastLogin: u.lastLogin || "", orders: (u.orders || []).length })).sort((a, b) => String(b.joinedAt).localeCompare(String(a.joinedAt)));
+  return json({ customers: Object.values(by).sort((a, b) => b.last.localeCompare(a.last)).slice(0, 1000), blocked, members });
 }
 async function adminBlock(req, env) {
   const d = await req.json().catch(() => ({}));
