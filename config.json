@@ -1,6 +1,10 @@
 {
   "shop_name": "담Go사Go",
-  "shop_name_alt": ["담고사고", "담고 사고", "damgosago"],
+  "shop_name_alt": [
+    "담고사고",
+    "담고 사고",
+    "damgosago"
+  ],
   "slogan": "좋은 물건을, 군더더기 없는 가격으로",
   "base_url": "https://damgosago.com",
   "free_shipping_over": 0,
@@ -8,7 +12,9 @@
   "naver_site_verification": "1968b2bbfcde24808092b05eb8e8d71902242ff1",
   "google_site_verification": "",
   "daum_webmaster": "2bfe781266e886bcadac3aa5e77df91beed674a2c0e5d63f767857a9e415b446:/U8QWp/Cxm097lAEJOWTSw==",
-  "verify_files": {"google2e4d9bd8d7272d88.html": "google-site-verification: google2e4d9bd8d7272d88.html"},
+  "verify_files": {
+    "google2e4d9bd8d7272d88.html": "google-site-verification: google2e4d9bd8d7272d88.html"
+  },
   "business": {
     "company": "퓨어라이프",
     "ceo": "손기범",
@@ -166,7 +172,11 @@
     "max_ship_ratio": 0,
     "_max_ship_ratio_설명": "0 = 끔. 배송비를 따로 받으므로 낱개 저가품도 원래 1개 가격으로 판매 (묶음 안 만듦)",
     "min_order_won": 0,
-    "_min_order_won_설명": "0 = 끔 (모든 상품 1개부터 구매, 배송비는 따로). 금액을 넣으면 그보다 싼 상품은 'N개부터 구매'"
+    "_min_order_won_설명": "0 = 끔 (모든 상품 1개부터 구매, 배송비는 따로). 금액을 넣으면 그보다 싼 상품은 'N개부터 구매'",
+    "source_margin": {
+      "GS": 0.1
+    },
+    "_source_margin_설명": "도매처별 순마진 (상품코드 앞 2글자). GS=건강산 10% (대표님 지정 2026-11-18). 공급사 최저판매가가 있으면 그 가격 이상"
   },
   "show_naver": false,
   "show_supplier": false,

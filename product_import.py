@@ -228,6 +228,8 @@ def ship_every(code, box, ship, raw=None):
         return int(box) if box else 0
     if code.startswith("DM"):
         return int(box) if box else 0
+    if code.startswith("GS"):  # 건강산: 주문당 3,000원 (20만 원 이상 무료) → 상품당 주문 1번
+        return 0
     if re.match(r"^W[0-9A-Z]{6}$", code):  # 오너클랜: 묶음 수량 표기가 없으면 주문당 1번 (대표님 확인 2026-11-17 — 장바구니에서 100개도 배송비 1번), 있으면 N개마다
         return int(box) if box and box > 1 else 0
     return int(box) if box and box > 1 else 1
@@ -314,10 +316,13 @@ def load(data_dir, cats, discount=0, pricing=None, require_detail=True, check_lo
                         cheap += 1; continue
                     pk, goods, box = k, goods * k, 0  # k개 묶음 1세트
                     name = f"[{k}개 묶음] {name}"
-                sf, sn = cship, ship_every(get(r, "code") or get(r, "product_no") or "", box, cship, get(r, "box_qty"))
+                rcode = get(r, "code") or get(r, "product_no") or ""
+                sm_ = (pricing.get("source_margin") or {}).get(rcode[:2])  # 도매처별 마진 (예: 건강산 GS = 10%, 대표님 지정)
+                P = {**pricing, "net_margin": sm_} if sm_ is not None else pricing
+                sf, sn = cship, ship_every(rcode, box, cship, get(r, "box_qty"))
                 shipx = math.ceil(cship * pricing.get("card_fee", 0.034) / (1 - pricing.get("card_fee", 0.034) - 1 / 11) / 10) * 10 if cship else 0  # 배송비에 붙는 카드수수료
-                price = price_from_cost(goods, pricing) + shipx
-                qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, pricing)]
+                price = price_from_cost(goods, P) + shipx
+                qt = [x + shipx for x in qty_prices(goods, 0, 0, 0, P)]
                 card_, ops_, fm_ = pricing.get("card_fee", 0.034), pricing.get("ops_cost_won", 0), pricing.get("qty_price", {}).get("min_net_margin", 0.08)
                 need1 = (fm_ * (goods + cship) + cship * card_ + goods * 10 / 11 + ops_) / (1 - card_ - 1 / 11)  # 1개 주문도 배송비 포함 원가 대비 순마진 8% 이상
                 price = max(price, math.ceil(need1 / 10) * 10)
