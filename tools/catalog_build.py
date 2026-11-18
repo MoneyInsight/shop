@@ -180,7 +180,17 @@ def main():
         if used + W_NEW > a.budget:
             break
         p = dict(p, updated=now)
-        lines.append(f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p.get(c, 0)) for c in COLS)});")
+        stmt = f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p.get(c, 0)) for c in COLS)});"
+        if len(stmt.encode()) > 90000:  # D1 한 문장 100KB 한도(SQLITE_TOOBIG) — 상세설명이 너무 긴 상품은 앞부분만 (태그 경계에서 자름)
+            d = p.get("detail_html") or ""
+            keep = 90000 - (len(stmt.encode()) - len(d.encode())) - 2000
+            cut = d.encode()[:max(0, keep)].decode("utf-8", "ignore")
+            cut = cut[:cut.rfind(">") + 1] if ">" in cut else ""
+            p["detail_html"] = cut
+            stmt = f"INSERT OR REPLACE INTO products ({','.join(COLS)}) VALUES ({','.join(lit(p.get(c, 0)) for c in COLS)});"
+            if len(stmt.encode()) > 95000:
+                continue  # 그래도 길면 이번엔 건너뜀
+        lines.append(stmt)
         old_h = state.get(p["id"])
         old_t = old_h.split(":")[1] if old_h and ":" in old_h else (None if old_h is None else "?")
         if old_t is None or (old_t != "?" and old_t != p["h"].split(":")[1]):  # 새 상품이거나 상품명이 바뀐 경우만 검색 색인 추가
