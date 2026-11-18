@@ -1035,7 +1035,7 @@
         ${special ? "" : `<div class="track">${FLOW.map((s, i) => `<div class="${i <= step ? "on" : ""}">${s}</div>`).join("")}</div>`}
         ${trackHTML(o)}
         ${o.receipt ? `<p style="margin:10px 0 0;font-size:13px"><a href="${esc(o.receipt)}" target="_blank" rel="noopener" style="text-decoration:underline">카드 영수증 보기</a></p>` : ""}
-        ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${esc(o.claim.reason)}</div>` : ""}
+        ${o.claim ? `<div class="note" style="margin-top:16px">${esc(o.claim.type)} 신청 (${esc(o.claim.status)}) — ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}${o.claim.photos ? ` · 사진 ${o.claim.photos}장` : ""}</div>` : ""}
         <div style="margin-top:20px">${o.lines.map((l) => `<div class="c-row" style="grid-template-columns:1fr auto"><div><a class="nm" href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a><div class="muted">${l.qty}개</div>
           ${shipped || o.status === "구매확정" ? `<a class="mini-btn" style="display:inline-block;margin-top:6px" href="${ROOT}product/${encodeURIComponent(l.id)}.html?write=1#review">리뷰 쓰기</a>` : ""}</div><strong>${won(l.price * l.qty)}</strong></div>`).join("")}</div>
         <dl class="kv" style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
@@ -1044,8 +1044,18 @@
           ${o.receiver.memo ? `<dt>배송 메모</dt><dd>${esc(o.receiver.memo)}</dd>` : ""}</dl>
         <div class="act-row">${canCancel ? `<button class="btn btn-line sm" data-act="cancel">주문 취소</button>` : ""}
           ${shipped ? `<button class="btn btn-dark sm" data-act="confirm-receipt">구매 확정</button><button class="btn btn-line sm" data-act="반품">반품 신청</button><button class="btn btn-line sm" data-act="교환">교환 신청</button>` : ""}</div>
-        <div class="mini-form" id="act-form"><label class="opt-label" id="act-label"></label><textarea class="field" id="act-reason" placeholder="사유를 적어 주세요"></textarea>
+        <div class="mini-form" id="act-form"><label class="opt-label" id="act-label"></label>
+          <div id="claim-extra" hidden><select class="field" id="claim-kind" style="margin-bottom:8px"><option value="">사유를 골라 주세요</option><option>상품 불량·파손</option><option>오배송 (다른 상품·옵션)</option><option>구성품 누락</option><option>단순 변심</option><option>기타</option></select></div>
+          <textarea class="field" id="act-reason" placeholder="사유를 적어 주세요"></textarea>
+          <div id="claim-photo" hidden style="margin-top:10px"><label class="opt-label">사진 첨부 <span id="claim-need" class="muted"></span></label>
+            <input type="file" id="claim-files" accept="image/*" multiple style="display:block;margin-top:6px">
+            <p class="muted" style="font-size:12.5px;margin:6px 0 0">불량·파손 부위, 받은 상품과 상자·송장이 보이게 찍어 주세요. 최대 3장.</p>
+            <div id="claim-prev" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"></div></div>
           <button class="btn btn-dark sm" style="margin-top:10px" id="act-send">신청하기</button></div></div>`;
+      // 사진: 휴대폰 원본은 크니 1280px JPEG로 줄여서 보냄
+      const shrink = (file) => new Promise((ok, no) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1280 / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); ok(c.toDataURL("image/jpeg", 0.8)); }; img.onerror = () => no(new Error("사진을 읽지 못했어요. 다른 사진으로 해 주세요.")); img.src = URL.createObjectURL(file); });
+      let photos = [];
+      const needPhoto = () => /불량|파손|오배송|누락/.test($("#claim-kind")?.value || "");
       let act = "";
       res.onclick = async (e) => {
         const b = e.target.closest("button[data-act]");
@@ -1057,14 +1067,31 @@
             alert(r.d.message); if (r.ok) render(r.d.order, phone); return;
           }
           $("#act-label").textContent = act === "cancel" ? "취소 사유" : act + " 사유";
-          $("#act-form").classList.add("open"); $("#act-reason").focus(); return;
+          const claim = act !== "cancel";
+          $("#claim-extra").hidden = !claim; $("#claim-photo").hidden = !claim;
+          $("#act-form").classList.add("open"); (claim ? $("#claim-kind") : $("#act-reason")).focus(); return;
         }
         if (e.target.id === "act-send") {
-          const reason = $("#act-reason").value.trim();
-          const r = act === "cancel" ? await api("/order/cancel", { orderId: o.orderId, phone, reason }) : await api("/order/claim", { orderId: o.orderId, phone, type: act, reason });
-          alert(r.d.message); if (r.ok) render(r.d.order, phone);
+          const reason = $("#act-reason").value.trim(), kind = $("#claim-kind").value;
+          if (act !== "cancel") {
+            if (!kind) { alert("사유를 골라 주세요."); return; }
+            if (needPhoto() && !photos.length) { alert("불량·파손·오배송·누락은 사진을 꼭 첨부해 주세요. 확인 후 바로 처리해 드려요."); return; }
+          }
+          e.target.disabled = true; e.target.textContent = "보내는 중…";
+          const r = act === "cancel" ? await api("/order/cancel", { orderId: o.orderId, phone, reason }) : await api("/order/claim", { orderId: o.orderId, phone, type: act, kind, reason: reason || kind, photos });
+          e.target.disabled = false; e.target.textContent = "신청하기";
+          alert(r.d.message); if (r.ok) { photos = []; render(r.d.order, phone); }
         }
       };
+      res.onchange = async (e) => {
+        if (e.target.id === "claim-kind") $("#claim-need").textContent = needPhoto() ? "(필수)" : "(선택)";
+        if (e.target.id !== "claim-files") return;
+        const files = [...e.target.files].slice(0, 3 - photos.length);
+        try { for (const f of files) photos.push(await shrink(f)); } catch (x) { alert(x.message); }
+        e.target.value = "";
+        $("#claim-prev").innerHTML = photos.map((p, i) => `<span style="position:relative"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border:1px solid var(--line)"><button type="button" data-rm="${i}" style="position:absolute;top:-6px;right:-6px;border:0;border-radius:50%;width:20px;height:20px;background:#333;color:#fff;cursor:pointer">×</button></span>`).join("");
+      };
+      res.addEventListener("click", (e) => { const x = e.target.closest("[data-rm]"); if (x) { photos.splice(+x.dataset.rm, 1); x.parentElement.remove(); $("#claim-prev").innerHTML = photos.map((p, i) => `<span style="position:relative"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border:1px solid var(--line)"><button type="button" data-rm="${i}" style="position:absolute;top:-6px;right:-6px;border:0;border-radius:50%;width:20px;height:20px;background:#333;color:#fff;cursor:pointer">×</button></span>`).join(""); } });
     };
     const lookup = async (orderId, phone) => {
       if (!orderId || !phone) { alert("주문번호와 연락처를 입력해 주세요."); return; }

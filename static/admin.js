@@ -28,7 +28,7 @@
       <td>${esc(o.customer?.name)}<br>${esc(o.customer?.phone)}<br><span class="muted">[${esc(o.customer?.zip)}] ${esc(o.customer?.addr)}${o.customer?.memo ? "<br>메모: " + esc(o.customer.memo) : ""}</span></td>
       <td><b>${won(o.amount)}</b>${o.discount ? `<br><span class="muted">쿠폰 ${esc(o.coupon)} −${won(o.discount)}</span>` : ""}${o.refunded ? `<br><span style="color:var(--sale)">환불 ${won(o.refunded)}</span>` : ""}</td>
       <td><select data-f="status">${D.statuses.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("")}</select>
-        ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${esc(o.claim.reason)}</span>` : ""}</td>
+        ${o.claim ? `<br><span class="muted">${esc(o.claim.type)}: ${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason)}</span>${Array.from({ length: o.claim.photos || 0 }, (_, i) => `<br><button class="ghost" data-act="claim-photo" data-id="${esc(o.orderId)}" data-i="${i}">📷 사진 ${i + 1}</button>`).join("")}` : ""}</td>
       <td><select data-f="courier"><option value="">택배사</option>${COURIERS.map((c) => `<option${c === o.courier ? " selected" : ""}>${c}</option>`).join("")}</select><br>
         <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px">${o.track?.stage ? `<br><b style="color:var(--accent)">📦 ${esc(o.track.stage)}</b>` : ""}</td>
       <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}">환불</button>${["결제완료", "상품준비중"].includes(o.status) ? `<br><button class="ghost" data-act="soldout-cancel" data-id="${esc(o.orderId)}">품절 취소</button>` : ""}</td></tr>`;
@@ -461,6 +461,12 @@
       }
       if (act === "track-sweep") { const r = await call("/admin/track-sweep", {}); alert(`배송중 ${r.checked ?? 0}건 확인, 배송완료 ${r.delivered ?? 0}건`); }
       if (act === "order-save") await call("/admin/order-update", { orderId: id, status: $('[data-f="status"]', row).value, courier: $('[data-f="courier"]', row).value, tracking: $('[data-f="tracking"]', row).value });
+      if (act === "claim-photo") {
+        const w = window.open("", "_blank");
+        const r = await call("/admin/claim-photo", { orderId: id, i: b.dataset.i });
+        if (w) { w.document.title = id + " 사진"; w.document.body.style.margin = "0"; w.document.body.innerHTML = `<img src="${r.data}" style="max-width:100%;display:block;margin:auto">`; }
+        return;
+      }
       if (act === "order-refund") {
         const amt = prompt("환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", "");
         if (amt === null) return;

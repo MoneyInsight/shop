@@ -926,16 +926,23 @@ async function orderCancel(req, env) {
 }
 
 async function orderClaim(req, env) {
-  const { orderId, phone, type, reason } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const { orderId, phone, type, reason, kind } = body;
+  let { photos } = body;
   const o = await findOrder(env, orderId, phone);
   if (!o) return fail("주문번호 또는 연락처가 일치하지 않아요.", 404);
   if (!["반품", "교환"].includes(type)) return fail("신청 종류를 선택해 주세요.");
   if (!["배송중", "배송완료"].includes(o.status)) return fail("배송이 시작된 주문만 반품/교환을 신청할 수 있어요.");
   if (!clip(reason, 500)) return fail("사유를 입력해 주세요.");
-  o.claim = { type, reason: clip(reason, 500), at: new Date().toISOString(), status: "접수" };
+  // 사진: 불량·파손·오배송·누락은 필수 (최대 3장, 장당 1.5MB 이하 이미지)
+  photos = (Array.isArray(photos) ? photos : []).filter((p) => typeof p === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(p)).slice(0, 3);
+  if (photos.some((p) => p.length > 2_000_000)) return fail("사진 용량이 너무 커요. 다시 골라 주세요.");
+  if (/불량|파손|오배송|누락/.test(String(kind || "")) && !photos.length) return fail("불량·파손·오배송·누락은 사진을 꼭 첨부해 주세요.");
+  for (let i = 0; i < photos.length; i++) await env.SHOP.put(`claimimg:${o.orderId}:${i}`, photos[i]);
+  o.claim = { type, kind: clip(kind, 30), reason: clip(reason, 500), photos: photos.length, at: new Date().toISOString(), status: "접수" };
   setStatus(o, type + "요청");
   await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
-  await notify(env, `📦 ${type} 요청 ${o.orderId}\n${o.claim.reason}`);
+  await notify(env, `📦 ${type} 요청 ${o.orderId}\n[${o.claim.kind || "-"}] ${o.claim.reason}${photos.length ? `\n사진 ${photos.length}장 (관리자 › 취소·반품·교환)` : ""}`);
   return json({ message: `${type} 신청이 접수되었어요. 확인 후 연락드릴게요.`, order: publicOrder(o) });
 }
 
@@ -1561,6 +1568,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/delete") return await adminDelete(req, env);
       if (path === "/admin/coupon-save") return await adminCouponSave(req, env);
       if (path === "/admin/portone-sync") return json(await portoneSync(env));
+      if (path === "/admin/claim-photo") { const b = await req.json().catch(() => ({})); const d = await env.SHOP.get(`claimimg:${b.orderId}:${parseInt(b.i) || 0}`); return d ? json({ data: d }) : fail("사진이 없어요.", 404); }
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
