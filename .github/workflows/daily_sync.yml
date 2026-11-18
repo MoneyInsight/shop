@@ -7,7 +7,7 @@ on:
     inputs:
       limit: { description: "점검할 기존 상품 수", default: "4000" }
       new_limit: { description: "새 상품 찾기 조회 수", default: "60000" }
-      focus: { description: "1이면 화장품·건강기능식품만 깊게 수집", default: "" }
+      focus: { description: "1=화장품·건강기능식품, winter=겨울용품만 깊게 수집", default: "" }
 permissions:
   contents: write
   pages: write
@@ -24,6 +24,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install openpyxl
       - name: 도매매 상품 조회·배송비·품절·키워드 갱신
+        if: github.event.inputs.focus != 'winter' && github.event.schedule != '37 15 * * *'  # 겨울용품 집중 수집 때는 호출 한도를 새 상품 찾기에 다 씀
         run: |
           python3 tools/domeggook_sync.py
           python3 tools/stock_sync.py data/_domeme_stock_result.json
@@ -38,13 +39,15 @@ jobs:
           NEW_LIMIT: ${{ github.event.inputs.new_limit || '60000' }}
           ADD_TARGET: ${{ (github.event.inputs.focus || github.event.schedule == '37 15 * * *') && '50000' || '10000' }}  # 오너클랜 전체 수집 완료(약 11만) → 도매매 하루 1만 개로 늘림 (대표님 요청) — 랭킹순 상위 안에서
           MAX_MIN: "270"
-          FOCUS: ${{ github.event.inputs.focus || (github.event.schedule == '37 15 * * *' && '1') || '' }}
+          FOCUS: ${{ github.event.inputs.focus || (github.event.schedule == '37 15 * * *' && 'winter') || '' }}  # 밤 집중 수집: 겨울 시즌엔 겨울용품 (대표님 요청)
           FOCUS_PAGES: "50"
       - name: 빌드·손해 점검
+        if: always()
         run: |
           python3 build.py
           python3 tools/site_check.py
       - name: 저장
+        if: always()
         run: |
           git config user.name "ttaengjab-bot"; git config user.email "bot@users.noreply.github.com"
           mkdir -p warehouse; git add data warehouse

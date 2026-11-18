@@ -47,6 +47,10 @@ def api(params):
         try:
             with urllib.request.urlopen("https://domeggook.com/ssl/api/?" + q, timeout=30) as r:
                 return json.loads(r.read().decode("utf-8", "replace"))
+        except urllib.error.HTTPError as e:
+            if e.code == 429:  # 도매꾹 호출 한도 → 오래 기다렸다 다시 (한도를 넘겨 계속 두드리지 않음)
+                time.sleep(60 * (t + 1)); continue
+            time.sleep(3 * (t + 1))
         except Exception:
             time.sleep(3 * (t + 1))
     return {}
@@ -179,7 +183,12 @@ def main():
         if len(c) > 1 and c[1] == "건강식품": return 1
         return 2
     BEAUTY = ("화장품", "뷰티", "미용", "스킨케어", "메이크업", "향수", "헤어케어", "바디케어", "네일")
-    def focus(c):  # 화장품·건강기능식품 (대표님: 전부 가져오기)
+    WINTER = ("방한", "겨울", "동계", "난방", "히터", "난로", "온풍", "전기요", "전기매트", "전기장판", "온수매트", "핫팩", "손난로", "보온", "장갑", "목도리", "머플러",
+              "넥워머", "귀마개", "털모자", "비니", "패딩", "점퍼", "내복", "발열", "기모", "수면", "담요", "극세사", "문풍지", "단열", "뽁뽁이", "부츠", "털슬리퍼", "스키", "보드")
+    FMODE = os.environ.get("FOCUS", "")
+    def focus(c):  # FOCUS=winter: 겨울용품 / 그 외(1): 화장품·건강기능식품 (대표님: 전부 가져오기)
+        if FMODE == "winter":
+            return any(k in n for n in c for k in WINTER)
         return any(k in n for n in c for k in BEAUTY) or (len(c) > 1 and c[1] == "건강식품")
     _p = prio
     prio = lambda c: 0 if focus(c) else _p(c) + 1
@@ -188,8 +197,8 @@ def main():
     if os.environ.get("FOCUS"):  # 화장품·건강식품만 깊게 (랭킹 상위 N쪽까지)
         cats = [c for c in cats if focus(c)]
         TOP_PAGES = int(os.environ.get("FOCUS_PAGES", "50"))
-        state.setdefault("focus_cat", 0)
-        print("집중 수집: 화장품·건강식품 분류", len(cats), "개, 분류마다", TOP_PAGES, "쪽까지")
+        state.setdefault("focus_cat_" + FMODE, 0)
+        print("집중 수집:", "겨울용품" if FMODE == "winter" else "화장품·건강식품", "분류", len(cats), "개, 분류마다", TOP_PAGES, "쪽까지")
     if not state.get("office_first"):
         state["office_first"] = True; state["supp_first"] = True; state["cat"] = 0
     print("우선 분류(문구·사무):", sum(1 for c in cats if prio(c) == 0), "개 / 건강식품:", sum(1 for c in cats if prio(c) == 1), "개")
@@ -201,7 +210,7 @@ def main():
         if p.name not in ("products.csv", "도매매API상품.csv"):
             total += sum(1 for _ in csv.reader(open(p, encoding="utf-8-sig"))) - 1
     total += len(rows)
-    ck = "focus_cat" if os.environ.get("FOCUS") else "cat"
+    ck = ("focus_cat_" + FMODE) if FMODE else "cat"
     ci = state.get(ck, 0) % len(cats)
     loops = 0
     t0 = time.time()
@@ -211,7 +220,7 @@ def main():
     while more() and loops < len(cats) * max(30, TOP_PAGES):
         kw = cats[ci][-1]
         ci = (ci + 1) % len(cats); loops += 1
-        pk = ("f:" if os.environ.get("FOCUS") else "") + kw  # 집중 수집은 쪽 번호를 따로 기억
+        pk = (("w:" if FMODE == "winter" else "f:") if FMODE else "") + kw  # 집중 수집은 쪽 번호를 따로 기억
         pg = int(pgs.get(pk, 1))
         d = (api({"ver": "4.1", "mode": "getItemList", "market": "supply", "kw": kw, "sz": "100", "pg": str(pg), "so": "rd"}).get("domeggook") or {})
         items = (d.get("list") or {}).get("item") or []
