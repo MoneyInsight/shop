@@ -197,12 +197,13 @@
       <div id="p-res" style="margin-top:10px"></div></div>
       <div class="card form" id="p-edit" style="display:none"></div>
       <div class="card form"><h2>SEO 일괄 수정 (엑셀)</h2>
-        <p class="muted">① 상품 목록을 내려받아 엑셀에서 <b>상품명·검색키워드·요약설명</b>을 고치고 ② 저장한 CSV를 올리면 돼요. 상품코드·기존 상품명 칸은 고치지 마세요.<br>
+        <p class="muted">① 상품 목록을 내려받아 엑셀에서 <b>상품명·검색키워드·요약설명</b>을 고치고 ② 저장한 파일(엑셀·CSV 모두 가능)을 올리면 돼요. 상품코드·기존 상품명 칸은 고치지 마세요.<br>
         검색키워드는 쉼표(,)로 구분, 요약설명은 150자 안. 올린 내용은 30분 안에 사이트·상품 DB에 반영돼요. (엑셀은 한 파일에 100만 줄까지라 30만 개씩 나눠서 받아요)</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
           <select id="seo-cat"><option value="">전체 상품</option>${Object.entries((window.SHOP_CFG || {}).cat_names || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("")}</select>
-          <button data-act="seo-down">목록 내려받기 (CSV)</button>
-          <label class="ghost" style="cursor:pointer;border:1px solid var(--line);padding:6px 12px">수정본 올리기 (CSV)<input type="file" id="seo-file" accept=".csv,text/csv" hidden></label></div>
+          <button data-act="seo-down" data-fmt="xlsx">엑셀(.xlsx)로 내려받기</button>
+          <button class="ghost" data-act="seo-down" data-fmt="csv">CSV로 내려받기</button>
+          <label class="ghost" style="cursor:pointer;border:1px solid var(--line);padding:6px 12px">수정본 올리기 (엑셀·CSV)<input type="file" id="seo-file" accept=".xlsx,.xls,.csv,text/csv" hidden></label></div>
         <div id="seo-msg" class="muted" style="margin-top:8px"></div></div>
       <div class="card form"><h2>여러 상품 한 번에</h2>
         <textarea id="pb-ids" rows="3" placeholder="상품코드를 띄어쓰기·쉼표·줄바꿈으로 구분해 넣어 주세요. 도매매는 숫자 번호만 넣어도 돼요. (예: DM20067843, 65114578)" style="width:100%"></textarea>
@@ -222,14 +223,27 @@
     return rows;
   }
   const SEO_HEAD = ["상품코드", "기존 상품명(수정 금지)", "상품명", "검색키워드(쉼표로 구분)", "요약설명(150자)", "카테고리", "판매가(참고)", "상품 링크"];
-  async function seoDownload() {
+  // 엑셀(.xlsx) 읽기·쓰기 라이브러리 (SheetJS) — 엑셀을 고를 때만 불러옴
+  const loadXLSX = () => window.XLSX ? Promise.resolve(window.XLSX) : new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"; sc.onload = () => ok(window.XLSX); sc.onerror = () => no(new Error("엑셀 기능을 불러오지 못했어요. CSV로 받아 주세요.")); document.head.appendChild(sc); });
+  async function seoDownload(fmt = "xlsx") {
     const msg = $("#seo-msg"), cat = $("#seo-cat").value, catN = cat ? $("#seo-cat").selectedOptions[0].text : "전체";
     let after = "", part = 1, buf = [], total = 0;
+    const X = fmt === "xlsx" ? await loadXLSX().catch((e) => { msg.textContent = e.message; return null; }) : null;
+    if (fmt === "xlsx" && !X) return;
+    const PER = fmt === "xlsx" ? 100000 : 300000;  // 엑셀 파일은 브라우저 메모리 때문에 10만 개씩
     const save = () => {
       if (!buf.length) return;
-      const blob = new Blob(["\ufeff" + [SEO_HEAD, ...buf].map((r) => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `담고사고_SEO_${catN.replace(/[\/·]/g, "_")}_${part}.csv`; a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 60000); part++; buf = [];
+      const fname = `담고사고_SEO_${catN.replace(/[\/·]/g, "_")}_${part}`;
+      if (X) {
+        const ws = X.utils.aoa_to_sheet([SEO_HEAD, ...buf]);
+        ws["!cols"] = [{ wch: 14 }, { wch: 40 }, { wch: 40 }, { wch: 30 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 30 }];
+        const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "상품목록"); X.writeFile(wb, fname + ".xlsx", { compression: true });
+      } else {
+        const blob = new Blob(["\ufeff" + [SEO_HEAD, ...buf].map((r) => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname + ".csv"; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      }
+      part++; buf = [];
     };
     try {
       do {
@@ -237,14 +251,20 @@
         for (const [id, name, kw, sum, c, price] of r.rows) buf.push([id, name, name, kw, sum, ((window.SHOP_CFG || {}).cat_names || {})[c] || c, price, `https://damgosago.com/product/item.html?id=${id}`]);
         total += r.rows.length; after = r.next;
         msg.textContent = `내려받는 중… ${total.toLocaleString()}개`;
-        if (buf.length >= 300000) save();
+        if (buf.length >= PER) save();
       } while (after);
       save(); msg.textContent = `완료: ${total.toLocaleString()}개 (${part - 1}개 파일)`;
     } catch (e) { msg.textContent = "실패: " + e.message; }
   }
   async function seoUploadFile(f) {
     const msg = $("#seo-msg");
-    const rows = parseCSV(await f.text()); const head = (rows.shift() || []).map((h) => h.replace(/^\ufeff/, "").trim());
+    let rows;
+    if (/\.xlsx?$/i.test(f.name)) {
+      msg.textContent = "엑셀 파일 읽는 중…";
+      const X = await loadXLSX().catch((e) => { alert(e.message); return null; }); if (!X) return;
+      const wb = X.read(await f.arrayBuffer()); rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: "" });
+    } else rows = parseCSV(await f.text());
+    const head = (rows.shift() || []).map((h) => h.replace(/^\ufeff/, "").trim());
     const ix = (k) => head.findIndex((h) => h.startsWith(k));
     const iId = ix("상품코드"), iOld = ix("기존 상품명"), iName = head.findIndex((h) => h === "상품명"), iKw = ix("검색키워드"), iSum = ix("요약설명");
     if (iId < 0 || iName < 0) { alert("상품코드·상품명 칸을 찾지 못했어요. 내려받은 파일 그대로 고쳐서 올려 주세요."); return; }
@@ -480,7 +500,7 @@
         if (act === "bl-del" && !confirm("차단을 풀까요?")) return;
         alert((await call("/admin/block", { phone, reason, block: act !== "bl-del" })).message); CUST = null; return paint();
       }
-      if (act === "seo-down") { seoDownload(); return; }
+      if (act === "seo-down") { seoDownload(b.dataset.fmt); return; }
       if (act === "pb") {
         const ids = $("#pb-ids").value; if (!ids.trim()) { alert("상품코드를 넣어 주세요."); return; }
         if (!confirm("선택한 작업을 적용할까요?")) return;
