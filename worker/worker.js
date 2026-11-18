@@ -775,7 +775,7 @@ async function email(env, to, subject, text, url) {
     <p style="margin-top:28px;color:#868a91;font-size:12px">이 메일은 발신 전용입니다. 문의는 쇼핑몰 고객센터를 이용해 주세요.</p></div>`;
   try {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { name: env.MAIL_FROM_NAME || "담Go사Go", email: env.MAIL_FROM }, to: [{ email: to }], subject, htmlContent: html, textContent: text + (url ? "\n\n" + url : "") }) });
+      body: JSON.stringify({ sender: { name: env.MAIL_FROM_NAME || "담Go사Go", email: env.MAIL_FROM }, to: [{ email: to }], ...(env.MAIL_REPLY_TO ? { replyTo: { email: env.MAIL_REPLY_TO, name: env.MAIL_FROM_NAME || "담Go사Go" } } : {}), subject, htmlContent: html, textContent: text + (url ? "\n\n" + url : "") }) });
     return r.ok;
   } catch (e) { return false; }
 }
