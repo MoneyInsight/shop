@@ -54,6 +54,26 @@ export function incomeTax(base) {
   return Math.round((base * r - d) * 1.1);
 }
 
+// 후원 기금: 달마다 순이익(매출−원가−카드수수료−부가세−운영비, 취소·반품·환불 반영)의 일정 비율 (적자 달은 0원)
+export function donation(orders, P, rate = 0.01) {
+  const card = P?.card_fee ?? 0.034, ops = P?.ops_cost_won ?? 300;
+  const kst = (iso) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(0, 7);
+  const m = {};
+  for (const o of orders) {
+    if (["취소완료", "반품완료"].includes(o.status) || !o.paidAt) continue;
+    const amt = o.amount - (o.refunded || 0);
+    const cost = o.lines.reduce((a, l) => a + (l.cost || costFromPrice(l.list_price || l.price, P)) * l.qty, 0);
+    const profit = amt - Math.round(amt * card) - Math.round((amt - cost) / 11) - cost - ops;
+    const k = kst(o.paidAt); (m[k] = m[k] || { month: k, orders: 0, sales: 0, profit: 0 }); m[k].orders++; m[k].sales += amt; m[k].profit += profit;
+  }
+  const months = Object.values(m).sort((a, b) => b.month.localeCompare(a.month)).map((x) => ({ ...x, fund: Math.max(0, Math.round(x.profit * rate)) }));
+  const now = kst(new Date().toISOString()), y = now.slice(0, 4);
+  const pick = (k) => months.find((x) => x.month === k) || { month: k, orders: 0, sales: 0, profit: 0, fund: 0 };
+  const lastK = (() => { const [a, b] = now.split("-").map(Number); return b === 1 ? `${a - 1}-12` : `${a}-${String(b - 1).padStart(2, "0")}`; })();
+  const yr = months.filter((x) => x.month.startsWith(y));
+  return { rate, thisMonth: pick(now), lastMonth: pick(lastK), year: { year: y, profit: yr.reduce((a, x) => a + x.profit, 0), fund: yr.reduce((a, x) => a + x.fund, 0) }, months: months.slice(0, 12) };
+}
+
 export async function analytics(env, kvList, { from, to }, P) {
   const card = P?.card_fee ?? 0.034, ops = P?.ops_cost_won ?? 300;
   const inRange = (iso) => { const d = dayKey(iso); return d >= from && d <= to; };

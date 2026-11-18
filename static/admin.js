@@ -41,6 +41,13 @@
         <div class="stat"><span>오늘 주문</span><b>${s.todayOrders}건</b></div><div class="stat"><span>오늘 매출</span><b>${won(s.todaySales)}</b></div>
         <div class="stat"><span>이번 달 매출</span><b>${won(s.monthSales)}</b></div><div class="stat"><span>출고 대기</span><b>${s.toShip}건</b></div>
         <div class="stat"><span>취소·반품 요청</span><b>${s.claims}건</b></div></div>
+      ${s.donation ? `<div class="card" style="margin-top:16px"><h2>💛 이웃 후원 기금 <small class="muted">순이익의 ${Math.round(s.donation.rate * 1000) / 10}%</small></h2>
+        <div class="stat-grid" style="margin-top:10px">
+          <div class="stat"><span>이번 달 (${s.donation.thisMonth.month}) 쌓이는 중</span><b>${won(s.donation.thisMonth.fund)}</b><small class="muted">순이익 ${won(s.donation.thisMonth.profit)}</small></div>
+          <div class="stat"><span>지난달 (${s.donation.lastMonth.month}) <b style="color:var(--sale)">낼 금액</b></span><b>${won(s.donation.lastMonth.fund)}</b><small class="muted">순이익 ${won(s.donation.lastMonth.profit)}</small></div>
+          <div class="stat"><span>${s.donation.year.year}년 합계</span><b>${won(s.donation.year.fund)}</b><small class="muted">순이익 ${won(s.donation.year.profit)}</small></div></div>
+        ${s.donation.months.length ? `<table class="adm-table" style="margin-top:12px"><tr><th>월</th><th>주문</th><th>매출</th><th>순이익</th><th>후원 기금</th></tr>${s.donation.months.map((m) => `<tr><td>${m.month}</td><td>${m.orders}건</td><td>${won(m.sales)}</td><td>${won(m.profit)}</td><td><b>${won(m.fund)}</b></td></tr>`).join("")}</table>` : ""}
+        <p class="muted" style="margin-top:10px">순이익 = 결제금액(환불 뺌) − 상품 원가(도매가+배송비) − 카드 수수료 − 부가세 − 주문당 운영비. 취소·반품 주문은 빼요. 적자 달은 0원이에요. 매달 초에 지난달 금액을 후원하시면 돼요.</p></div>` : ""}
       <div class="card" style="margin-top:16px"><h2>처리할 일</h2><ul class="why">
         <li>출고 대기 주문 <b>${s.toShip}</b>건 — 발주하고 송장번호를 입력해 주세요.</li>
         <li>취소·반품·교환 요청 <b>${s.claims}</b>건</li>
