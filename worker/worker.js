@@ -1290,7 +1290,7 @@ export async function handle(req, env, path) {
   if (path === "/health") {  // 상태 점검 (비밀값은 노출하지 않고 설정 여부만)
     const pw = String(env.ADMIN_PASSWORD || "").trim();
     return json({ ok: true, version: "2026-11-13d", login: auth.loginStatus(env), tracking: tracking.trackReady(env) ? "켜짐" : "꺼짐 (택배사 바로가기만)", adminPassword: pw ? `설정됨 (${[...pw].length}자)` : "없음",
-      kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음", portone: env.PORTONE_API_SECRET ? "켜짐" : "없음" });
+      kv: !!env.SHOP, catalog: env.DB ? "상품 DB 연결됨" : "없음 (products.json 사용)", email: env.BREVO_API_KEY && env.MAIL_FROM ? "켜짐" : "꺼짐", kakao: kakaoReady(env) ? `켜짐 (템플릿 ${Object.keys(TEMPLATES).filter((k) => env["KAKAO_TPL_" + k]).length}/${Object.keys(TEMPLATES).length})` : "꺼짐 (키 없음)", toss: env.TOSS_SECRET_KEY ? (String(env.TOSS_SECRET_KEY).startsWith("test_") ? "테스트 키" : "실제 키") : "없음", portone: env.PORTONE_API_SECRET ? `켜짐 (${String(env.PORTONE_API_SECRET).trim().length}자)` : "없음" });
   }
   if (req.method === "POST" && path === "/oc/scan") {  // 오너클랜 상품 목록 한 쪽 (깃허브 대량 수집용, 관리자 비밀번호 필요)
     const pw = String(env.ADMIN_PASSWORD || "").trim(), got = String(req.headers.get("x-admin-pass") || "").trim();
