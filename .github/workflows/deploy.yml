@@ -30,5 +30,12 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      - run: sleep 15  # 업로드 직후 GitHub가 산출물을 못 찾는 경우가 있어 잠깐 기다림
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep 60  # 실패하면 1분 뒤 한 번 더
+      - id: deployment2
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
