@@ -930,7 +930,7 @@
       if ($("#save-addr").checked) { store.set("addr", { name: f("name"), phone: f("phone"), email: f("email"), zip: f("zip"), addr1: f("addr1"), addr2: f("addr2") }); memberSave({ addr: store.get("addr") }); }
       else store.set("addr", null);
       await paint();  // 주소에 따른 추가 배송비 반영
-      const orderId = "T" + new Date().toISOString().slice(2, 10).replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const orderId = "T" + new Date().toISOString().slice(2, 10).replace(/-/g, "") + Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, "0");  // 영문·숫자만 (KPN 등 일부 PG는 '-' 불가)
       const first = sums.lines[0].name;
       const orderName = (first.length > 40 ? first.slice(0, 40) + "…" : first) + (sums.lines.length > 1 ? ` 외 ${sums.lines.length - 1}건` : "");
       const order = { orderId, orderName, amount: sums.total, items: cart, coupon, fromCart: !now,

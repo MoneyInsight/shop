@@ -754,7 +754,7 @@ def build_shop_pages():
 <label for="f-phone">연락처</label><input id="f-phone" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
 <button class="btn btn-dark" id="f-btn" style="margin-top:18px">주문 조회하기</button><div id="f-result"></div>
 <details class="find-order"><summary>주문번호로 조회하기</summary>
-<div class="row"><input id="o-id" placeholder="주문번호 예) T261112-AB12CD"><input id="o-phone" inputmode="tel" placeholder="010-0000-0000"></div><button class="btn btn-line" id="o-btn" style="margin-top:10px">조회하기</button></details></div>
+<div class="row"><input id="o-id" placeholder="주문번호 예) T261112AB12CD"><input id="o-phone" inputmode="tel" placeholder="010-0000-0000"></div><button class="btn btn-line" id="o-btn" style="margin-top:10px">조회하기</button></details></div>
 <div class="card" id="my-orders" style="display:none"></div></div>
 <div class="narrow" id="order-result" style="margin-top:16px;max-width:760px"></div>
 ''')

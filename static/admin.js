@@ -319,7 +319,7 @@
     const out = [];
     for (const ln of lines) {
       const cells = split(ln), all = cells.join(" ");
-      const m = all.match(/T\d{6}-[A-Z0-9]{6}/); if (!m) continue;
+      const m = all.match(/T\d{6}-?[A-Z0-9]{6}/); if (!m) continue;
       let tr = ti >= 0 ? cells[ti] : (cells.find((c) => /^\d[\d-]{8,15}$/.test(c.trim())) || "");
       tr = String(tr || "").replace(/[^\d]/g, "");
       if (tr.length < 9) continue;
