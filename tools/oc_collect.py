@@ -143,6 +143,19 @@ def main():
         except Exception as e:
             print("수집 중단 (다음 실행에서 이어서):", e); break
         items = d.get("items") or []
+        if not items:  # 오너클랜이 가끔 빈 쪽을 줌 → 바로 '끝'으로 보지 말고 같은 자리에서 다시 받아 봄
+            for t in range(4):
+                time.sleep(20 * (t + 1))
+                try:
+                    d = scan(after); items = d.get("items") or []
+                except Exception:
+                    items = []
+                if items:
+                    break
+        if not items and (after is None or st.get("empty_at") != after):  # 그래도 비면 자리(cursor)를 지키고 이번 실행만 멈춤 — 다음 실행이 같은 자리에서 다시 시도
+            st["empty_at"] = after
+            print("오너클랜이 빈 쪽을 줘서 이번엔 멈춤 (다음 실행에서 같은 자리부터 다시)")
+            break
         seen += len(items)
         for it in items:
             if it.get("key") in have:
@@ -152,8 +165,10 @@ def main():
                 kept.append(r); have.add(r["상품코드"])
         pg = d.get("page") or {}
         nxt = pg.get("endCursor")
-        if not items or not nxt or nxt == after:  # 오너클랜 hasNextPage 값은 믿지 않고, 받은 게 없거나 커서가 그대로일 때만 끝
-            done = True; st["cursor"] = None; st["rounds"] = st.get("rounds", 0) + 1; break
+        if not items or not nxt or nxt == after:  # 같은 자리에서 두 번 연속 비었거나 커서가 그대로면 진짜 끝 → 처음부터 다시 (새 상품 찾기)
+            done = True; st["cursor"] = None; st.pop("empty_at", None); st["rounds"] = st.get("rounds", 0) + 1
+            st["last_round_seen"] = st.get("round_seen", 0) + len(items); st["round_seen"] = 0; break
+        st["round_seen"] = st.get("round_seen", 0) + len(items); st.pop("empty_at", None)
         after = nxt
         st.update(cursor=after, seen=st.get("seen", 0) + len(items))
         if len(kept) >= PER_FILE:
