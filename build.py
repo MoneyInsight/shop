@@ -527,7 +527,7 @@ def build_home(ps):
 <div>{I_TRUCK}<p><b><a href="search.html?free=1" style="color:inherit">무료배송 {sum(1 for x in ps if not x["shipping_fee"]):,}개</a></b><span>같은 상품은 여러 개 사도 배송비 한 번</span></p></div>
 <div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>
 <div>{I_SHIELD}<p><b>안전 결제</b><span>{PAY_SHORT}</span></p></div>
-<div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div><div class="wrap"><p class="give-band">💛 담Go사Go에서 사시면 <b>판매금액의 일부는 어려운 이웃을 위한 후원금으로 사용됩니다.</b></p></div></div>
+<div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div></div>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
