@@ -1268,10 +1268,81 @@ async function adminPo(env) {
       (groups[src] = groups[src] || { source: src, name: SOURCE_NAME[src] || (src === "direct" ? "직영·공급사" : src), lines: [] }).lines.push({
         orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty * (Number(l.pk) || 1), pk: Number(l.pk) || 1,
         cost: l.cost || 0, amount: l.price * l.qty, ship_mode: l.ship_mode || "", receiver: o.customer?.name || "", phone: o.customer?.phone || "", zip: o.customer?.zip || "",
-        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "" });
+        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null });
     });
   }
   return { groups: Object.values(groups), sheets: ORDER_SHEETS };
+}
+// ---------- 발주 전 도매처 가격·재고 확인 (도매매·오너클랜 실시간) ----------
+// 결과는 주문 줄(l.lv)에 저장 → 발주 화면에 빨강/초록 표시. 10분마다 새 결제 주문을 자동 확인하고 문제가 있으면 관리자에게 알림
+async function poCheckOrders(env, { force = false, notifyBad = false } = {}) {
+  const res = {}, bad = [];
+  const env2 = { ...env, __ocToken: () => ocToken(env) };
+  for (const o of await kvList(env, "order:")) {
+    if (o.status !== "결제완료") continue;
+    const pids = [...new Set(o.lines.map((l) => l.id))], shipEach = Math.floor((Number(o.shipping) || 0) / Math.max(1, pids.length));
+    const seen = {};
+    let changed = false;
+    for (const [i, l] of o.lines.entries()) {
+      if (l.po) continue;
+      const src = srcOf(l);
+      if (src !== "domeme" && src !== "ownerclan") {
+        if (!l.lv && src === "onchannel") { l.lv = { ok: null, msg: "온채널은 자동 확인이 안 돼요 (발주 때 금액 확인)", at: new Date().toISOString() }; changed = true; }
+        res[`${o.orderId}:${i}`] = l.lv || { ok: null, msg: "" }; continue;
+      }
+      if (!force && l.lv && Date.now() - Date.parse(l.lv.at) < 30 * 60e3) { res[`${o.orderId}:${i}`] = l.lv; continue; }
+      let r;
+      try {
+        r = await live.check(env2, [{ id: l.id, name: l.name, qty: l.qty, pk: Number(l.pk) || 1, price: l.price, option: l.option || "", ship: seen[l.id] ? 0 : ((seen[l.id] = 1), shipEach), ship_fee: shipEach }], PRICING(env));
+      } catch (e) { r = { ok: true, skipped: true }; }
+      const lv = { ok: r.skipped ? null : !!r.ok, msg: r.ok ? (r.skipped ? "확인 못 함 (발주 때 금액 확인)" : "도매처 가격·재고 정상") : String(r.message || "").slice(0, 200), at: new Date().toISOString() };
+      const wasBad = l.lv && l.lv.ok === false;
+      l.lv = lv; changed = true; res[`${o.orderId}:${i}`] = lv;
+      if (lv.ok === false && !wasBad) bad.push(`${o.orderId} ${l.name}: ${lv.msg}`);
+    }
+    if (changed) await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  }
+  if (notifyBad && bad.length) await notify(env, `⚠️ 발주 전 확인 — 도매처 품절·가격 변동 ${bad.length}건\n${bad.slice(0, 10).join("\n")}\n관리자 > 발주에서 품절 취소 여부를 정해 주세요.`).catch(() => {});
+  return { results: res, bad: bad.length };
+}
+
+// ---------- 오너클랜 송장 자동 수집 ----------
+// 오너클랜 주문의 메모(원장주문코드·전달사항)에서 우리 주문번호(T…)를 찾아 송장 입력 → 배송중 + 손님에게 출고 알림
+async function ocTrackingSync(env) {
+  const tok = await ocToken(env).catch(() => "");
+  if (!tok) return { ok: false, message: "오너클랜 로그인 정보가 없어요." };
+  const want = {};  // 우리 주문번호 → 주문 (오너클랜 상품을 발주했고 송장이 아직 없는 것)
+  for (const o of await kvList(env, "order:")) {
+    if (o.tracking || !["상품준비중", "결제완료"].includes(o.status)) continue;
+    if (o.lines.some((l) => srcOf(l) === "ownerclan" && l.po)) want[o.orderId] = o;
+  }
+  if (!Object.keys(want).length) return { ok: true, updated: 0, message: "송장을 기다리는 오너클랜 주문이 없어요." };
+  let after = null, updated = 0, seen = 0;
+  for (let page = 0; page < 5; page++) {
+    const q = `query{allOrders(first:100${after ? `,after:${JSON.stringify(after)}` : ""}){pageInfo{hasNextPage endCursor} edges{node{key note ordererNote sellerNote products{itemKey trackingNumber shippingCompanyName}}}}}`;
+    const r = await fetch("https://api.ownerclan.com/v1/graphql", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ query: q }) });
+    const d = await r.json().catch(() => ({}));
+    if (d.errors || !d.data) return { ok: false, updated, message: "오너클랜 주문 조회 실패: " + JSON.stringify(d.errors || d).slice(0, 200) };
+    const con = d.data.allOrders;
+    for (const { node } of con.edges || []) {
+      seen++;
+      const m = [node.note, node.ordererNote, node.sellerNote].join(" ").match(/T\d{6}[0-9A-Z]{6}/);
+      const o = m && want[m[0]];
+      const pr = (node.products || []).find((x) => x.trackingNumber);
+      if (!o || !pr) continue;
+      const fake = new Request("https://x", { method: "POST", body: JSON.stringify({ orderId: o.orderId, courier: pr.shippingCompanyName || "", tracking: pr.trackingNumber }) });
+      const out = await (await adminOrderUpdate(fake, env)).json().catch(() => ({}));
+      if (out.ok) { updated++; delete want[o.orderId]; }
+    }
+    if (!con.pageInfo?.hasNextPage || !Object.keys(want).length) break;
+    after = con.pageInfo.endCursor;
+  }
+  return { ok: true, updated, message: `오너클랜 주문 ${seen}건 확인 → 송장 ${updated}건 자동 입력했어요.${Object.keys(want).length ? ` (아직 송장 없음 ${Object.keys(want).length}건)` : ""}` };
+}
+async function poCron(env) {  // 10분마다: 새 결제 주문 도매처 확인, 1시간마다: 오너클랜 송장 수집
+  await poCheckOrders(env, { notifyBad: true }).catch(() => {});
+  const last = Number(await env.SHOP.get("oc_trk_at")) || 0;
+  if (Date.now() - last > 55 * 60e3) { await env.SHOP.put("oc_trk_at", String(Date.now())); await ocTrackingSync(env).catch(() => {}); }
 }
 async function adminPoDone(req, env) {
   const { items } = await req.json();  // [{orderId, idx}]
@@ -1827,6 +1898,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
       if (path === "/admin/product-get") return await adminProductGet(req, env);
+      if (path === "/admin/po-check") return json(await poCheckOrders(env, { force: true }));
+      if (path === "/admin/oc-tracking-sync") return json(await ocTrackingSync(env));
       if (path === "/admin/product-img") return await adminProductImg(req, env);
       if (path === "/admin/product-bulk") return await adminProductBulk(req, env);
       if (path === "/admin/order-search") return await adminOrderSearch(req, env);
@@ -1863,4 +1936,4 @@ function retryDB(db) {
   const wrap = (st) => ({ bind: (...a) => wrap(st.bind(...a)), first: (...a) => again(() => st.first(...a)), all: () => again(() => st.all()), run: () => again(() => st.run()), raw: (...a) => again(() => st.raw(...a)), __st: st });
   return { __retry: true, prepare: (sql) => wrap(db.prepare(sql)), batch: (list) => again(() => db.batch(list.map((x) => x.__st || x))), exec: (q) => db.exec(q), dump: () => db.dump() };
 }
-export default { fetch: (req, env) => handle(req, env.DB ? { ...env, DB: retryDB(env.DB) } : env), scheduled: (ev, env, ctx) => ctx.waitUntil(ev.cron === "*/10 * * * *" ? portoneSync(env) : trackSweep(env)) };  // 정기 실행: 배송 단계 확인
+export default { fetch: (req, env) => handle(req, env.DB ? { ...env, DB: retryDB(env.DB) } : env), scheduled: (ev, env, ctx) => ctx.waitUntil(ev.cron === "*/10 * * * *" ? Promise.all([portoneSync(env), poCron(env)]) : trackSweep(env)) };  // 정기 실행: 배송 단계 확인

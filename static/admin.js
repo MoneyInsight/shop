@@ -102,7 +102,10 @@
     if (tab === "po") {
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
-      return `<div class="card"><h2>발주 대기 <small>${total}건</small></h2>
+      const badN = G.reduce((a, g) => a + g.lines.filter((l) => l.lv && l.lv.ok === false).length, 0);
+      return `<div class="card"><h2>발주 대기 <small>${total}건</small>${badN ? ` <small style="color:var(--sale)">⚠️ 도매처 문제 ${badN}건</small>` : ""}
+        <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost" data-act="po-check">도매처 가격·재고 지금 확인</button><button class="ghost" data-act="oc-trk">오너클랜 송장 가져오기</button></span></h2>
+        <p class="muted" style="margin:-8px 0 10px">새 결제 주문은 10분마다 도매매·오너클랜 가격·재고를 자동 확인하고, 품절·가격 인상이면 카톡으로 알려 드려요. 오너클랜 송장은 1시간마다 자동으로 들어가요.</p>
         <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
         <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
         <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
@@ -111,9 +114,10 @@
         <span style="color:var(--sale)">발주 전 확인: 도매처 결제 금액이 아래 '원가'보다 크면(도매가 인상) 손해일 수 있어요 — 발주하지 말고 품절 취소하세요.</span></p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
           <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button>${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
-          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>원가 / 판매</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
+          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>원가 / 판매</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
           <td><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td><td>${l.qty}${l.pk > 1 ? `<br><span class="muted">(${l.pk}개 묶음)</span>` : ""}</td>
-          <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
+          <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td>
+          <td style="white-space:normal;max-width:220px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}${l.lv && l.lv.at ? `<br><span class="muted" style="font-size:11px">${dt(l.lv.at)}</span>` : ""}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
         <p class="muted" style="margin-bottom:10px">도매처에서 받은 송장 엑셀을 열어 <b>전체 복사(Ctrl+A → Ctrl+C)</b> 후 아래에 붙여넣거나, CSV로 저장해 올려 주세요. 각 줄에서 우리 주문번호(T로 시작)·택배사·송장번호를 자동으로 찾아요.</p>
@@ -687,6 +691,8 @@
         if (!g || !confirm(`${g.name} ${g.lines.length}건을 발주 완료로 표시할까요? (도매처 결제까지 끝낸 뒤 눌러 주세요)`)) return;
         alert((await call("/admin/po-done", { items: g.lines.map((l) => ({ orderId: l.orderId, idx: l.idx })) })).message); return load();
       }
+      if (act === "po-check") { b.disabled = true; b.textContent = "확인 중…"; try { const r = await call("/admin/po-check"); alert(r.bad ? `⚠️ 문제 ${r.bad}건을 찾았어요. 표의 빨간 줄을 확인해 주세요.` : "확인했어요. 표의 '도매처 확인' 칸을 보세요."); } catch (e) { alert(e.message); } return load(); }
+      if (act === "oc-trk") { b.disabled = true; b.textContent = "가져오는 중…"; try { alert((await call("/admin/oc-tracking-sync")).message); } catch (e) { alert(e.message); } return load(); }
       if (act === "trk-import") {
         let text = $("#trk-paste").value;
         const f = $("#trk-file").files[0];
