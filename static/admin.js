@@ -370,7 +370,7 @@
       </div>
       <div id="pe-detail" contenteditable="true" style="border:1px solid #ddd;border-radius:8px;padding:10px;max-height:600px;overflow:auto;background:#fff">${peClean(html)}</div>
       <textarea id="pe-detail-html" style="display:none;width:100%;height:400px;font-family:monospace;font-size:12px"></textarea>
-      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="p-save" data-id="${esc(id)}">저장</button>${PEDITS.items[id] ? `<button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로 (도매처 원본)</button>` : ""}<a class="btn btn-ghost" href="product/item.html?id=${encodeURIComponent(id)}" target="_blank">사이트에서 보기</a></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="p-save" data-id="${esc(id)}">저장</button>${PEDITS.items[id] ? `<button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로 (도매처 원본)</button>` : ""}<a class="btn btn-ghost" href="product/item.html?id=${encodeURIComponent(id)}&x=1" target="_blank">사이트에서 보기</a></div>
       <p class="muted" style="margin-top:6px">저장하면 상품 페이지에 바로 반영돼요. 도매처가 매일 정보를 갱신해도 고친 내용은 유지돼요.</p>`;
     peImgs(); peOpts();
     const det2 = $("#pe-detail"); PSEL.html0 = det2.innerHTML;  // 브라우저가 정리한 모양 기준으로 바뀜 여부 판단

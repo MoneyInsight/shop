@@ -503,6 +503,7 @@ def listing(title, mode, items, root, cat="", count=None):
 
 
 # ---------------- 페이지 ----------------
+BUILT_AT = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(timespec="seconds")  # 상품 페이지가 만들어진 시각 (관리자가 그 뒤에 고치면 최신 화면으로)
 _IN_DB = {}
 def in_db(pid):
     """홈에 거는 상품이 상품 DB(D1)에 실제로 있는지 (아직 DB에 안 올라간 새 상품이면 홈 링크가 '상품 없음'이 됨). 확인 못 하면 있다고 봄"""
@@ -663,7 +664,7 @@ def product_body(p, related):
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액<small style="display:block;font-size:12px;color:var(--sub);font-weight:400">배송비 별도</small></span><strong id="d-total">{won(int(p["price"]))}</strong></div>
-<div class="d-btns" id="buy" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
+<div class="d-btns" id="buy" data-built="{BUILT_AT}" data-id="{e(p["id"])}" data-name="{e(p["name"])}" data-price="{p["price"]}" data-opts='{e(json.dumps([o["add"] for o in p["options"]]))}' data-qt='{e(json.dumps(p.get("qt") or []))}' data-ship="{int(p.get("shipping_fee") or 0)}" data-sn="{int(p.get("sn") or 0)}" data-pk="{int(p.get("pk") or 1)}" data-mq="{int(p.get("mq") or 1)}">
 <button class="wish-toggle" aria-label="찜하기">{I_HEART}</button>{'<button class="btn btn-soldout" disabled>일시품절 · 입고되면 다시 판매해요</button>' if p.get("soldout") else '<button class="btn btn-line" id="add-cart">장바구니</button><button class="btn btn-dark" id="buy-now">바로 구매</button>'}</div>
 {qty_table(p)}
 <p class="give-note">💛 구매하실 때마다 수익의 일부가 어려운 이웃 후원으로 쓰입니다.</p>

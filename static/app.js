@@ -519,7 +519,7 @@
     const box = $("#item-tpl");
     if (!box) return;
     const id = new URLSearchParams(location.search).get("id") || "";
-    const p = id && API ? await apiGet("/catalog/item?id=" + encodeURIComponent(id)) : null;
+    const p = id && API ? await apiGet("/catalog/item?id=" + encodeURIComponent(id) + (new URLSearchParams(location.search).get("x") ? "&x=" + Date.now() : "")) : null;  // x: 방금 고친 상품 → 브라우저 캐시 건너뜀
     if (!p) { box.innerHTML = `<div class="page"><div class="empty">상품을 찾을 수 없어요. <a href="${ROOT}index.html" style="text-decoration:underline">홈으로</a></div></div>`; return false; }
     document.title = `${p.name} — ${CFG.shop_name || ""}`;
     const cat = (CFG.cat_names || {})[p.category] || "";
@@ -591,6 +591,12 @@
   function initDetail() {
     const el = $("#buy");
     if (!el) return;
+    // 미리 만들어 둔 상품 페이지인데 관리자가 그 뒤에 고쳤으면 → 최신 정보 화면으로 (다음 사이트 빌드 전까지)
+    if (el.dataset.built && API && !/item\.html$/.test(location.pathname)) {
+      fetch(`${API}/edits/one?id=${encodeURIComponent(el.dataset.id)}`).then((r) => r.json()).then((d) => {
+        if (d.at && d.at > el.dataset.built) location.replace(`${ROOT}product/item.html?id=${encodeURIComponent(el.dataset.id)}&x=1`);
+      }).catch(() => {});
+    }
     document.body.classList.add("has-buybar");
     // 도착 예정일: 영업일 기준 출고 1~3일 + 배송 1일 (주말 제외)
     const eta = $("#eta");

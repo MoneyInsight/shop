@@ -231,9 +231,10 @@ async function adminProductSave(req, env) {
   }
   all.ver = Date.now();
   await env.SHOP.put("product_edits", JSON.stringify(all));
-  let deploy = "30분 안에 사이트에 반영돼요.";
+  if (typeof caches !== "undefined") await caches.default.delete(new Request("https://catalog-cache/catalog/item?id=" + encodeURIComponent(id))).catch(() => {});  // 상품 캐시 바로 지움
+  let deploy = "상품 페이지에 바로 반영돼요. (목록·검색 화면은 5분 안에)";
   if (env.GITHUB_TOKEN) {
-    try { await gh(env, "actions/workflows/deploy.yml/dispatches", { method: "POST", body: JSON.stringify({ ref: "main" }) }); deploy = "2~3분 뒤 사이트에 반영돼요."; } catch (e) { /* 다음 정기 반영 때 */ }
+    try { await gh(env, "actions/workflows/deploy.yml/dispatches", { method: "POST", body: JSON.stringify({ ref: "main" }) }); deploy = "상품 페이지에 바로 반영돼요. (사이트 전체 갱신은 2~3분 뒤)"; } catch (e) { /* 다음 정기 반영 때 */ }
   }
   return json({ ok: true, message: (d.reset ? "원래대로 되돌렸어요. " : "저장했어요. ") + deploy, item: all.items[id] || null });
 }
@@ -1536,6 +1537,11 @@ export async function handle(req, env, path) {
     const { value, metadata } = await env.SHOP.getWithMetadata("pimg:" + k, "arrayBuffer");
     if (!value) return new Response("not found", { status: 404 });
     return new Response(value, { headers: { "Content-Type": (metadata && metadata.type) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": "*" } });
+  }
+  if (req.method === "GET" && path === "/edits/one") {  // 이 상품을 관리자가 마지막으로 고친 시각 (상품 페이지가 최신인지 확인)
+    const id = String(new URL(req.url).searchParams.get("id") || "");
+    const e = (((await env.SHOP.get("product_edits", "json")) || {}).items || {})[id];
+    return json({ at: e ? e.at : null }, 200, { "Cache-Control": "public, max-age=20" });
   }
   if (req.method === "GET" && path === "/edits/big") {  // 상세·사진·옵션 수정본 (사이트 빌드·상품 DB 채우기용) ?ids=a,b,c
     const ids = String(new URL(req.url).searchParams.get("ids") || "").split(",").map((x) => x.replace(/[^0-9A-Za-z_-]/g, "")).filter(Boolean).slice(0, 100);
