@@ -192,17 +192,17 @@ def apply_edits(ps):
     import urllib.request
     url = (CFG.get("worker_url") or "").rstrip("/") + "/edits"
     try:
-        with urllib.request.urlopen(url, timeout=15) as r:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "allchaeum-d1"}), timeout=15) as r:
             data = json.loads(r.read().decode("utf-8"))
     except Exception as ex:
         print("상품 수정 내역을 못 받음(이번엔 건너뜀):", ex); return ps
     global SITE
     EDITS_VER = str(data.get("ver", 0)); items = data.get("items") or {}
     try:  # SEO 일괄 수정본 (상품명·검색 키워드·요약 설명) — 서버에 64칸으로 나눠 저장
-        meta = json.loads(urllib.request.urlopen(url + "/seo", timeout=15).read().decode("utf-8"))
+        meta = json.loads(urllib.request.urlopen(urllib.request.Request(url + "/seo", headers={"User-Agent": "allchaeum-d1"}), timeout=15).read().decode("utf-8"))
         seo_items = {}
         for b in range(int(meta.get("n", 0))):
-            seo_items.update(json.loads(urllib.request.urlopen(f"{url}/seo?b={b}", timeout=30).read().decode("utf-8")))
+            seo_items.update(json.loads(urllib.request.urlopen(urllib.request.Request(f"{url}/seo?b={b}", headers={"User-Agent": "allchaeum-d1"}), timeout=30).read().decode("utf-8")))
         n_seo = 0
         for p in ps:
             e = seo_items.get(p["id"])
@@ -226,7 +226,7 @@ def apply_edits(ps):
     bigs = {}
     for k in range(0, len(big_ids), 100):
         try:
-            bigs.update(json.loads(urllib.request.urlopen(url + "/big?ids=" + ",".join(big_ids[k:k + 100]), timeout=30).read().decode("utf-8")))
+            bigs.update(json.loads(urllib.request.urlopen(urllib.request.Request(url + "/big?ids=" + ",".join(big_ids[k:k + 100]), headers={"User-Agent": "allchaeum-d1"}), timeout=30).read().decode("utf-8")))
         except Exception as ex:
             print("상세 수정본을 못 받음(일부 건너뜀):", ex)
     for p in ps:
@@ -660,7 +660,7 @@ def product_body(p, related):
 {f'<p class="d-summary">{e(p["summary"])}</p>' if p["summary"] else ""}<div class="d-rating" id="d-rating"></div>
 <div class="d-price">{f'<span class="rate">{r}%</span>' if r else ""}<span class="now">{won(p["price"])}</span>{f"<del>{won(p['normal_price'])}</del>" if r else ""}</div>
 <dl class="d-meta"><dt>배송비</dt><dd>{"<b>무료배송</b>" if not p["shipping_fee"] else e(ship_text(p)) + '<br><small class="muted">' + ("부피가 커서 1개씩 따로 보내요 — 수량만큼 배송비가 붙어요" if int(p.get("sn") or 0) == 1 else f'{int(p["sn"])}개까지는 배송비 한 번 · {int(p["sn"])}개를 넘으면 {int(p["sn"])}개마다 추가' if int(p.get("sn") or 0) > 1 else "같은 상품은 몇 개를 사도(옵션을 섞어도) 배송비 한 번") + "</small>"}</dd>
-{f'<dt>구매 수량</dt><dd><b>{int(p["mq"])}개부터 구매</b> <small class="muted">(1개 {won(p["price"])} · 상품값 {won(int(p["price"]) * int(p["mq"]))}부터)</small></dd>' if int(p.get("mq") or 1) > 1 else ""}<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd><dt>상품번호</dt><dd><span class="pid">{e(p["id"])}</span> <button type="button" class="pid-copy" style="border:1px solid #ddd;background:#fff;border-radius:4px;font-size:11px;padding:1px 6px;cursor:pointer">복사</button></dd></dl>
+{f'<dt>구매 수량</dt><dd><b>{int(p["mq"])}개부터 구매</b> <small class="muted">(1개 {won(p["price"])} · 상품값 {won(int(p["price"]) * int(p["mq"]))}부터)</small></dd>' if int(p.get("mq") or 1) > 1 else ""}<dt>배송 안내</dt><dd>결제 후 영업일 1~3일 안에 출고<span class="eta" id="eta"></span></dd><dt class="adm-only" hidden>상품번호</dt><dd class="adm-only" hidden><span class="pid">{e(p["id"])}</span> <button type="button" class="pid-copy" style="border:1px solid #ddd;background:#fff;border-radius:4px;font-size:11px;padding:1px 6px;cursor:pointer">복사</button> <a href="../admin.html#p={e(p["id"])}" style="font-size:11px">관리자에서 수정</a></dd></dl>
 {opts}
 <div class="qty-row"><span>수량</span><div class="qty"><button id="minus" aria-label="빼기">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="더하기">+</button></div></div>
 <div class="d-total"><span>총 상품 금액<small style="display:block;font-size:12px;color:var(--sub);font-weight:400">배송비 별도</small></span><strong id="d-total">{won(int(p["price"]))}</strong></div>

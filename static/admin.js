@@ -8,6 +8,8 @@
   const dt = (iso) => new Date(iso).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   const COURIERS = ["CJ대한통운", "한진택배", "롯데택배", "우체국택배", "로젠택배", "경동택배", "대신택배", "기타"];
   let PW = sessionStorage.getItem("admin_pw") || "", D = null, tab = "dash", orderFilter = "전체";
+  const HASH_P = (location.hash.match(/^#p=([0-9A-Za-z_-]+)/) || [])[1];  // 상품 페이지의 '관리자에서 수정'
+  if (HASH_P) tab = "products";
 
   const call = async (path, body) => {
     let r, d;
@@ -329,7 +331,7 @@
     const sf = $("#seo-file"); if (sf) sf.onchange = () => { if (sf.files[0]) seoUploadFile(sf.files[0]); sf.value = ""; };
     const q = $("#p-q"); if (!q) return;
     q.oninput = () => { clearTimeout(q._t); q._t = setTimeout(prodSearch, 200); };
-    prodEdited(); if (PSEL) prodForm(PSEL.id);
+    prodEdited(); if (PSEL) prodForm(PSEL.id); else if (HASH_P && !prodInit._h) { prodInit._h = 1; prodForm(HASH_P); }
   }
   const catName = (i) => (PIDX && PIDX.cats[i] ? PIDX.cats[i][1] : "");
   function prodSearch() {
@@ -716,7 +718,7 @@
 
   $("#admin-enter").onclick = async () => {
     if (!API) { alert("서버 주소(worker_url)가 설정되지 않았어요."); return; }
-    PW = $("#admin-pw").value; sessionStorage.setItem("admin_pw", PW);
+    PW = $("#admin-pw").value; sessionStorage.setItem("admin_pw", PW); try { localStorage.setItem("is_admin", "1"); } catch (e) {}
     try { await load(); } catch (e) { alert(e.message); }
   };
   $("#admin-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#admin-enter").click(); });

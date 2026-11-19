@@ -537,6 +537,7 @@
     Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []),
       ship: p.shipping_fee || 0, sn: p.sn || 0, pk: p.pk || 1, mq: p.mq || 1 });  // 배송비 규칙 (서버 결제 검증과 같게)
     if ($(".d-meta .pid")) $(".d-meta .pid").textContent = p.id;
+    if ($(".d-meta a[href*='admin.html#p=']")) $(".d-meta a[href*='admin.html#p=']").href = ROOT + "admin.html#p=" + encodeURIComponent(p.id);
     const sdd = $(".d-meta dd");
     if (sdd) sdd.innerHTML = shipInfo(p.shipping_fee || 0, p.sn || 0, p.price, p.mq || 1);
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
@@ -592,6 +593,8 @@
   function initDetail() {
     const el = $("#buy");
     if (!el) return;
+    // 상품번호는 관리자에게만 (관리자 화면에 로그인한 브라우저)
+    try { if (localStorage.getItem("is_admin") === "1") document.querySelectorAll(".adm-only").forEach((x) => (x.hidden = false)); } catch (e) {}
     document.addEventListener("click", (ev) => { if (ev.target.closest(".pid-copy")) { navigator.clipboard?.writeText($(".d-meta .pid").textContent.trim()).then(() => { const b = ev.target.closest(".pid-copy"); b.textContent = "복사됨"; setTimeout(() => (b.textContent = "복사"), 1500); }).catch(() => {}); } });
     // 미리 만들어 둔 상품 페이지인데 관리자가 그 뒤에 고쳤으면 → 최신 정보 화면으로 (다음 사이트 빌드 전까지)
     if (el.dataset.built && API && !/item\.html$/.test(location.pathname)) {
@@ -1207,7 +1210,7 @@
       if (p) {
         $("#bk-product").value = p.name;
         const bi = $("#bulk-item"); bi.hidden = false;
-        bi.innerHTML = `<img src="${esc(img(p.image))}" alt=""><div><b>${esc(p.name)}</b><div class="muted">상품번호 ${esc(p.id)} · 1개 ${won(p.price)}</div></div>`;
+        bi.innerHTML = `<img src="${esc(img(p.image))}" alt=""><div><b>${esc(p.name)}</b><div class="muted">1개 ${won(p.price)}</div></div>`;
       }
     }
     const a = store.get("addr", null) || member();

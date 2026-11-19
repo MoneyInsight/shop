@@ -23,13 +23,13 @@ UA = {"User-Agent": "damgosago-seo"}
 
 PROMO = re.compile(r"무료\s*배송|무배|최저가|초특가|특가|파격|할인|세일|\bsale\b|이벤트|사은품|증정|당일\s*(발송|배송|출고)|빠른\s*배송|국내\s*배송|오늘\s*출발|"
                    r"강력\s*추천|추천\s*상품|인기\s*상품|베스트|\bbest\b|핫딜|대박|신상품?|정품\s*보장|100%\s*정품|공식\s*판매|한정\s*수량|품절\s*임박|"
-                   r"도매|위탁|재고\s*정리|땡처리|가성비\s*갑|1\s*등|판매\s*1위", re.I)
+                   r"도매|위탁|재고\s*정리|땡처리|가성비\s*갑|1\s*등|판매\s*1위|[가-힣]*셀러\s*제안\s*샵|셀러\s*제안", re.I)
 SPECIAL = re.compile(r"[★☆♥♡◆◇■□●○▶◀▲▼※♣♠✔✨🔥💯!~^*=+|\\#@$%`{}<>\"']+")
 COLORS = set("블랙 화이트 그레이 네이비 베이지 브라운 레드 블루 그린 옐로우 핑크 퍼플 오렌지 아이보리 카키 민트 실버 골드 검정 흰색 회색 남색 빨강 파랑 초록 노랑 분홍 보라 랜덤 혼합".split())
 STOP = set("추천 강추 및 등 외 용 형 개 세트 1개 2개 상품 제품 신형 기본 고급 프리미엄 국산 국내산 수입 정품 새상품 단품 택1 선택 옵션 색상 사이즈 컬러 랜덤발송 랜덤".split())
 GENERIC = set("대용량 소용량 미니 대형 중형 소형 휴대용 가정용 업소용 사무용 차량용 캠핑용 다용도 다용도용 초대형 슬림 접이식 고급형 일반형 신형 구형 남성 여성 남녀공용 아동 유아 성인 겨울 여름 사계절 간편 튼튼한 예쁜".split())
 SPEC = re.compile(r"^(\d+([.,]\d+)?(mm|cm|m|ml|l|g|kg|매|개|입|장|p|pcs|ea|구|단|롤|인치|인용|켤레|족|팩|박스|세트|겹|호|종|미터|리터|w|v|mah|평)?|[xX×*]\d+.*|\d+[xX×*]\d+.*|\d+\+\d+|[a-z]{1,2}\d{2,}[a-z0-9-]*)$", re.I)
-TOK = re.compile(r"[0-9A-Za-z가-힣][0-9A-Za-z가-힣.+\-/]*")
+TOK = re.compile(r"[0-9A-Za-z가-힣][0-9A-Za-z가-힣.+\-]*")
 
 
 def tokens(s):
@@ -46,6 +46,7 @@ def clean_name(name):
     s = re.sub(r"[\[\(【〔]([^\]\)】〕]*)[\]\)】〕]", lambda m: "" if PROMO.search(m.group(1)) or not m.group(1).strip() else m.group(0), s)  # [무료배송] 같은 괄호는 통째로
     s = PROMO.sub(" ", s)
     s = SPECIAL.sub(" ", s)
+    s = re.sub(r"(?<=[가-힣a-zA-Z])\s*/\s*(?=[가-힣a-zA-Z])", " ", s)  # 남성신발/파크골프/패션화 → 띄어쓰기
     out, seen = [], set()
     for w in s.split():
         k = w.lower().strip(",.·/-")
@@ -64,7 +65,7 @@ def content_tokens(name):
 def core_query(name):
     """검색에 쓸 핵심 말: 끝쪽 뜻있는 말 두 개 (한국어 상품명은 보통 끝이 '무엇'인지)"""
     ct = [t for t in content_tokens(re.sub(r"[\[\(【〔][^\]\)】〕]*[\]\)】〕]", " ", name)) if re.search(r"[가-힣]", t)]
-    ct = [t for t in ct if t not in GENERIC] or ct
+    ct = [t for t in ct if t not in GENERIC and not (t.endswith("용") and len(t) <= 4)] or ct  # 군용·업소용 같은 '~용'은 핵심 말이 아님
     return ct[-1] if ct else ""
 
 
@@ -157,13 +158,14 @@ def ad_words(rel, core, own_text, my):
     tags, syn = [], []
     for x in sorted(rel or [], key=lambda x: -x["v"]):
         w = x["k"].lower()
-        if not w or x["v"] < 20 or PROMO.search(w) or any(st in w for st in ("추천", "가격", "할인", "최저", "후기", "순위", "파는곳", "쇼핑몰", "브랜드", "중고")):
+        if not w or x["v"] < 20 or PROMO.search(w) or any(st in w for st in ("추천", "가격", "할인", "최저", "후기", "순위", "파는곳", "쇼핑몰", "브랜드", "중고", "샵", "몰", "마켓", "스토어", "사이트", "매장", "판매", "구매", "만들기", "diy")):
             continue
         if not re.fullmatch(r"[가-힣0-9a-z]+", w):
             continue
         if core and core in w:
             rest = w.replace(core, "")
-            if not rest or rest in own_text or all(r in own_text for r in re.findall(r"[가-힣]{2,}|[0-9a-z]+", rest)):
+            parts = re.findall(r"[가-힣]{2,}|[0-9a-z]+", rest)
+            if not rest or rest in own_text or (parts and "".join(parts) == rest and all(r in own_text for r in parts)):
                 tags.append((w, x["v"]))
         elif w in own_text and w not in my and len(w) >= 2:
             syn.append((w, x["v"]))  # 같은 상품을 부르는 다른 이름 (우리 설명에 실제로 있는 말)
@@ -207,6 +209,7 @@ def optimize(p, nv):
     arel = ad.related(core_w) if (ad and core_w) else None
     if arel:
         atags, syn = ad_words(arel, core_w, own_text, my)
+        syn = [x for x in syn if not any(x[0] in t.lower() for t in tokens(name))]  # 이미 이름 속 말에 들어 있으면(신발 ⊂ 남성신발) 안 붙임
         if syn and syn[0][1] >= 1000 and len(name) + len(syn[0][0]) + 1 <= 50:
             add = syn[0][0]; name = f"{name} {add}"; why.append(f"검색 많은 이름 '{add}' 추가 (월 {syn[0][1]:,}회)")
         for w, v in atags[:8] + syn[1:3]:

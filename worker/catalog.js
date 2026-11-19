@@ -71,13 +71,6 @@ async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, 
   page = Math.max(1, +page || 1);
   const where = [], args = [];
   let from = "products p";
-  // 상품번호로 찾기 (예: DM12345678, CH1234567, 숫자만)
-  const code = String(q || "").trim().toUpperCase().replace(/\s/g, "");
-  if (/^[A-Z]{1,3}\d{4,}$|^\d{6,}$/.test(code)) {
-    const ids = /^\d+$/.test(code) ? ["DM" + code, "CH" + code, "OC" + code, code] : [code];
-    const rs = await db.prepare(`SELECT * FROM products WHERE id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all().catch(() => ({ results: [] }));
-    if ((rs.results || []).length) return { total: rs.results.length, items: rs.results.map(card), page: 1, size };
-  }
   const t = terms(q).filter((x) => x.length > 1 || /[0-9a-z]/.test(x)).slice(0, 12);
   if (q && !t.length) return { total: 0, items: [], page, size };
   if (t.length) {  // 검색 색인에 같은 상품이 두 줄 있어도(이름 변경) 한 번만 — IN 으로 중복 제거
