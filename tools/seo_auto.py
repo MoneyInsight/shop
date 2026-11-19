@@ -12,7 +12,7 @@
 사용: python3 tools/seo_auto.py --mode preview|apply --scope site|db|cat:<slug>|ids:A,B --limit 20000
 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET (네이버 검색 API, 없으면 규칙 정리만), ADMIN_PASSWORD
 """
-import argparse, collections, datetime, gzip, json, os, re, sys, time, urllib.parse, urllib.request
+import argparse, base64, collections, datetime, gzip, hashlib, hmac, json, os, re, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -116,6 +116,60 @@ class Naver:
             f.write(json.dumps(self.cache, ensure_ascii=False, separators=(",", ":")))
 
 
+class SearchAd:
+    """네이버 검색광고 키워드 도구: 검색어 → 연관 검색어 + 월간 검색량 (PC+모바일). 무료, 광고를 안 해도 됨"""
+    def __init__(self, key, secret, customer, cache, max_calls):
+        self.key, self.secret, self.cust = key, secret, customer
+        self.ok, self.err, self.calls, self.left, self.cache = bool(key and secret and customer), "", 0, max_calls, cache
+
+    def related(self, q):
+        k = "ad:" + q
+        if k in self.cache:
+            return self.cache[k]["items"]
+        if not self.ok or self.left <= 0:
+            return None
+        path = "/keywordstool"
+        url = "https://api.searchad.naver.com" + path + "?" + urllib.parse.urlencode({"hintKeywords": q.replace(" ", ""), "showDetail": 1})
+        for t in range(3):
+            ts = str(int(time.time() * 1000))
+            sig = base64.b64encode(hmac.new(self.secret.encode(), f"{ts}.GET.{path}".encode(), hashlib.sha256).digest()).decode()
+            try:
+                req = urllib.request.Request(url, headers={"X-Timestamp": ts, "X-API-KEY": self.key, "X-Customer": self.cust, "X-Signature": sig, **UA})
+                d = json.loads(urllib.request.urlopen(req, timeout=20).read().decode("utf-8"))
+                self.calls += 1; self.left -= 1
+                num = lambda v: int(v) if str(v).isdigit() else 5  # "< 10" 같은 값
+                items = [{"k": x.get("relKeyword", ""), "v": num(x.get("monthlyPcQcCnt")) + num(x.get("monthlyMobileQcCnt"))} for x in d.get("keywordList", [])[:300]]
+                self.cache[k] = {"d": datetime.date.today().isoformat(), "items": items}
+                time.sleep(0.25)
+                return items
+            except urllib.error.HTTPError as e:
+                body = e.read().decode("utf-8", "replace")[:200]
+                if e.code in (401, 403):
+                    self.ok, self.err = False, f"검색광고 API 키 오류 ({e.code}) {body}"; return None
+                time.sleep(3 * (t + 1))
+            except Exception:
+                time.sleep(3)
+        return None
+
+
+def ad_words(rel, core, own_text, my):
+    """연관 검색어 중 우리 상품에 맞는 것만: 핵심 말 + (우리 상품 설명에 실제로 있는 말) 조합, 검색량 순"""
+    tags, syn = [], []
+    for x in sorted(rel or [], key=lambda x: -x["v"]):
+        w = x["k"].lower()
+        if not w or x["v"] < 20 or PROMO.search(w) or any(st in w for st in ("추천", "가격", "할인", "최저", "후기", "순위", "파는곳", "쇼핑몰", "브랜드", "중고")):
+            continue
+        if not re.fullmatch(r"[가-힣0-9a-z]+", w):
+            continue
+        if core and core in w:
+            rest = w.replace(core, "")
+            if not rest or rest in own_text or all(r in own_text for r in re.findall(r"[가-힣]{2,}|[0-9a-z]+", rest)):
+                tags.append((w, x["v"]))
+        elif w in own_text and w not in my and len(w) >= 2:
+            syn.append((w, x["v"]))  # 같은 상품을 부르는 다른 이름 (우리 설명에 실제로 있는 말)
+    return tags, syn
+
+
 def market(items, my_tokens, core):
     """같은 상품을 파는 네이버 상위 상품들 → 자주 쓰는 말·브랜드·분류 (핵심 말이 이름에 있는 상품만 = 진짜 같은 종류)"""
     brands, df, cats = set(), collections.Counter(), collections.Counter()
@@ -148,8 +202,20 @@ def optimize(p, nv):
     q = core_query(name)
     tags, add = [], None
     items = nv.shop(q) if q else None
+    ad = getattr(nv, "ad", None)
+    core_w = q.split()[-1].lower() if q else ""
+    arel = ad.related(core_w) if (ad and core_w) else None
+    if arel:
+        atags, syn = ad_words(arel, core_w, own_text, my)
+        if syn and syn[0][1] >= 1000 and len(name) + len(syn[0][0]) + 1 <= 50:
+            add = syn[0][0]; name = f"{name} {add}"; why.append(f"검색 많은 이름 '{add}' 추가 (월 {syn[0][1]:,}회)")
+        for w, v in atags[:8] + syn[1:3]:
+            if w not in tags and w != core_w:
+                tags.append(w)
+        if tags:
+            why.append(f"연관 검색어 {len(tags)}개 (월 검색량 순)")
     rel = []
-    if items:
+    if items and not arel:
         rel, brands, df, cats = market(items, my, (q.split()[-1].lower() if q else ""))
     if len(rel) >= 5:  # 같은 종류 상품이 충분히 있을 때만 시장 말을 씀 (엉뚱한 말이 붙지 않게)
         n = max(1, len(rel))
@@ -179,7 +245,7 @@ def optimize(p, nv):
             for t in tokens(c):
                 if len(t) >= 2 and t.lower() not in my and t.lower() not in tags and t.lower() not in bad and len(tags) < 10:
                     tags.append(t.lower())
-        if add and len(name) + len(add) + 1 <= 50:
+        if add and add not in name and len(name) + len(add) + 1 <= 50:
             name = f"{name} {add}"; why.append(f"대표 검색어 '{add}' 추가")
         if tags:
             why.append("검색 태그 " + str(len(tags)) + "개")
@@ -265,6 +331,7 @@ def main():
         todo.sort(key=lambda p: (cur.get(p["id"], {}).get("auto", "") if p["id"] in cur else "", -int(p.get("price") or 0)))
         todo = todo[:a.limit]
         nv = Naver(os.environ.get("NAVER_CLIENT_ID", "").strip(), os.environ.get("NAVER_CLIENT_SECRET", "").strip(), a.max_calls)
+        nv.ad = SearchAd(os.environ.get("NAVER_AD_API_KEY", "").strip(), os.environ.get("NAVER_AD_SECRET", "").strip(), os.environ.get("NAVER_AD_CUSTOMER", "").strip(), nv.cache, a.max_calls)
         # 같은 핵심 말끼리 묶어서 조회 한 번으로 여러 상품
         todo.sort(key=lambda p: core_query(clean_name(p.get("name"))))
         rows, samples, stats, errs = [], [], collections.Counter(), 0
@@ -288,8 +355,8 @@ def main():
             if time.time() - t0 > 5.3 * 3600:
                 stats["시간 부족으로 다음에"] += 1; break
         nv.save()
-        report.update({"total": len(ps), "checked": len(todo), "changed": len(rows), "stats": dict(stats), "api_calls": nv.calls,
-                       "api": "ok" if nv.ok and nv.calls else (nv.err or ("키 없음 — 규칙 정리만" if not nv.cid else "캐시만 사용")), "samples": samples, "errors": errs})
+        report.update({"total": len(ps), "checked": len(todo), "changed": len(rows), "stats": dict(stats), "api_calls": nv.calls + nv.ad.calls,
+                       "api": "검색광고 키워드 도구 ok" if nv.ad.calls else ("쇼핑 검색 ok" if nv.ok and nv.calls else (nv.ad.err or nv.err or ("키 없음 — 규칙 정리만" if not (nv.cid or nv.ad.key) else "지난 조회 결과 사용"))), "samples": samples, "errors": errs})
         if a.mode == "apply" and rows:
             done = 0
             for k in range(0, len(rows), 2000):
