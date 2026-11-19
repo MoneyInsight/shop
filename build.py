@@ -221,8 +221,22 @@ def apply_edits(ps):
     import product_import as _pi
     floor_p = dict(CFG.get("pricing", {})); floor_p["net_margin"] = (floor_p.get("qty_price") or {}).get("min_net_margin", 0.08); floor_p["min_margin_won"] = 0
     slugs = {c["slug"] for c in CATS}; out, n = [], 0
+    # 상세페이지 본문·사진·옵션 수정본 (크기가 커서 따로 받음)
+    big_ids = [i for i, e in items.items() if e.get("big")]
+    bigs = {}
+    for k in range(0, len(big_ids), 100):
+        try:
+            bigs.update(json.loads(urllib.request.urlopen(url + "/big?ids=" + ",".join(big_ids[k:k + 100]), timeout=30).read().decode("utf-8")))
+        except Exception as ex:
+            print("상세 수정본을 못 받음(일부 건너뜀):", ex)
     for p in ps:
         e = items.get(p["id"])
+        b = bigs.get(p["id"])
+        if b:
+            if "detail_html" in b: p["detail_html"] = b["detail_html"]; p["desc_lines"] = []
+            if b.get("images"): p["image"] = b["images"][0]; p["images"] = b["images"][1:]
+            if "options" in b: p["options"] = [{"v": o["v"], "add": int(o.get("add") or 0), "so": bool(o.get("so"))} for o in b["options"]]
+            if "option_name" in b: p["option_name"] = b["option_name"]
         if not e:
             out.append(p); continue
         n += 1

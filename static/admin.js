@@ -307,33 +307,99 @@
     if (v.length < 2) { box.innerHTML = ""; return; }
     const words = v.split(/\s+/), hits = [];
     for (const r of PIDX.items) { const t = (r[0] + " " + r[1]).toLowerCase(); if (words.every((w) => t.includes(w))) { hits.push(r); if (hits.length >= 40) break; } }
+    const row = (r) => `<tr>
+      <td><img src="${esc(r[4])}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px"></td>
+      <td>${esc(r[1])}<br><span class="muted">${esc(r[0])}${r[7] ? " · 품절" : ""}${PEDITS.items[r[0]] ? " · ✏️ 고침" : ""}</span></td>
+      <td>${esc(r[6] === null ? "" : catName(r[6]) || r[6])}</td><td>${won(r[2])}</td>
+      <td><button data-act="p-pick" data-id="${esc(r[0])}">수정</button> <a class="muted" href="product/item.html?id=${encodeURIComponent(r[0])}" target="_blank">보기</a></td></tr>`;
+    // 사이트 목록 밖(상품 DB 150만 개)도 서버에서 찾기
+    const tok = (box._tok = (box._tok || 0) + 1);
+    const code = v.toUpperCase().replace(/\s/g, "");
+    Promise.all([
+      /^[A-Z]{1,3}\d{4,}$|^\d{6,}$/.test(code) ? call("/admin/product-get", { id: code }).then((d) => d.row && d.row.name ? [[d.row.id, d.row.name, d.row.price, 0, d.row.image, 0, d.row.category, d.row.soldout]] : []).catch(() => []) : Promise.resolve([]),
+      fetch(`${API}/catalog/list?q=${encodeURIComponent(v)}&size=40`).then((x) => x.json()).then((d) => (d.items || []).map((it) => [it.id, it.name, it.price, 0, it.image, 0, it.category, it.soldout])).catch(() => []),
+    ]).then(([a, b2]) => {
+      if (tok !== box._tok) return;
+      const seen = new Set(hits.map((r) => r[0])), more = [...a, ...b2].filter((r) => !seen.has(r[0]) && seen.add(r[0]));
+      if (more.length) box.insertAdjacentHTML("beforeend", `<h3 style="margin:14px 0 6px">상품 DB에서 찾은 상품 <small class="muted">${more.length}개</small></h3><table class="adm-table"><tr><th></th><th>상품</th><th>카테고리</th><th>가격</th><th></th></tr>${more.map(row).join("")}</table>`);
+      else if (!hits.length) box.innerHTML = `<p class="muted">찾는 상품이 없어요.</p>`;
+    });
     box.innerHTML = hits.length ? `<table class="adm-table"><tr><th></th><th>상품</th><th>카테고리</th><th>가격</th><th></th></tr>${hits.map((r) => `<tr>
       <td><img src="${esc(r[4])}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px"></td>
       <td>${esc(r[1])}<br><span class="muted">${esc(r[0])}${r[7] ? " · 품절" : ""}${PEDITS.items[r[0]] ? " · ✏️ 고침" : ""}</span></td>
       <td>${esc(catName(r[6]))}</td><td>${won(r[2])}</td>
-      <td><button data-act="p-pick" data-id="${esc(r[0])}">수정</button> <a class="muted" href="product/${esc(r[0])}.html" target="_blank">보기</a></td></tr>`).join("")}</table>` : `<p class="muted">찾는 상품이 없어요.</p>`;
+      <td><button data-act="p-pick" data-id="${esc(r[0])}">수정</button> <a class="muted" href="product/${esc(r[0])}.html" target="_blank">보기</a></td></tr>`).join("")}</table>` : `<p class="muted">찾는 중…</p>`;
   }
   async function prodForm(id) {
     const r = PIDX && PIDX.items.find((x) => x[0] === id);
-    const det = await fetch(`p/${id}.json`).then((x) => x.json()).catch(() => ({}));
-    const e = (PEDITS.items || {})[id] || {};
-    const cur = { name: det.name || (r && r[1]) || "", price: det.price || (r && r[2]) || 0, category: det.category || "", summary: det.summary || "", badge: det.badge || "" };
-    PSEL = { id, cur };
+    const [det, srv] = await Promise.all([fetch(`p/${id}.json`).then((x) => x.json()).catch(() => ({})), call("/admin/product-get", { id }).catch(() => ({}))]);
+    const row = srv.row || {}, big = srv.big || {}, e = (PEDITS.items || {})[id] || srv.edit || {};
+    const cur = { name: row.name || det.name || (r && r[1]) || "", price: row.price || det.price || (r && r[2]) || 0, category: row.category || det.category || "", summary: det.summary || "", badge: det.badge || "" };
+    const imgs = big.images || [row.image || det.image || (r && r[4]) || "", ...(row.images || det.images || [])].filter(Boolean);
+    const opts = (big.options || row.options || det.options || []).map((o) => ({ v: o.v, add: o.add || 0, so: !!o.so }));
+    const html = big.detail_html !== undefined ? big.detail_html : (row.detail_html || det.detail_html || "");
+    PSEL = { id, cur, imgs: [...imgs], opts, optName: big.option_name ?? row.option_name ?? det.option_name ?? "", html0: null, imgs0: JSON.stringify(imgs), opts0: JSON.stringify(opts), floor: row.floor || 0 };
     const box = $("#p-edit"); box.style.display = "";
     box.innerHTML = `<h2>상품 수정 <small>${esc(id)}</small></h2>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-        <img src="${esc(det.image || (r && r[4]) || "")}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px">
+        <img src="${esc(imgs[0] || "")}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px">
         <div style="flex:1;min-width:260px">
           <label>상품명</label><input id="pe-name" value="${esc(e.name || cur.name)}" maxlength="100">
-          <label>판매가 (1개)</label><input id="pe-price" type="number" min="0" step="10" value="${esc(e.price || cur.price)}">
+          <label>판매가 (1개)${row.cost ? ` <span class="muted">· 원가 ${won(row.cost)} · 손해 안 나는 최저 ${won(row.floor)}</span>` : ""}</label><input id="pe-price" type="number" min="0" step="10" value="${esc(e.price || cur.price)}">
           <label>카테고리</label><select id="pe-cat">${(PIDX ? PIDX.cats : []).filter((c) => !["food", "adult"].includes(c[0])).map((c) => `<option value="${esc(c[0])}"${c[0] === (e.category || cur.category) ? " selected" : ""}>${esc(c[1])}</option>`).join("")}</select>
           <label>한 줄 소개</label><input id="pe-sum" value="${esc(e.summary || cur.summary)}" maxlength="80" placeholder="상품명 아래에 보이는 짧은 소개">
           <label>사진 표시</label><select id="pe-badge">${BADGES.map((b) => `<option value="${b}"${b === (e.badge || "") ? " selected" : ""}>${b || "없음"}</option>`).join("")}</select>
           <label style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="pe-sold"${e.soldout ? " checked" : ""} style="width:auto"> 품절로 표시</label>
           <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="pe-hide"${e.hidden ? " checked" : ""} style="width:auto"> 사이트에서 숨기기 (판매 중지)</label>
-          <div style="margin-top:12px;display:flex;gap:8px"><button data-act="p-save" data-id="${esc(id)}">저장</button>${PEDITS.items[id] ? `<button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로</button>` : ""}<a class="btn btn-ghost" href="product/${esc(id)}.html" target="_blank">상품 화면 보기</a></div>
-        </div></div>`;
+        </div></div>
+      <h3 style="margin:18px 0 6px">사진 <small class="muted">첫 번째가 대표 사진 · 최대 20장</small></h3>
+      <div id="pe-imgs" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input id="pe-img-url" placeholder="사진 주소(https://…) 붙여넣기" style="flex:1;min-width:200px"><button class="ghost" data-act="pe-img-add">주소로 추가</button>
+        <label class="btn btn-ghost" style="cursor:pointer">사진 올리기<input type="file" id="pe-img-file" accept="image/*" multiple style="display:none"></label></div>
+      <h3 style="margin:18px 0 6px">옵션</h3>
+      <label>옵션 이름</label><input id="pe-optname" value="${esc(PSEL.optName)}" placeholder="예: 색상 / 사이즈" maxlength="30">
+      <div id="pe-opts"></div><button class="ghost" data-act="pe-opt-add" style="margin-top:6px">+ 옵션 추가</button>
+      <h3 style="margin:18px 0 6px">상세페이지 <small class="muted">글을 바로 고치거나, 사진을 눌러 선택 후 삭제</small></h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <button class="ghost" data-act="pe-d-text">+ 글 추가</button>
+        <label class="btn btn-ghost" style="cursor:pointer">+ 사진 추가<input type="file" id="pe-d-file" accept="image/*" multiple style="display:none"></label>
+        <button class="ghost" data-act="pe-d-del">선택한 사진 삭제</button>
+        <button class="ghost" data-act="pe-d-bold">굵게</button>
+        <button class="ghost" data-act="pe-d-html">HTML 보기/편집</button>
+        ${srv.orig ? `<button class="ghost" data-act="pe-d-orig">도매처 원본 불러오기</button>` : ""}
+      </div>
+      <div id="pe-detail" contenteditable="true" style="border:1px solid #ddd;border-radius:8px;padding:10px;max-height:600px;overflow:auto;background:#fff">${peClean(html)}</div>
+      <textarea id="pe-detail-html" style="display:none;width:100%;height:400px;font-family:monospace;font-size:12px"></textarea>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="p-save" data-id="${esc(id)}">저장</button>${PEDITS.items[id] ? `<button class="ghost" data-act="p-reset" data-id="${esc(id)}">원래대로 (도매처 원본)</button>` : ""}<a class="btn btn-ghost" href="product/item.html?id=${encodeURIComponent(id)}" target="_blank">사이트에서 보기</a></div>
+      <p class="muted" style="margin-top:6px">저장하면 상품 페이지에 바로 반영돼요. 도매처가 매일 정보를 갱신해도 고친 내용은 유지돼요.</p>`;
+    peImgs(); peOpts();
+    const det2 = $("#pe-detail"); PSEL.html0 = det2.innerHTML;  // 브라우저가 정리한 모양 기준으로 바뀜 여부 판단
+    det2.addEventListener("click", (ev) => { det2.querySelectorAll("img").forEach((x) => (x.style.outline = "")); if (ev.target.tagName === "IMG") { ev.target.style.outline = "3px solid #e33"; PSEL.selImg = ev.target; } else PSEL.selImg = null; });
+    $("#pe-img-file").onchange = async (ev) => { for (const f of ev.target.files) { const u = await peUpload(f); if (u) PSEL.imgs.push(u); } ev.target.value = ""; peImgs(); };
+    $("#pe-d-file").onchange = async (ev) => { for (const f of ev.target.files) { const u = await peUpload(f); if (u) peInsert(`<p><img src="${esc(u)}" style="max-width:100%"></p>`); } ev.target.value = ""; };
     box.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  const peClean = (h) => String(h || "").replace(/<(script|style|iframe|object|textarea)\b[\s\S]*?<\/\1\s*>/gi, "").replace(/<\/?(script|iframe|object|embed|style|form|input|button|link|meta|textarea|base)\b[^>]*>/gi, "").replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "").replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^"'>\s]*\2/gi, "");
+  async function peUpload(f) {  // 사진을 1600px JPEG로 줄여 서버에 올림
+    try {
+      const data = await new Promise((ok, no) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); ok(c.toDataURL("image/jpeg", 0.85)); }; img.onerror = () => no(new Error("사진을 읽지 못했어요.")); img.src = URL.createObjectURL(f); });
+      return (await call("/admin/product-img", { data })).url;
+    } catch (e) { alert(e.message); return ""; }
+  }
+  function peInsert(h) {
+    const d = $("#pe-detail"), sel = window.getSelection();
+    if (sel.rangeCount && d.contains(sel.anchorNode)) { const r = sel.getRangeAt(0); r.collapse(false); r.insertNode(document.createRange().createContextualFragment(h)); }
+    else d.insertAdjacentHTML("beforeend", h);
+  }
+  function peImgs() {
+    $("#pe-imgs").innerHTML = PSEL.imgs.map((u, i) => `<div style="position:relative;width:96px;text-align:center"><img src="${esc(u)}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:6px;${i === 0 ? "outline:3px solid #2a7" : ""}">
+      <div style="display:flex;justify-content:center;gap:2px"><button class="ghost" style="padding:2px 6px" data-act="pe-img-mv" data-i="${i}" data-d="-1">◀</button><button class="ghost" style="padding:2px 6px" data-act="pe-img-del" data-i="${i}">✕</button><button class="ghost" style="padding:2px 6px" data-act="pe-img-mv" data-i="${i}" data-d="1">▶</button></div></div>`).join("") || `<p class="muted">사진이 없어요.</p>`;
+  }
+  function peOpts() {
+    $("#pe-opts").innerHTML = PSEL.opts.length ? `<table class="adm-table"><tr><th>옵션</th><th>추가금(원)</th><th>품절</th><th></th></tr>${PSEL.opts.map((o, i) => `<tr>
+      <td><input data-oi="${i}" data-ok="v" value="${esc(o.v)}" maxlength="80"></td><td><input data-oi="${i}" data-ok="add" type="number" step="10" value="${o.add}" style="width:100px"></td>
+      <td><input data-oi="${i}" data-ok="so" type="checkbox"${o.so ? " checked" : ""} style="width:auto"></td><td><button class="ghost" data-act="pe-opt-del" data-i="${i}">삭제</button></td></tr>`).join("")}</table>` : `<p class="muted">옵션 없음 (단일 상품)</p>`;
+    $("#pe-opts").querySelectorAll("input").forEach((x) => (x.oninput = x.onchange = () => { const o = PSEL.opts[+x.dataset.oi]; o[x.dataset.ok] = x.type === "checkbox" ? x.checked : x.dataset.ok === "add" ? parseInt(x.value) || 0 : x.value; }));
   }
   function prodEdited() {
     const it = Object.entries((PEDITS || {}).items || {}).sort((a, b) => String(b[1].at).localeCompare(String(a[1].at)));
@@ -515,6 +581,16 @@
         alert((await call("/admin/product-bulk", { ids, action: b.dataset.a })).message); PEDITS = await call("/admin/product-edits"); prodEdited(); return;
       }
       if (act === "st-save") { alert((await call("/admin/site-save", { notice: $("#st-notice").value.trim(), notice_link: $("#st-link").value.trim() })).message); ALOG = null; return paint(); }
+      if (act === "pe-img-add") { const u = $("#pe-img-url").value.trim(); if (!/^https:\/\//.test(u)) { alert("https:// 로 시작하는 사진 주소를 넣어 주세요."); return; } PSEL.imgs.push(u); $("#pe-img-url").value = ""; return peImgs(); }
+      if (act === "pe-img-del") { PSEL.imgs.splice(+b.dataset.i, 1); return peImgs(); }
+      if (act === "pe-img-mv") { const i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= PSEL.imgs.length) return; [PSEL.imgs[i], PSEL.imgs[j]] = [PSEL.imgs[j], PSEL.imgs[i]]; return peImgs(); }
+      if (act === "pe-opt-add") { PSEL.opts.push({ v: "", add: 0, so: false }); return peOpts(); }
+      if (act === "pe-opt-del") { PSEL.opts.splice(+b.dataset.i, 1); return peOpts(); }
+      if (act === "pe-d-text") { const t = prompt("추가할 글"); if (t) peInsert(`<p>${esc(t)}</p>`); return; }
+      if (act === "pe-d-del") { if (!PSEL.selImg) { alert("지울 사진을 먼저 눌러 선택해 주세요."); return; } const p = PSEL.selImg.parentElement; PSEL.selImg.remove(); if (p && p !== $("#pe-detail") && !p.textContent.trim() && !p.querySelector("img")) p.remove(); PSEL.selImg = null; return; }
+      if (act === "pe-d-bold") { document.execCommand("bold"); return; }
+      if (act === "pe-d-html") { const d = $("#pe-detail"), ta = $("#pe-detail-html"); if (ta.style.display === "none") { ta.value = d.innerHTML; ta.style.display = ""; d.style.display = "none"; } else { d.innerHTML = ta.value; ta.style.display = "none"; d.style.display = ""; } return; }
+      if (act === "pe-d-orig") { const o = (await call("/admin/product-get", { id: PSEL.id })).orig; if (o && confirm("상세페이지를 도매처 원본으로 바꿀까요? (저장해야 반영돼요)")) $("#pe-detail").innerHTML = peClean(o.detail_html); return; }
       if (act === "p-save" || act === "p-reset") {
         const pid = b.dataset.id;
         if (act === "p-reset" && !confirm("고친 내용을 지우고 원래대로 되돌릴까요?")) return;
@@ -525,7 +601,21 @@
           if ($("#pe-sold").checked) fields.soldout = true;
           if ($("#pe-hide").checked) fields.hidden = true;
         }
-        const r = await call("/admin/product-save", { id: pid, fields, reset: act === "p-reset" });
+        const big = {};
+        if (act === "p-save" && PSEL) {
+          const ta = $("#pe-detail-html"); if (ta.style.display !== "none") $("#pe-detail").innerHTML = ta.value;
+          $("#pe-detail").querySelectorAll("img").forEach((x) => (x.style.outline = ""));
+          const html = $("#pe-detail").innerHTML;
+          if (html !== PSEL.html0) big.detail_html = html;
+          if (JSON.stringify(PSEL.imgs) !== PSEL.imgs0) big.images = PSEL.imgs;
+          const opts = PSEL.opts.filter((o) => String(o.v).trim());
+          if (JSON.stringify(opts) !== PSEL.opts0 || $("#pe-optname").value.trim() !== PSEL.optName) { big.options = opts; big.option_name = $("#pe-optname").value.trim(); }
+          const low = opts.filter((o) => PSEL.floor && (+fields.price || +c.price) + o.add < PSEL.floor);
+          if (fields.price && PSEL.floor && +fields.price < PSEL.floor && !confirm(`판매가가 손해 안 나는 최저가(${won(PSEL.floor)})보다 낮아요. 최저가로 저장돼요. 계속할까요?`)) return;
+          if (low.length && !confirm(`옵션 ${low.length}개의 가격이 최저가보다 낮아 자동으로 올려서 저장돼요. 계속할까요?`)) return;
+          if (!Object.keys(fields).length && !Object.keys(big).length) { alert("바뀐 내용이 없어요."); return; }
+        }
+        const r = await call("/admin/product-save", { id: pid, fields, big, reset: act === "p-reset" });
         PEDITS = await call("/admin/product-edits").catch(() => PEDITS);
         alert(r.message); prodEdited(); if (act === "p-reset") { $("#p-edit").style.display = "none"; PSEL = null; } return;
       }

@@ -206,7 +206,15 @@ async function adminProductSave(req, env) {
   const id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, "");
   if (!id) return fail("상품코드가 없어요.");
   const all = (await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} };
-  if (d.reset) delete all.items[id];
+  const row = env.DB ? await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first().catch(() => null) : null;
+  if (d.reset) {
+    const e0 = all.items[id] || {};
+    delete all.items[id];
+    const orig = await env.SHOP.get("porig:" + id, "json");
+    await env.SHOP.delete("pedit:" + id);
+    if (row && orig) await d1Apply(env, id, null, { ...orig, images: [orig.image, ...(orig.images || [])].filter(Boolean) }, row).catch(() => {});
+    if (e0.hidden) { const rm = (await env.SHOP.get("db_removed", "json")) || {}; delete rm[id]; await env.SHOP.put("db_removed", JSON.stringify(rm)); }  // 숨김을 풀면 다음 채우기 때 다시 올라감
+  }
   else {
     const e = {};
     for (const [k, max] of Object.entries(EDIT_FIELDS)) {
@@ -216,7 +224,10 @@ async function adminProductSave(req, env) {
       else if (k === "hidden" || k === "soldout") { if (v === true) e[k] = true; }
       else e[k] = String(v).slice(0, max);
     }
-    if (Object.keys(e).length) all.items[id] = { ...e, at: new Date().toISOString() }; else delete all.items[id];
+    const big = await saveBig(env, id, d.big || {}, row);
+    const hasBig = big || (await env.SHOP.get("pedit:" + id));
+    if (Object.keys(e).length || hasBig) all.items[id] = { ...e, ...(hasBig ? { big: true } : {}), at: new Date().toISOString() }; else delete all.items[id];
+    await d1Apply(env, id, e, big, row).catch(() => {});
   }
   all.ver = Date.now();
   await env.SHOP.put("product_edits", JSON.stringify(all));
@@ -227,6 +238,76 @@ async function adminProductSave(req, env) {
   return json({ ok: true, message: (d.reset ? "원래대로 되돌렸어요. " : "저장했어요. ") + deploy, item: all.items[id] || null });
 }
 
+// ---------- 상품 상세 수정 (상세페이지 본문·사진·옵션) ----------
+// 크기가 커서 KV "pedit:<id>"에 따로 저장, product_edits.items[id].big = true 로 표시 → 빌드·상품 DB 채우기가 읽어 반영
+// 저장하는 순간 상품 DB(D1)에도 바로 반영 (손님 화면에 즉시)
+const cleanHtml = (h) => String(h || "").slice(0, 300000)
+  .replace(/<(script|style|iframe|object|textarea)\b[\s\S]*?<\/\1\s*>/gi, "").replace(/<\/?(script|iframe|object|embed|style|form|input|button|link|meta|textarea|base)\b[^>]*>/gi, "")
+  .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+  .replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^"'>\s]*\2/gi, "");
+const cleanUrl = (u) => { u = String(u || "").trim(); return /^https:\/\/[^\s"'<>]{4,600}$/.test(u) ? u : ""; };
+function priceFloor(row, env) {  // 손해 방지 바닥값 (회원 할인과 같은 기준: 순마진 8%, 공급사 최저가)
+  const P = { ...MEMBER_DEFAULT, ...PRICING(env) }, cost = Number(row.cost) || 0;
+  return Math.ceil(Math.max(cost > 0 ? (cost * 10 / 11 + cost * P.min_net_margin) / (1 - P.card_fee - 1 / 11) : 0, Number(row.mp) || 0) / 10) * 10;
+}
+async function adminProductGet(req, env) {
+  const d = await req.json().catch(() => ({}));
+  let id = String(d.id || "").replace(/[^0-9A-Za-z_-]/g, ""); if (/^\d+$/.test(id)) id = "DM" + id;
+  const row = env.DB ? await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first().catch(() => null) : null;
+  const all = (await env.SHOP.get("product_edits", "json")) || { items: {} };
+  const big = (await env.SHOP.get("pedit:" + id, "json")) || null;
+  const orig = (await env.SHOP.get("porig:" + id, "json")) || null;
+  if (!row && !all.items[id]) return fail("상품을 찾을 수 없어요. 상품코드를 확인해 주세요.", 404);
+  const r = row ? { ...row, images: JSON.parse(row.images || "[]"), options: JSON.parse(row.options || "[]"), qt: JSON.parse(row.qt || "[]") } : { id };
+  if (row) r.floor = priceFloor(row, env);
+  return json({ row: r, edit: all.items[id] || null, big, orig });
+}
+async function adminProductImg(req, env) {  // 관리자가 올린 사진 (상세·대표 사진용)
+  const d = await req.json().catch(() => ({}));
+  const m = String(d.data || "").match(/^data:image\/(jpeg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return fail("사진 파일만 올릴 수 있어요.");
+  const bin = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  if (bin.length > 3 * 1024 * 1024) return fail("사진이 너무 커요 (3MB 이하).");
+  const key = Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + "." + (m[1] === "jpeg" ? "jpg" : m[1]);
+  await env.SHOP.put("pimg:" + key, bin, { metadata: { type: "image/" + m[1] } });
+  return json({ ok: true, url: new URL(req.url).origin + "/pimg/" + key });
+}
+async function saveBig(env, id, d, row) {  // 상세·사진·옵션 저장 + D1 즉시 반영
+  const big = {};
+  if (typeof d.detail_html === "string") big.detail_html = cleanHtml(d.detail_html);
+  if (Array.isArray(d.images)) big.images = d.images.map(cleanUrl).filter(Boolean).slice(0, 20);
+  if (Array.isArray(d.options)) big.options = d.options.slice(0, 200).map((o) => ({ v: String(o.v || "").replace(/\s+/g, " ").trim().slice(0, 80), add: Math.round((parseInt(o.add) || 0) / 10) * 10, so: !!o.so })).filter((o) => o.v);
+  if (typeof d.option_name === "string") big.option_name = d.option_name.trim().slice(0, 30);
+  if (!Object.keys(big).length) return null;
+  if (row && !(await env.SHOP.get("porig:" + id))) {  // 도매처 원본 (되돌리기용) — 처음 고칠 때 한 번만
+    await env.SHOP.put("porig:" + id, JSON.stringify({ detail_html: row.detail_html, images: JSON.parse(row.images || "[]"), image: row.image, options: JSON.parse(row.options || "[]"), option_name: row.option_name }));
+  }
+  if (row && big.options) {  // 옵션 추가금이 손해 바닥 아래로 못 가게
+    const fl = priceFloor(row, env);
+    big.options.forEach((o) => { if (row.price + o.add < fl) o.add = fl - row.price; });
+  }
+  await env.SHOP.put("pedit:" + id, JSON.stringify(big));
+  return big;
+}
+async function d1Apply(env, id, e, big, row) {  // 고친 내용을 상품 DB에 바로
+  if (!env.DB || !row) return;
+  const set = [], args = [];
+  const put = (k, v) => { set.push(k + " = ?"); args.push(v); };
+  if (e) {
+    if (e.name) put("name", e.name);
+    if (e.category) put("category", e.category);
+    if (e.price) put("price", Math.max(parseInt(e.price), priceFloor(row, env)));
+    put("soldout", e.soldout ? 1 : 0);
+  }
+  if (big) {
+    if (big.detail_html !== undefined) put("detail_html", big.detail_html);
+    if (big.images) { put("images", JSON.stringify(big.images.slice(1))); if (big.images[0]) put("image", big.images[0]); }
+    if (big.options) put("options", JSON.stringify(big.options));
+    if (big.option_name !== undefined) put("option_name", big.option_name);
+  }
+  if (e && e.hidden) { await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run(); return; }
+  if (set.length) await env.DB.prepare(`UPDATE products SET ${set.join(", ")}, h = 'edited' WHERE id = ?`).bind(...args, id).run();
+}
 // ---------- 가격 ----------
 // 기준: 공급사가 입력한 "오픈마켓 판매가"(무료배송 기준)
 // 판매가 = 오픈마켓 판매가 (일괄 할인 없음 — 대량 구매는 가격 제안으로)
@@ -1450,6 +1531,18 @@ export async function handle(req, env, path) {
     for (const [id, at] of Object.entries(b)) if (at >= "2026-11-17T10:00" && at < "2026-11-17T14:00" && !rm[id]) rm[id] = new Date().toISOString().slice(0, 10) + "T00:00:00+00:00";
     return json(rm);
   }
+  if (req.method === "GET" && path.startsWith("/pimg/")) {  // 관리자가 올린 상품 사진
+    const k = path.slice(6).replace(/[^0-9a-z.]/g, "");
+    const { value, metadata } = await env.SHOP.getWithMetadata("pimg:" + k, "arrayBuffer");
+    if (!value) return new Response("not found", { status: 404 });
+    return new Response(value, { headers: { "Content-Type": (metadata && metadata.type) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": "*" } });
+  }
+  if (req.method === "GET" && path === "/edits/big") {  // 상세·사진·옵션 수정본 (사이트 빌드·상품 DB 채우기용) ?ids=a,b,c
+    const ids = String(new URL(req.url).searchParams.get("ids") || "").split(",").map((x) => x.replace(/[^0-9A-Za-z_-]/g, "")).filter(Boolean).slice(0, 100);
+    const out = {};
+    await Promise.all(ids.map(async (i) => { const v = await env.SHOP.get("pedit:" + i, "json"); if (v) out[i] = v; }));
+    return json(out);
+  }
   if (req.method === "GET" && path === "/edits/seo") {  // SEO 수정본 한 칸 (사이트 빌드·상품 DB 반영용)
     const b = parseInt(new URL(req.url).searchParams.get("b"));
     if (!(b >= 0 && b < SEO_B)) return json({ n: SEO_B, ver: (await env.SHOP.get("seo_ver")) || "0" });
@@ -1628,7 +1721,7 @@ export async function handle(req, env, path) {
       const ip = ipOf(req);
       if (await overLimit(env, "adminfail:" + ip, 5, 900, false)) return fail("비밀번호를 여러 번 틀려서 15분 동안 막았어요. 잠시 후 다시 시도해 주세요.", 429);
       if (got.trim() !== want) { await overLimit(env, "adminfail:" + ip, 5, 900); return fail("비밀번호가 틀렸어요.", 401); }
-      const READ_ONLY = ["/admin/catalog-export", "/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
+      const READ_ONLY = ["/admin/product-get", "/admin/catalog-export", "/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
       if (!READ_ONLY.includes(path)) await adminLog(env, path, ip, "").catch(() => {});
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
@@ -1665,6 +1758,8 @@ export async function handle(req, env, path) {
       if (path === "/admin/seo-upload") return await seoUpload(req, env);
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
+      if (path === "/admin/product-get") return await adminProductGet(req, env);
+      if (path === "/admin/product-img") return await adminProductImg(req, env);
       if (path === "/admin/product-bulk") return await adminProductBulk(req, env);
       if (path === "/admin/order-search") return await adminOrderSearch(req, env);
       if (path === "/admin/customers") return await adminCustomers(env);
