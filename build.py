@@ -568,7 +568,7 @@ def build_home(ps):
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
     by_cat = {c["slug"]: [p for p in ps if in_cat(p, c["slug"])] for c in SHOW_CATS}
     art = [p for p in ps if p["image"].startswith("http")][:4] or ps[:4]
-    tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{len(by_cat[c["slug"]]):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
+    tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{((DC or {}).get(c["slug"]) or len(by_cat[c["slug"]])):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
     sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in [x for x in by_cat[c["slug"]][:12] if in_db(x["id"])][:4])}</div></div></section>''' for c in top)
@@ -601,8 +601,8 @@ def build_home(ps):
     rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
     slides = [
         ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {N_ALL:,}개 · 무료배송 {(DC['free'] if DC else sum(1 for x in ps if not x['shipping_fee'])):,}개", "search.html", "전체 상품 보기", pics("living")),
-        ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·목도리·장갑·방한용품 {len(by_cat.get('winter', [])):,}개", "category/winter.html", "겨울용품 보기", pics("winter")),
-        ("office", "기업·학교 구매", "사무실·학교 비품은<br>담Go사Go 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
+        ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·목도리·장갑·방한용품 {((DC or {}).get('winter') or len(by_cat.get('winter', []))):,}개", "category/winter.html", "겨울용품 보기", pics("winter")),
+        ("office", "기업·학교 구매", "사무실·학교 비품은<br>담Go사Go 오피스", f"문구·사무용품 {((DC or {}).get('office') or len(by_cat.get('office', []))):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
     ]
     if max_deal >= 2:
         slides.append(("deal", "담을수록 할인", "같은 상품 2개부터<br>자동으로 할인", "쿠폰·적립금 없이 장바구니에서 바로 내려가요", "search.html", "상품 담으러 가기", pics("kitchen")))
