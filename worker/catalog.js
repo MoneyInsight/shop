@@ -90,9 +90,13 @@ async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, 
 }
 
 // 인기 순위 TOP N: 최근 7일 많이 본 상품 먼저, 모자라면 카테고리별 추천 1위로 채움 (한 종류만 몰리지 않게)
-export async function popular(db, views = {}, n = 10) {
+export async function popular(db, views = {}, n = 10, pin = []) {
   const out = [], seen = new Set();
-  const ids = Object.entries(views).sort((a, b) => b[1] - a[1]).map(([id]) => id).slice(0, 40);
+  for (const id of pin) {  // 관리자가 고정한 상품 (맨 앞)
+    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0`).bind(id).first().catch(() => null);
+    if (r && r.image && !seen.has(r.id)) { out.push({ ...card(r), pinned: true }); seen.add(r.id); }
+  }
+  const ids = Object.entries(views).sort((a, b) => b[1] - a[1]).map(([id]) => id).filter((id) => !seen.has(id)).slice(0, 40);
   for (const id of ids) {
     if (out.length >= n) break;
     const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0`).bind(id).first();

@@ -1638,7 +1638,8 @@ export async function handle(req, env, path) {
           const s = await env.SHOP.get("stat:" + stats.dayKey(Date.now() - i * 864e5), "json").catch(() => null);
           for (const [pth, n] of Object.entries((s && s.pages) || {})) { const m = pth.match(/\/product\/([^/]+)\.html$/); if (m) views[m[1]] = (views[m[1]] || 0) + n; }
         }
-        return keep(json({ items: await catalog.popular(env.DB, views, 10) }, 200, cache));
+        const pin = String(env.POPULAR_PIN || "").split(",").map((x) => x.trim()).filter(Boolean);
+        return keep(json({ items: await catalog.popular(env.DB, views, 10, pin) }, 200, cache));
       }
     } catch (e) { return fail("상품 조회 중 오류가 났어요. (" + String(e && e.message || e).slice(0, 160) + ")", 500); }
     return fail("Not found", 404);
