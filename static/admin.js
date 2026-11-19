@@ -154,8 +154,8 @@
         <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "ggsan", "cmtstory", "own", "direct"].map((k) => {
           const n = D.orders.filter((o) => o.status === "상품준비중" && !o.tracking && o.lines.some((l) => SRC(l.id) === k)).length;
           return `<tr><td><b>${SUP[k].n}</b></td><td>${n ? `<b>${n}건</b>` : `<span class="muted">0건</span>`}</td><td class="muted" style="white-space:normal">${SUP[k].how}</td>
-            <td>${k === "direct" || k === "own" ? "" : `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a> <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>${k === "ownerclan" ? ` <button data-act="oc-trk">자동으로 가져오기</button>` : ""}`}
-            ${n ? ` <button class="ghost" data-act="trk-wait" data-src="${k}">기다리는 주문 목록</button>` : ""}</td></tr>`; }).join("")}</table>
+            <td><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${k === "direct" || k === "own" ? `<span class="muted">직접 입력</span>` : `<button class="ghost" data-act="open-url" data-url="${SUP[k].url}">사이트 열기 ↗</button><button class="ghost" data-act="trk-file-up">엑셀 올리기</button>${k === "ownerclan" ? `<button data-act="oc-trk">자동으로 가져오기</button>` : ""}`}
+            ${n ? `<button class="ghost" data-act="trk-wait" data-src="${k}">기다리는 주문 목록</button>` : ""}</div></td></tr>`; }).join("")}</table>
         <p class="muted" style="margin-top:8px">엑셀 올리기: 도매처에서 받은 주문·배송 엑셀을 그대로 올리면 우리 주문번호로 찾아 송장이 들어가고, 손님께 출고 알림이 자동으로 가요. 어느 도매처 파일이든 같은 버튼이에요.</p></div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
         <p class="muted" style="margin-bottom:10px">도매처에서 받은 송장 엑셀을 열어 <b>전체 복사(Ctrl+A → Ctrl+C)</b> 후 아래에 붙여넣거나, CSV로 저장해 올려 주세요. 각 줄에서 우리 주문번호(T로 시작)·택배사·송장번호를 자동으로 찾아요.</p>
@@ -178,7 +178,7 @@
           ${o.claim ? `<p class="muted">${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason || "")} ${Array.from({ length: o.claim.photos || 0 }, (_, i) => `<button class="ghost" style="padding:1px 6px" data-act="claim-photo" data-id="${esc(o.orderId)}" data-i="${i}">사진 ${i + 1}</button>`).join(" ")}</p>` : ""}
           <p>결제 ${won(o.amount)}${o.refunded ? ` · 환불됨 ${won(o.refunded)}` : ""} · <b>${type === "교환" ? (/변심/.test(o.claim?.kind || "") ? `왕복 배송비 ${won(o.claim?.deduct || 0)} 손님 부담 (입금 확인 후 진행)` : "불량·오배송: 도매처 부담으로 교환") : `환불할 금액 ${won(sug)}`}</b>
             ${cost && o.lines.some((l) => l.po) ? `<br><span class="muted">도매처에 낸 원가 약 ${won(cost)} → 도매처 ${type}로 돌려받기${/변심/.test(o.claim?.kind || "") ? ` (도매처 반품·교환 배송비는 손님 부담분 ${won(o.claim?.deduct || 0)}로 충당)` : " (불량·오배송이면 배송비도 도매처 부담으로 요청)"}</span>` : ""}</p>
-          <p class="muted" style="margin:6px 0">${srcs.filter((x) => x !== "direct").map((x) => `<a href="${SUP[x].url}" target="_blank" rel="noopener">${SUP[x].n} 열기 ↗</a>`).join(" · ")}${srcs.includes("direct") ? " · 직영 상품: 직접 회수·처리" : ""}</p>
+          <p class="muted" style="margin:6px 0">${srcs.filter((x) => SUP[x].url).map((x) => `<button class="ghost" style="padding:3px 8px;font-size:12px" data-act="open-url" data-url="${SUP[x].url}">${SUP[x].n} 열기 ↗</button>`).join(" ")}${srcs.includes("direct") ? " · 직영 상품: 직접 회수·처리" : ""}</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${flow.map(([k, lb]) => step(o, k, lb, st[k])).join(" → ")}
             ${type !== "교환" ? ` → <button ${canRefund ? "" : 'class="ghost" '}data-act="order-refund" data-id="${esc(o.orderId)}"${o.claim?.refund != null ? ` data-refund="${o.claim.refund}" data-deduct="${o.claim.deduct}"` : ""}>${type === "취소" ? "②" : "③"} 환불 ${won(sug)}</button>` : ""}</div>
           ${!canRefund && type !== "교환" ? `<p class="muted" style="font-size:12px;margin-top:4px">앞 단계를 끝낸 뒤 환불하세요. 순서를 건너뛰면 한 번 더 확인해요.</p>` : ""}</div>`;
@@ -750,6 +750,7 @@
       }
       if (act === "cl-step") { await call("/admin/claim-step", { orderId: b.dataset.id, step: b.dataset.step, undo: !!b.dataset.undo }); return load(); }
       if (act === "trk-file-up") { $("#trk-file").click(); return; }
+      if (act === "open-url") { window.open(b.dataset.url, "_blank", "noopener"); return; }
       if (act === "trk-wait") {  // 송장 기다리는 주문 목록 (도매처 사이트에서 찾기 쉽게)
         const src = b.dataset.src, rows = [["우리 주문번호", "도매처 상품번호", "상품명", "수량", "받는 분", "연락처", "발주일"]];
         for (const o of D.orders.filter((o) => o.status === "상품준비중" && !o.tracking)) for (const l of o.lines) if (SRC(l.id) === src) rows.push([o.orderId, l.source_no || String(l.id).replace(/^DM/, ""), l.name, l.qty, o.customer?.name || "", o.customer?.phone || "", (l.po || "").slice(0, 10)]);
