@@ -1,5 +1,5 @@
 {
- "at": "2026-11-19 02:56 UTC",
+ "at": "2026-11-19 03:18 UTC",
  "db": "allchaeum",
  "in_db": 2243309,
  "site_and_warehouse_total": 2243309,
@@ -7,8 +7,8 @@
  "left": 0,
  "files_ok": 1,
  "files_planned": 1,
- "rows_written_24h_before": 6912320,
- "rows_written_24h_after": 6912320,
+ "rows_written_24h_before": 4799234,
+ "rows_written_24h_after": 4799234,
  "writes_per_product": null,
  "unsafe_skipped": 5,
  "warehouse_files": 72,
