@@ -175,6 +175,7 @@ def load_products():
             print(f"상품 DB에 없는 상품 {before - len(out)}개 정적 사이트에서 제외")
     out = fix_images(out)
     out = apply_edits(out)
+    out = drop_custom_expensive(out)
     out = clean_catalog(out)
     mark_new(out)
     out.sort(key=lambda p: p["soldout"])  # 품절 상품은 목록 맨 뒤로
@@ -183,6 +184,35 @@ def load_products():
 
 EDITS_VER = "0"
 SITE = {}  # 관리자 › 사이트 설정 (공지 띠 문구 등)
+
+
+# 주문제작(받고 나서 만드는 상품: 반품·교환이 안 돼 분쟁 위험) · 100만원 이상 고가 상품은 판매하지 않음 (대표님 2026-11-19)
+CUSTOM_MADE = re.compile(r"주문\s*(제작|생산)|맞춤\s*제작|제작\s*(상품|주문|기간|소요)|주문\s*후\s*(제작|생산)|오더\s*메이드|커스텀\s*제작|"
+                         r"(로고|문구|이름|사진|각인)\s*(인쇄|각인|새김|제작)|인쇄\s*(주문|제작)|판촉물\s*제작|단체\s*(복|티)\s*제작|"
+                         r"[\[(]\s*(주문제작|제작)\s*[\])]")
+MAX_PRICE = 1_000_000
+
+
+def drop_custom_expensive(ps):
+    out, n_custom, n_price = [], 0, 0
+    for p in ps:
+        text = p.get("name", "") + " " + " ".join(str(o.get("v", "")) for o in (p.get("options") or []))
+        if CUSTOM_MADE.search(text):
+            n_custom += 1; continue
+        try:
+            price = int(float(p.get("price") or 0))
+        except (TypeError, ValueError):
+            price = 0
+        if price >= MAX_PRICE:
+            n_price += 1; continue
+        out.append(p)
+    print(f"판매 제외: 주문제작 {n_custom}개 · 100만원 이상 {n_price}개 (합계 {n_custom + n_price}개)")
+    try:
+        (ROOT / "dist").mkdir(exist_ok=True)
+        (ROOT / "dist/dropped_custom_expensive.json").write_text(json.dumps({"custom": n_custom, "price": n_price}), encoding="utf-8")
+    except Exception:
+        pass
+    return out
 
 
 def apply_edits(ps):
