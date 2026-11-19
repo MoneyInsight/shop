@@ -213,8 +213,8 @@
           <select id="sa-scope"><option value="site">사이트 상품</option><option value="db">상품 DB 전체</option>${Object.entries((window.SHOP_CFG || {}).cat_names || {}).map(([k, v]) => `<option value="cat:${esc(k)}">${esc(v)}</option>`).join("")}<option value="ids">상품코드 직접 입력</option></select>
           <input id="sa-ids" placeholder="상품코드 (쉼표로 구분)" style="display:none;min-width:240px">
           <label class="muted">최대 <input id="sa-limit" type="number" value="20000" min="1" max="200000" step="1000" style="width:100px"> 개</label>
-          <button class="ghost" data-act="sa-run" data-m="preview">① 미리보기</button>
-          <button data-act="sa-run" data-m="apply">② 적용</button>
+          <button class="btn btn-ghost" data-act="sa-run" data-m="preview">① 미리보기</button>
+          <button class="btn" data-act="sa-run" data-m="apply">② 적용</button>
           <label style="display:flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="sa-daily" style="width:auto"> 매일 새벽 자동 (사이트 상품)</label></div>
         <div id="sa-status" style="margin-top:10px"><p class="muted">불러오는 중…</p></div></div>
       <div class="card form"><h2>SEO 일괄 수정 (엑셀)</h2>
@@ -304,6 +304,22 @@
       msg.textContent = `완료: ${done.toLocaleString()}개 저장. 30분 안에 사이트에 반영돼요.`;
     } catch (e) { msg.textContent = `실패 (${done.toLocaleString()}개까지 저장됨): ` + e.message; }
   }
+  const SA = { list: [], page: 1, size: +(localStorage.getItem("sa_size") || 10), only: localStorage.getItem("sa_only") === "1" };
+  function saTable() {  // 예시 표: 페이지 나누기 + 한 쪽에 몇 개
+    const box = $("#sa-tbl"); if (!box) return;
+    const L = SA.only ? SA.list.filter((x) => x.after !== x.before) : SA.list;
+    const pages = Math.max(1, Math.ceil(L.length / SA.size)); SA.page = Math.min(Math.max(1, SA.page), pages);
+    const rows = L.slice((SA.page - 1) * SA.size, SA.page * SA.size);
+    const nav = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+      <label class="muted">한 쪽에 <select id="sa-size" style="width:auto">${[10, 20, 50, 100].map((n) => `<option${n === SA.size ? " selected" : ""}>${n}</option>`).join("")}</select> 개</label>
+      <label class="muted" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="sa-only" style="width:auto"${SA.only ? " checked" : ""}> 상품명이 바뀌는 것만 (${SA.list.filter((x) => x.after !== x.before).length}개)</label>
+      <span style="margin-left:auto;display:flex;gap:4px;align-items:center"><button class="ghost" data-act="sa-pg" data-p="1"${SA.page === 1 ? " disabled" : ""}>«</button><button class="ghost" data-act="sa-pg" data-p="${SA.page - 1}"${SA.page === 1 ? " disabled" : ""}>‹ 이전</button>
+      <span class="muted">${SA.page} / ${pages} 쪽 (${L.length}개)</span>
+      <button class="ghost" data-act="sa-pg" data-p="${SA.page + 1}"${SA.page === pages ? " disabled" : ""}>다음 ›</button><button class="ghost" data-act="sa-pg" data-p="${pages}"${SA.page === pages ? " disabled" : ""}>»</button></span></div>`;
+    box.innerHTML = nav + `<table class="adm-table"><tr><th>상품코드</th><th>지금 상품명</th><th>바뀔 상품명</th><th>검색 태그</th><th>이유</th></tr>${rows.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.before)}</td><td>${x.after !== x.before ? `<b>${esc(x.after)}</b>` : `<span class="muted">그대로</span>`}</td><td class="muted">${esc(x.kw)}</td><td class="muted">${esc((x.why || []).join(", "))}</td></tr>`).join("")}</table>`;
+    $("#sa-size").onchange = (ev) => { SA.size = +ev.target.value; SA.page = 1; try { localStorage.setItem("sa_size", SA.size); } catch (e) {} saTable(); };
+    $("#sa-only").onchange = (ev) => { SA.only = ev.target.checked; SA.page = 1; try { localStorage.setItem("sa_only", SA.only ? "1" : "0"); } catch (e) {} saTable(); };
+  }
   async function seoAutoPaint() {
     const box = $("#sa-status"); if (!box) return;
     let d; try { d = await call("/admin/seo-auto-status"); } catch (e) { box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
@@ -316,10 +332,11 @@
       const st = rp.stats || {};
       h += `<p><b>최근 결과</b> · ${esc(MODE[rp.mode] || rp.mode)} · ${esc(scopeName(rp.scope))} · ${rp.at ? dt(rp.at) : ""} ${rp.ok ? "✅" : "❌ " + esc(rp.error || "")}<br>
         <span class="muted">확인 ${(rp.checked || 0).toLocaleString()}개 → 바뀜 ${(rp.changed || 0).toLocaleString()}개${rp.applied ? ` (적용 ${rp.applied.toLocaleString()}개)` : ""} · ${Object.entries(st).map(([k, v]) => `${esc(k)} ${(+v).toLocaleString()}`).join(" · ")} · 네이버 조회 ${(rp.api_calls || 0).toLocaleString()}회 (${esc(rp.api || "")})</span></p>`;
-      if ((rp.samples || []).length) h += `<details${rp.mode === "preview" ? " open" : ""}><summary>바뀌는 예시 ${rp.samples.length}개 보기</summary><table class="adm-table"><tr><th>상품코드</th><th>지금 상품명</th><th>바뀔 상품명</th><th>검색 태그</th><th>이유</th></tr>${rp.samples.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.before)}</td><td>${x.after !== x.before ? `<b>${esc(x.after)}</b>` : `<span class="muted">그대로</span>`}</td><td class="muted">${esc(x.kw)}</td><td class="muted">${esc((x.why || []).join(", "))}</td></tr>`).join("")}</table></details>`;
+      if ((rp.samples || []).length) { SA.list = rp.samples; SA.page = 1; h += `<details${rp.mode === "preview" ? " open" : ""}><summary>바뀌는 예시 ${rp.samples.length}개 보기</summary><div id="sa-tbl"></div></details>`; }
     }
     if ((d.runs || []).length) h += `<p style="margin-top:8px">적용한 기록: ${d.runs.slice().reverse().map((r) => `<span style="display:inline-block;margin:2px 6px 2px 0">${esc(r)} <button class="ghost" style="padding:2px 8px" data-act="sa-undo" data-run="${esc(r)}">되돌리기</button></span>`).join("")}</p>`;
     box.innerHTML = h || `<p class="muted">아직 실행한 적이 없어요. ① 미리보기로 먼저 확인해 보세요.</p>`;
+    saTable();
     if (rq) { clearTimeout(box._t); box._t = setTimeout(seoAutoPaint, 60000); }
   }
   async function prodInit() {
@@ -615,6 +632,7 @@
         if (m === "apply" && !confirm(`SEO 자동 최적화를 적용할까요?\n(손으로 고친 상품은 건드리지 않고, 적용 전 값은 백업돼서 언제든 되돌릴 수 있어요)`)) return;
         alert((await call("/admin/seo-auto-req", { mode: m, scope, limit: lim })).message); return seoAutoPaint();
       }
+      if (act === "sa-pg") { SA.page = +b.dataset.p; return saTable(); }
       if (act === "sa-undo") { if (!confirm(`${b.dataset.run} 실행으로 바뀐 SEO를 모두 되돌릴까요?`)) return; alert((await call("/admin/seo-restore", { run: b.dataset.run })).message); return seoAutoPaint(); }
       if (act === "pb") {
         const ids = $("#pb-ids").value; if (!ids.trim()) { alert("상품코드를 넣어 주세요."); return; }
