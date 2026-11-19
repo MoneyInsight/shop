@@ -515,15 +515,31 @@
     const det2 = $("#pe-detail"); PSEL.html0 = det2.innerHTML;  // 브라우저가 정리한 모양 기준으로 바뀜 여부 판단
     det2.addEventListener("click", (ev) => { det2.querySelectorAll("img").forEach((x) => (x.style.outline = "")); if (ev.target.tagName === "IMG") { ev.target.style.outline = "3px solid #e33"; PSEL.selImg = ev.target; } else PSEL.selImg = null; });
     $("#pe-img-file").onchange = async (ev) => { for (const f of ev.target.files) { const u = await peUpload(f); if (u) PSEL.imgs.push(u); } ev.target.value = ""; peImgs(); };
-    $("#pe-d-file").onchange = async (ev) => { for (const f of ev.target.files) { const u = await peUpload(f); if (u) peInsert(`<p><img src="${esc(u)}" style="max-width:100%"></p>`); } ev.target.value = ""; };
+    $("#pe-d-file").onchange = async (ev) => { for (const f of ev.target.files) { const us = await peUploadDetail(f); if (us.length) peInsert(us.map((u) => `<img src="${esc(u)}" style="display:block;width:100%;max-width:1000px;margin:0 auto">`).join("")); } ev.target.value = ""; };
     box.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   const peClean = (h) => String(h || "").replace(/<(script|style|iframe|object|textarea)\b[\s\S]*?<\/\1\s*>/gi, "").replace(/<\/?(script|iframe|object|embed|style|form|input|button|link|meta|textarea|base)\b[^>]*>/gi, "").replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "").replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^"'>\s]*\2/gi, "");
-  async function peUpload(f) {  // 사진을 1600px JPEG로 줄여 서버에 올림
+  async function peUpload(f) {  // 대표·추가 사진: 긴 쪽 1600px JPEG
     try {
       const data = await new Promise((ok, no) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); ok(c.toDataURL("image/jpeg", 0.85)); }; img.onerror = () => no(new Error("사진을 읽지 못했어요.")); img.src = URL.createObjectURL(f); });
       return (await call("/admin/product-img", { data })).url;
     } catch (e) { alert(e.message); return ""; }
+  }
+  // 상세페이지 이미지: 가로 기준(최대 1000px)으로만 줄이고, 세로로 긴 상세는 3000px씩 잘라 여러 장으로 올림 (세로 길이 때문에 작아지지 않게)
+  async function peUploadDetail(f) {
+    try {
+      const img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error("사진을 읽지 못했어요.")); im.src = URL.createObjectURL(f); });
+      const W = Math.min(1000, img.width), k = W / img.width, H = Math.round(img.height * k), PIECE = 3000, urls = [];
+      for (let y = 0; y < H; y += PIECE) {
+        const h = Math.min(PIECE, H - y), c = document.createElement("canvas"); c.width = W; c.height = h;
+        c.getContext("2d").drawImage(img, 0, y / k, img.width, h / k, 0, 0, W, h);
+        let q = 0.88, data = c.toDataURL("image/jpeg", q);
+        while (data.length > 3.8e6 && q > 0.5) { q -= 0.1; data = c.toDataURL("image/jpeg", q); }  // 서버 한도(3MB) 안으로
+        urls.push((await call("/admin/product-img", { data })).url);
+      }
+      URL.revokeObjectURL(img.src);
+      return urls;
+    } catch (e) { alert(e.message); return []; }
   }
   function peInsert(h) {
     const d = $("#pe-detail"), sel = window.getSelection();
