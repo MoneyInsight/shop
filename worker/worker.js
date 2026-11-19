@@ -507,7 +507,7 @@ async function confirmCore(body, env) {
   }
 
   const now = new Date().toISOString();
-  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, remote: remote.label || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, pg: pg === "portone" ? "portone" : "toss", receipt: pay.receipt?.url || "",
+  const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, ship_by: shipBy, remote: remote.label || undefined, remote_fee: remote.fee || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, pg: pg === "portone" ? "portone" : "toss", receipt: pay.receipt?.url || "",
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
   if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
@@ -1273,8 +1273,24 @@ const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜", onchannel:
 const ORDER_SHEETS = {"domeme": ["상품번호", "옵션", "수량", "수령자명", "휴대전화", "추가연락처", "우편번호", "배송지주소", "배송상세주소", "쇼핑몰명", "전달사항", "배송요청사항"], "ownerclan": ["오너클랜 상품코드", "수량", "배송방식", "받는사람 이름", "받는사람 전화번호", "받는사람 휴대폰", "우편번호", "받는사람 주소", "옵션1", "옵션2", "배송시 요청사항", "판매사 주문관리 메모", "원장주문코드", "개인통관부호", "구매자 생년월일", "마켓 정산가(배송비 포함)"], "onchannel": ["온채널 상품코드", "주문코드", "주문 옵션", "옵션 주문 수량", "배송비 결제 유형", "받는사람", "전화번호", "비상연락처", "우편번호", "주소", "배송 메시지", "통관고유부호", "(국제)배송방식"]};
 // 상품코드 앞글자 → 도매처: DM 도매매 · W(7자리) 오너클랜 · CH 온채널 · GS 건강산 · CM 화장품스토리 · OWN 자체상품
 const srcOf = (l) => { const id = String(l.id); return /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{3,}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : /^GS\d/.test(id) ? "ggsan" : /^CM\d/.test(id) ? "cmtstory" : /^OWN/.test(id) ? "own" : (l.source && SOURCE_NAME[l.source] ? l.source : ""); };
+// 주문 줄마다 돈 계산 (발주 화면 표시용): 손님 결제·도매 원가·카드수수료·부가세·운영비·순수마진
+function lineMoney(o, l, i, P) {
+  const goods = l.price * l.qty, sub = o.subtotal || o.lines.reduce((a, x) => a + x.price * x.qty, 0) || 1;
+  const disc = Math.round(((o.discount || 0) + (o.member_discount || 0)) * goods / sub);
+  const firstIdx = o.lines.findIndex((x) => x.id === l.id);
+  const pids = [...new Set(o.lines.map((x) => x.id))];
+  let ship = 0;
+  if (firstIdx === i) ship = o.ship_by ? Number(o.ship_by[l.id]) || 0 : Math.round(((o.shipping || 0) - (o.remote_fee || 0)) / pids.length);
+  if (i === 0) ship += Number(o.remote_fee) || 0;  // 제주·도서산간 추가 배송비
+  const rev = goods - disc + ship;
+  const cost = ((Number(l.cost) || 0) * (Number(l.pk) || 1) + (Number(l.opt_add) || 0)) * l.qty;
+  const card = Math.round(rev * P.card_fee), vat = Math.round(Math.max(0, rev - cost - ship) / 11);
+  const ops = Math.round(P.ops_cost_won * goods / sub);
+  const net = rev - card - vat - cost - ship - ops;
+  return { unit: l.price, goods, disc, ship, rev, cost, card, vat, ops, net, rate: rev ? Math.round(net / rev * 1000) / 10 : 0 };
+}
 async function adminPo(env) {
-  const groups = {};
+  const groups = {}, P = PRICING(env);
   for (const o of await kvList(env, "order:")) {
     if (o.status !== "결제완료") continue;
     o.lines.forEach((l, i) => {
@@ -1283,7 +1299,7 @@ async function adminPo(env) {
       (groups[src] = groups[src] || { source: src, name: SOURCE_NAME[src] || (src === "direct" ? "직영·공급사" : src), lines: [] }).lines.push({
         orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty * (Number(l.pk) || 1), pk: Number(l.pk) || 1,
         cost: l.cost || 0, amount: l.price * l.qty, ship_mode: l.ship_mode || "", receiver: o.customer?.name || "", phone: o.customer?.phone || "", zip: o.customer?.zip || "",
-        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null });
+        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null, m: lineMoney(o, l, i, P) });
     });
   }
   return { groups: Object.values(groups), sheets: ORDER_SHEETS };

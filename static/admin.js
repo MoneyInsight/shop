@@ -32,7 +32,7 @@
   };
   const SRC = (id) => { id = String(id); return /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{3,}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : /^GS\d/.test(id) ? "ggsan" : /^CM\d/.test(id) ? "cmtstory" : /^OWN/.test(id) ? "own" : "direct"; };
   const SUP = { domeme: { n: "도매매", url: "https://domeme.domeggook.com/", how: "로그인 → 주문/배송 관리 → 주문내역 → 엑셀 다운로드" },
-    ownerclan: { n: "오너클랜", url: "https://ownerclan.com/", how: "자동으로 가져와요 (1시간마다). 급하면 [지금 가져오기]" },
+    ownerclan: { n: "오너클랜", url: "https://ownerclan.com/", how: "1시간마다 자동으로 들어와요. 급하면 [자동으로 가져오기], 또는 다른 곳처럼 엑셀 올리기" },
     onchannel: { n: "온채널", url: "https://www.onch3.co.kr/", how: "로그인 → 판매사 → 주문관리 → 배송조회 → 엑셀 다운로드" },
     ggsan: { n: "건강산", url: "https://www.ggsan.com/", how: "로그인 → 마이페이지 → 주문배송조회에서 송장 확인 → 엑셀 올리기 또는 [주문] 탭에 입력" },
     cmtstory: { n: "화장품스토리", url: "https://www.cmtstory.com/", how: "로그인 → 마이페이지 → 주문배송조회에서 송장 확인 → 엑셀 올리기 또는 [주문] 탭에 입력" },
@@ -123,8 +123,9 @@
       const total = G.reduce((a, g) => a + g.lines.length, 0);
       const badN = G.reduce((a, g) => a + g.lines.filter((l) => l.lv && l.lv.ok === false).length, 0);
       return `<div class="card"><h2>발주 대기 <small>${total}건</small>${badN ? ` <small style="color:var(--sale)">⚠️ 도매처 문제 ${badN}건</small>` : ""}
-        <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost" data-act="po-check">도매처 가격·재고 지금 확인</button><button class="ghost" data-act="oc-trk">오너클랜 송장 가져오기</button></span></h2>
-        <p class="muted" style="margin:-8px 0 10px">새 결제 주문은 10분마다 도매매·오너클랜 가격·재고를 자동 확인하고, 품절·가격 인상이면 카톡으로 알려 드려요. 오너클랜 송장은 1시간마다 자동으로 들어가요.</p>
+        <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost" data-act="po-check">가격·재고 지금 확인 (도매매·오너클랜)</button></span></h2>
+        <p class="muted" style="margin:-8px 0 10px">도매매·오너클랜은 도매처 시스템에 연결돼 10분마다 가격·재고를 자동 확인하고, 품절·가격 인상이면 카톡으로 알려 드려요.
+        온채널·건강산·화장품스토리는 연결 기능(API)이 없어 자동 확인이 안 돼요 — 발주할 때 도매처 결제 금액이 표의 '도매 원가'와 같은지 꼭 확인하세요.</p>
         <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
         <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
         <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
@@ -133,16 +134,23 @@
         <span style="color:var(--sale)">발주 전 확인: 도매처 결제 금액이 아래 '원가'보다 크면(도매가 인상) 손해일 수 있어요 — 발주하지 말고 품절 취소하세요.</span></p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
           <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button>${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
-          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>원가 / 판매</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
-          <td>${srcTag(l.id)}<br><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td><td>${l.qty}${l.pk > 1 ? `<br><span class="muted">(${l.pk}개 묶음)</span>` : ""}</td>
-          <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td>
-          <td style="white-space:normal;max-width:220px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}${l.lv && l.lv.at ? `<br><span class="muted" style="font-size:11px">${dt(l.lv.at)}</span>` : ""}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
+          <div style="overflow-x:auto"><table class="adm-table" style="font-size:12.5px"><tr><th>주문</th><th>상품코드</th><th>제품명</th><th>수량</th><th>개당가격</th><th>제품가격</th><th>택배비</th><th>종합가격<br><small>손님 결제</small></th><th>도매 원가</th><th>카드값</th><th>각종세금<br><small>부가세</small></th><th>순수마진</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => { const m = l.m || {}; return `<tr>
+          <td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
+          <td>${srcTag(l.id)}<br><b>${esc(l.product_no)}</b></td>
+          <td style="white-space:normal;min-width:160px">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td>
+          <td>${l.qty / (l.pk || 1)}${l.pk > 1 ? `<br><span class="muted">(도매처 ${l.qty}개)</span>` : ""}</td>
+          <td>${won(m.unit)}</td><td>${won(m.goods)}${m.disc ? `<br><span class="muted">할인 −${won(m.disc)}</span>` : ""}</td><td>${won(m.ship)}</td>
+          <td><b>${won(m.rev)}</b></td><td>${won(m.cost)}${m.ship ? `<br><span class="muted">+택배 ${won(m.ship)}</span>` : ""}</td>
+          <td>${won(m.card)}</td><td>${won(m.vat)}${m.ops ? `<br><span class="muted">운영비 ${won(m.ops)}</span>` : ""}</td>
+          <td><b style="color:${m.net < 0 ? "var(--sale)" : "var(--ok)"}">${won(m.net)}</b><br><span class="muted">${m.rate}%</span></td>
+          <td style="white-space:normal;max-width:200px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}</td>
+          <td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`; }).join("")}</table></div></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>도매처별 송장 가져오기 <small>송장 기다리는 주문 ${D.orders.filter((o) => o.status === "상품준비중" && !o.tracking).length}건</small></h2>
         <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "ggsan", "cmtstory", "own", "direct"].map((k) => {
           const n = D.orders.filter((o) => o.status === "상품준비중" && !o.tracking && o.lines.some((l) => SRC(l.id) === k)).length;
           return `<tr><td><b>${SUP[k].n}</b></td><td>${n ? `<b>${n}건</b>` : `<span class="muted">0건</span>`}</td><td class="muted" style="white-space:normal">${SUP[k].how}</td>
-            <td>${k === "ownerclan" ? `<button data-act="oc-trk">지금 가져오기</button>` : k === "direct" || k === "own" ? "" : `${SUP[k].url ? `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a>` : ""} <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>`}
+            <td>${k === "direct" || k === "own" ? "" : `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a> <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>${k === "ownerclan" ? ` <button data-act="oc-trk">자동으로 가져오기</button>` : ""}`}
             ${n ? ` <button class="ghost" data-act="trk-wait" data-src="${k}">기다리는 주문 목록</button>` : ""}</td></tr>`; }).join("")}</table>
         <p class="muted" style="margin-top:8px">엑셀 올리기: 도매처에서 받은 주문·배송 엑셀을 그대로 올리면 우리 주문번호로 찾아 송장이 들어가고, 손님께 출고 알림이 자동으로 가요. 어느 도매처 파일이든 같은 버튼이에요.</p></div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
