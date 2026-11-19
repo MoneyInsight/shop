@@ -217,6 +217,29 @@ def optimize(p, nv):
                 tags.append(w)
         if tags:
             why.append(f"연관 검색어 {len(tags)}개 (월 검색량 순)")
+        # 상품명 재구성: [브랜드] + 검색량 높은 대표 키워드(최대 2개, 우리 상품에 맞는 말만) + 나머지 원래 말 + 규격·색상 (50자 안)
+        vol = {x["k"].lower(): x["v"] for x in arel}
+        lead = []
+        for w, v in sorted([x for x in atags + syn if x[1] >= 300], key=lambda x: -x[1]):
+            if len(lead) >= 2:
+                break
+            if any(w in l or l in w for l, _ in lead):
+                continue
+            lead.append((w, v))
+        if core_w and vol.get(core_w, 0) >= max([v for _, v in lead] or [0]) and not any(core_w in l for l, _ in lead):
+            lead = [(core_w, vol[core_w])] + lead[:1]  # 핵심 말 자체가 제일 많이 찾는 말이면 맨 앞
+        if lead:
+            m = re.match(r"^\s*([\[\(][^\]\)]{1,20}[\]\)])\s*", name)
+            brand = m.group(1) if m else ""
+            rest = name[m.end():] if m else name
+            toks = rest.split()
+            spec = [t for t in toks if SPEC.match(t) or t in COLORS]
+            body = [t for t in toks if t not in spec and not any(t.lower() in l for l, _ in lead)]
+            cand = " ".join(x for x in [brand, " ".join(l for l, _ in lead), " ".join(body), " ".join(spec)] if x).strip()
+            cand = re.sub(r"\s+", " ", cand)
+            if 4 <= len(cand) <= 50 and cand.replace(" ", "") != name.replace(" ", ""):
+                name = cand
+                why.append("대표 키워드 앞으로: " + ", ".join(f"'{l}'(월 {v:,}회)" for l, v in lead))
     rel = []
     if items and not arel:
         rel, brands, df, cats = market(items, my, (q.split()[-1].lower() if q else ""))
