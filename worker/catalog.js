@@ -69,7 +69,7 @@ export async function list(db, o = {}) {
 async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, free = 0, noW = 0 } = {}) {
   size = Math.min(100, Math.max(1, +size || 40));
   page = Math.max(1, +page || 1);
-  const where = ["p.price < 1000000"], args = [];  // 100만원 이상은 판매 안 함 (대표님 2026-11-19)
+  const where = ["p.price < 500000"], args = [];  // 50만원 이상은 판매 안 함 (대표님 2026-11-19, 잘못 등록된 고가 상품 방지)
   let from = "products p";
   const t = terms(q).filter((x) => x.length > 1 || /[0-9a-z]/.test(x)).slice(0, 12);
   if (q && !t.length) return { total: 0, items: [], page, size };
@@ -93,13 +93,13 @@ async function list0(db, { q = "", cat = "", sort = "rec", page = 1, size = 40, 
 export async function popular(db, views = {}, n = 10, pin = []) {
   const out = [], seen = new Set();
   for (const id of pin) {  // 관리자가 고정한 상품 (맨 앞)
-    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0 AND price < 1000000`).bind(id).first().catch(() => null);
+    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0 AND price < 500000`).bind(id).first().catch(() => null);
     if (r && r.image && !seen.has(r.id)) { out.push({ ...card(r), pinned: true }); seen.add(r.id); }
   }
   const ids = Object.entries(views).sort((a, b) => b[1] - a[1]).map(([id]) => id).filter((id) => !seen.has(id)).slice(0, 40);
   for (const id of ids) {
     if (out.length >= n) break;
-    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0 AND price < 1000000`).bind(id).first();
+    const r = await db.prepare(`SELECT ${CARD_COLS} FROM products WHERE id = ? AND soldout = 0 AND price < 500000`).bind(id).first();
     if (r && r.image) { out.push({ ...card(r), views: views[id] }); seen.add(r.id); }
   }
   const cats = ["winter", "living", "kitchen", "fashion", "digital", "bath", "office", "season", "sleep", "beauty", "furniture", "leisure", "car", "pet", "tools", "kids"];
@@ -107,7 +107,7 @@ export async function popular(db, views = {}, n = 10, pin = []) {
     for (const c of cats) {
       if (out.length >= n) break;
       const w = c === "winter" ? "(w = 1 OR category = 'winter')" : "category = ?";
-      const st = db.prepare(`SELECT ${CARD_COLS} FROM products WHERE ${w} AND soldout = 0 AND price < 1000000 AND image LIKE 'http%' ORDER BY rank LIMIT 1 OFFSET ${round * 7}`);
+      const st = db.prepare(`SELECT ${CARD_COLS} FROM products WHERE ${w} AND soldout = 0 AND price < 500000 AND image LIKE 'http%' ORDER BY rank LIMIT 1 OFFSET ${round * 7}`);
       const r = await (c === "winter" ? st : st.bind(c)).first().catch(() => null);
       if (r && !seen.has(r.id)) { out.push(card(r)); seen.add(r.id); }
     }
@@ -118,7 +118,7 @@ export async function popular(db, views = {}, n = 10, pin = []) {
 // 상품 하나 (상세용, 원가 제외)
 export async function item(db, id) {
   const r = await db.prepare("SELECT * FROM products WHERE id = ?").bind(String(id)).first();
-  if (!r || Number(r.price) >= 1000000) return null;
+  if (!r || Number(r.price) >= 500000) return null;
   const { cost, ...pub } = r;
   return { ...card(r), images: JSON.parse(r.images || "[]"), detail_html: r.detail_html, origin: r.origin, supplier: r.supplier, source: r.source, source_no: r.source_no };
 }
@@ -128,7 +128,7 @@ export async function itemsForOrder(db, ids) {
   const out = {};
   for (const id of [...new Set(ids.map(String))]) {
     const r = await db.prepare("SELECT id, name, price, options, qt, soldout, source, source_no, supplier, cost, shipping_fee, sn, mq, pk FROM products WHERE id = ?").bind(id).first();
-    if (r && Number(r.price) < 1000000) out[r.id] = { ...r, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), qt: JSON.parse(r.qt || "[]") };
+    if (r && Number(r.price) < 500000) out[r.id] = { ...r, soldout: !!r.soldout, options: JSON.parse(r.options || "[]"), qt: JSON.parse(r.qt || "[]") };
   }
   return out;
 }

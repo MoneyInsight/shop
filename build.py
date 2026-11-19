@@ -190,7 +190,7 @@ SITE = {}  # 관리자 › 사이트 설정 (공지 띠 문구 등)
 CUSTOM_MADE = re.compile(r"주문\s*(제작|생산)|맞춤\s*제작|제작\s*(상품|주문|기간|소요)|주문\s*후\s*(제작|생산)|오더\s*메이드|커스텀\s*제작|"
                          r"(로고|문구|이름|사진|각인)\s*(인쇄|각인|새김|제작)|인쇄\s*(주문|제작)|판촉물\s*제작|단체\s*(복|티)\s*제작|"
                          r"[\[(]\s*(주문제작|제작)\s*[\])]")
-MAX_PRICE = 1_000_000
+MAX_PRICE = 500_000  # 50만원 이상 판매 안 함 (대표님 2026-11-19: 잘못 비싸게 등록된 상품 방지)
 
 
 def drop_custom_expensive(ps):
@@ -206,7 +206,7 @@ def drop_custom_expensive(ps):
         if price >= MAX_PRICE:
             n_price += 1; continue
         out.append(p)
-    print(f"판매 제외: 주문제작 {n_custom}개 · 100만원 이상 {n_price}개 (합계 {n_custom + n_price}개)")
+    print(f"판매 제외: 주문제작 {n_custom}개 · 50만원 이상 {n_price}개 (합계 {n_custom + n_price}개)")
     try:
         (ROOT / "dist").mkdir(exist_ok=True)
         (ROOT / "dist/dropped_custom_expensive.json").write_text(json.dumps({"custom": n_custom, "price": n_price}), encoding="utf-8")
