@@ -549,7 +549,19 @@ def in_db(pid):
     return _IN_DB[pid]
 
 
+def db_counts():
+    """상품 DB(사이트 전체) 실제 개수 — 첫 화면에 정적 페이지 상품 수(일부) 대신 보여 줌. 못 받으면 None"""
+    try:
+        c = json.loads(urllib.request.urlopen(urllib.request.Request(CFG["worker_url"].rstrip("/") + "/catalog/counts", headers={"User-Agent": "allchaeum-d1"}), timeout=20).read().decode())
+        total = sum(int(v or 0) for k, v in c.items() if not k.startswith("_") and k != "winter")
+        return {"total": total, "free": int(c.get("_free") or 0), **{k: int(v or 0) for k, v in c.items()}} if total else None
+    except Exception as ex:
+        print("상품 DB 개수를 못 받음(정적 개수로 표시):", ex); return None
+
+
 def build_home(ps):
+    DC = db_counts() if CFG.get("catalog_api") else None  # 상품 DB 전체 개수 (있으면 이 숫자로)
+    N_ALL = DC["total"] if DC else len(ps)
     # 수량 할인 최대 비율 (상품 중 가장 많이 내려가는 값, 내림)
     max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "alternateName": CFG.get("shop_name_alt") or [], "url": BASE + "/",
@@ -588,7 +600,7 @@ def build_home(ps):
     mixed = mixed or ps[:8]
     rate_m = round(((CFG.get("member_discount") or {}).get("rate") or 0) * 100)
     slides = [
-        ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {len(ps):,}개 · 무료배송 {sum(1 for x in ps if not x['shipping_fee']):,}개", "search.html", "전체 상품 보기", pics("living")),
+        ("brand", "담Go사Go", "좋은 물건을,<br>군더더기 없는 가격으로.", f"유통 수수료를 덜어낸 정직한 가격 · 상품 {N_ALL:,}개 · 무료배송 {(DC['free'] if DC else sum(1 for x in ps if not x['shipping_fee'])):,}개", "search.html", "전체 상품 보기", pics("living")),
         ("winter", "겨울 준비", "추위 오기 전에,<br>겨울용품 한 번에!", f"핫팩·목도리·장갑·방한용품 {len(by_cat.get('winter', [])):,}개", "category/winter.html", "겨울용품 보기", pics("winter")),
         ("office", "기업·학교 구매", "사무실·학교 비품은<br>담Go사Go 오피스", f"문구·사무용품 {len(by_cat.get('office', [])):,}개 · 견적서 바로 발급", "category/office.html", "문구·사무 보기", pics("office")),
     ]
@@ -614,7 +626,7 @@ def build_home(ps):
 <div>{I_TAG}<p><b>정직한 가격</b><span>수수료 거품을 뺀 판매가</span></p></div>
 <div>{I_SHIELD}<p><b>안전 결제</b><span>{PAY_SHORT}</span></p></div>
 <div>{I_RETURN}<p><b>7일 교환·반품</b><span>받아보고 결정하세요</span></p></div></div></div>
-<section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {len(ps):,}개 보기</a></div>
+<section class="section"><div class="wrap"><div class="sec-head"><div><h2>새로 들어온 상품</h2><p>이번 주에 새로 만나보실 수 있는 상품입니다.</p></div><a href="search.html">전체 {N_ALL:,}개 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in mixed)}</div></div></section>
 <section class="section"><div class="wrap"><div class="sec-head"><div><h2>카테고리</h2></div></div><div class="cat-tiles">{tiles}</div></div></section>
 {sections}

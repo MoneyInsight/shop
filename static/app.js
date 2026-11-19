@@ -570,7 +570,7 @@
     const n = (k) => Number(c[k] || 0), f = (x) => x.toLocaleString("ko-KR");
     const total = Object.entries(c).filter(([k]) => !k.startsWith("_") && k !== "winter").reduce((a, [, v]) => a + Number(v || 0), 0);
     if (!total) return;
-    const rep = [[/상품 [\d,]+개/g, "상품 " + f(total) + "개"], [/무료배송 [\d,]+개/g, "무료배송 " + f(n("_free")) + "개"], [/전체 [\d,]+개 보기/g, "전체 " + f(total) + "개 보기"],
+    const rep = [[/· 상품 [\d,]{3,}개/g, "· 상품 " + f(total) + "개"], [/무료배송 [\d,]+개/g, "무료배송 " + f(n("_free")) + "개"], [/전체 [\d,]+개 보기/g, "전체 " + f(total) + "개 보기"],
       [/(방한용품) [\d,]+개/g, "$1 " + f(n("winter")) + "개"], [/(문구·사무용품) [\d,]+개/g, "$1 " + f(n("office")) + "개"]];
     const w = document.createTreeWalker(document.querySelector("main") || document.body, NodeFilter.SHOW_TEXT);
     for (let t; (t = w.nextNode());) { let v = t.nodeValue; for (const [re, to] of rep) v = v.replace(re, to); if (v !== t.nodeValue) t.nodeValue = v; }
