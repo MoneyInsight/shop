@@ -148,6 +148,7 @@
         <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
         <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
         <b>도매매</b>: [대량주문 엑셀 받기] → <a href="https://domeggook.com/main/myBuy/order/my_orderExcelForm.php" target="_blank" rel="noopener">도매꾹 엑셀일괄주문</a>에 파일 업로드(도매꾹 공식 양식, 전달사항에 우리 주문번호) → 이머니 바로결제 → [발주 완료]<br>
+        <b>건강산·화장품스토리</b>: 엑셀 대량주문 기능이 없어요 → 줄마다 [상품 열기]로 상품을 장바구니에 담고, 주문서에서 '배송지 직접 입력'에 [배송정보 복사] 내용을 붙여넣기 → 예치금·카드 결제 → [발주 완료]<br>
         <b>직영(숨엔 등 직접 보내는 상품)</b>: 직접 포장·발송 → [주문] 탭에서 송장 입력 → 고객에게 출고 알림이 자동으로 가요.<br>
         나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣거나 엑셀 파일을 그대로 올리면 우리 주문번호로 찾아 송장이 자동으로 들어가요.<br>
         <span style="color:var(--sale)">발주 전 확인: 도매처 결제 화면의 <b>상품값·택배비</b>가 아래 '도매 원가'·'택배비'(주문당 1번 / N개마다)와 다르면 손해일 수 있어요 — 특히 도매처가 <b>1개마다 택배비</b>를 받는데 표에 '주문당 1번'이면 발주하지 말고 알려 주세요.</span></p>
@@ -163,7 +164,7 @@
           <td>${won(m.card)}</td><td>${won(m.vat)}${m.ops ? `<br><span class="muted">운영비 ${won(m.ops)}</span>` : ""}</td>
           <td><b style="color:${m.net < 0 ? "var(--sale)" : "var(--ok)"}">${won(m.net)}</b><br><span class="muted">${m.rate}%</span></td>
           <td style="white-space:normal;max-width:200px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}</td>
-          <td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`; }).join("")}</table></div></div>`).join("")
+          <td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span>${/^(GS|CM)\d/.test(l.id) ? `<br><button class="ghost" style="padding:2px 8px;font-size:11px" data-act="open-url" data-url="https://www.${/^GS/.test(l.id) ? "ggsan" : "cmtstory"}.com/goods/goods_view.php?goodsNo=${esc(String(l.id).slice(2))}">상품 열기 ↗</button> <button class="ghost" style="padding:2px 8px;font-size:11px" data-act="copy-ship" data-v="${esc([l.receiver, l.phone, (l.zip ? "(" + l.zip + ") " : "") + l.addr, l.memo ? "요청: " + l.memo : "", "주문 " + l.orderId].filter(Boolean).join("\n"))}">배송정보 복사</button>` : ""}</td></tr>`; }).join("")}</table></div></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>도매처 대량주문 양식 <small>각 도매처 공식 양식에 맞춰 주문서가 만들어져요</small></h2>
         <p class="muted" style="margin-bottom:8px">도매처 사이트의 대량(엑셀) 주문 화면에서 <b>양식(샘플) 파일</b>을 내려받아 여기에 한 번만 올려 두면, 그 열 순서·이름 그대로 주문서를 만들어 드려요. 도매처가 양식을 바꾸면 다시 올리면 돼요.</p>
@@ -866,6 +867,7 @@
       }
       if (act === "sheet-up") { const f = $("#sheet-file"); f.dataset.src = b.dataset.src; f.value = ""; f.click(); return; }
       if (act === "sheet-reset") { if (!confirm("올린 양식을 지우고 기본 양식으로 돌릴까요?")) return; await call("/admin/sheet-save", { src: b.dataset.src, reset: true }); return load(); }
+      if (act === "copy-ship") { await navigator.clipboard.writeText(b.dataset.v); b.textContent = "복사됨 ✓"; setTimeout(() => (b.textContent = "배송정보 복사"), 1500); return; }
       if (act === "open-url") { window.open(b.dataset.url, "_blank", "noopener"); return; }
       if (act === "trk-wait") {  // 송장 기다리는 주문 목록 (도매처 사이트에서 찾기 쉽게)
         const src = b.dataset.src, rows = [["우리 주문번호", "도매처 상품번호", "상품명", "수량", "받는 분", "연락처", "발주일"]];
