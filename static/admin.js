@@ -18,9 +18,23 @@
       r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + encodeURIComponent(PW.trim()) }, body: JSON.stringify(body || {}) });
     } catch (e) { throw new Error("서버에 연결하지 못했어요. (" + API + ")"); }
     try { d = await r.json(); } catch (e) { throw new Error("서버 응답이 올바르지 않아요. (상태 " + r.status + ") 서버 배포가 실패했을 수 있어요."); }
-    if (!r.ok) throw new Error(d.message || "오류가 났어요.");
+    if (!r.ok) { const e = new Error(d.message || "오류가 났어요."); if (r.status === 409 && d.need) e.need = d.need; throw e; }
     return d;
   };
+  // 손해 날 수 있는 처리(환불·취소): 서버가 묻는 확인을 하나씩 받고 진행. 취소하면 null
+  const safeCall = async (path, body) => {
+    const ok = [];
+    for (let i = 0; i < 6; i++) {
+      try { return await call(path, { ...body, ok }); }
+      catch (e) { if (!e.need) throw e; if (!confirm("⚠️ " + e.message)) return null; ok.push(e.need); }
+    }
+    return null;
+  };
+  const SRC = (id) => /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{6}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : "direct";
+  const SUP = { domeme: { n: "도매매", url: "https://domeme.domeggook.com/", how: "로그인 → 주문/배송 관리 → 주문내역 → 엑셀 다운로드" },
+    ownerclan: { n: "오너클랜", url: "https://ownerclan.com/", how: "자동으로 가져와요 (1시간마다). 급하면 [지금 가져오기]" },
+    onchannel: { n: "온채널", url: "https://www.onch3.co.kr/", how: "로그인 → 판매사 → 주문관리 → 배송조회 → 엑셀 다운로드" },
+    direct: { n: "직영(직접 발송)", url: "", how: "[주문] 탭에서 송장 직접 입력" } };
 
   const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "회원·고객"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
 
@@ -119,20 +133,45 @@
           <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td>
           <td style="white-space:normal;max-width:220px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}${l.lv && l.lv.at ? `<br><span class="muted" style="font-size:11px">${dt(l.lv.at)}</span>` : ""}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
+        <div class="card"><h2>도매처별 송장 가져오기 <small>송장 기다리는 주문 ${D.orders.filter((o) => o.status === "상품준비중" && !o.tracking).length}건</small></h2>
+        <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "direct"].map((k) => {
+          const n = D.orders.filter((o) => o.status === "상품준비중" && !o.tracking && o.lines.some((l) => SRC(l.id) === k)).length;
+          return `<tr><td><b>${SUP[k].n}</b></td><td>${n ? `<b>${n}건</b>` : `<span class="muted">0건</span>`}</td><td class="muted" style="white-space:normal">${SUP[k].how}</td>
+            <td>${k === "ownerclan" ? `<button data-act="oc-trk">지금 가져오기</button>` : k === "direct" ? "" : `${SUP[k].url ? `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a>` : ""} <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>`}
+            ${n ? ` <button class="ghost" data-act="trk-wait" data-src="${k}">기다리는 주문 목록</button>` : ""}</td></tr>`; }).join("")}</table>
+        <p class="muted" style="margin-top:8px">엑셀 올리기: 도매처에서 받은 주문·배송 엑셀을 그대로 올리면 우리 주문번호로 찾아 송장이 들어가고, 손님께 출고 알림이 자동으로 가요. 어느 도매처 파일이든 같은 버튼이에요.</p></div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
         <p class="muted" style="margin-bottom:10px">도매처에서 받은 송장 엑셀을 열어 <b>전체 복사(Ctrl+A → Ctrl+C)</b> 후 아래에 붙여넣거나, CSV로 저장해 올려 주세요. 각 줄에서 우리 주문번호(T로 시작)·택배사·송장번호를 자동으로 찾아요.</p>
         <textarea id="trk-paste" style="width:100%;height:120px" placeholder="여기에 붙여넣기"></textarea>
         <div style="margin-top:8px"><input type="file" id="trk-file" accept=".xlsx,.xls,.csv,.txt"> <button data-act="trk-import">송장 넣기</button></div><div id="trk-result" class="muted" style="margin-top:8px"></div></div>`;
     }
-    if (tab === "claims") return `<div class="card"><h2>처리 순서</h2><ol class="why" style="padding-left:18px;list-style:decimal">
-        <li><b>취소 (발주 전)</b>: 고객이 직접 취소하면 자동 환불돼요. 할 일 없음.</li>
-        <li><b>취소 (발주 후·출고 전)</b>: 도매처(도매매·오너클랜) 주문 화면에서 <b>주문 취소</b> 요청 → 취소되면 여기서 [환불].</li>
-        <li><b>반품</b>: 도매처 주문·배송 조회 → 해당 주문 <b>반품 신청</b> (사유·회수지 = 고객 주소) → 도매처가 회수 → 회수 확인되면 [환불] → 상태 ‘반품완료’.<br>
-          <span class="muted">단순 변심은 왕복 배송비를 고객 부담으로 빼고 부분 환불(환불 금액 입력), 불량·오배송은 전액 환불하고 도매처에 배송비 청구.</span></li>
-        <li><b>교환</b>: 도매처에 교환 신청 → 새 송장 받으면 송장 입력 → 상태 ‘교환완료’.</li>
-        <li>도매처 반품·교환 배송비는 상품마다 달라요. 도매처 상품 페이지의 반품/교환비를 확인하세요.</li></ol></div>
-      <div class="card"><h2>취소·반품·교환 요청</h2><p class="muted" style="margin-bottom:12px">환불 버튼을 누르면 결제가 실제로 취소돼요. 교환은 처리 후 상태를 ‘교환완료’로 바꿔 주세요.</p>${orderTable(D.orders.filter((o) => /요청$/.test(o.status)))}</div>
+    if (tab === "claims") {
+      const open = D.orders.filter((o) => /요청$/.test(o.status));
+      const step = (o, k, label, done) => done ? `<span style="color:var(--ok)">✅ ${label}<br><small class="muted">${dt(done)}</small></span> <button class="ghost" style="padding:1px 6px;font-size:11px" data-act="cl-step" data-id="${esc(o.orderId)}" data-step="${k}" data-undo="1">되돌리기</button>`
+        : `<button data-act="cl-step" data-id="${esc(o.orderId)}" data-step="${k}">${label}</button>`;
+      const card = (o) => {
+        const st = (o.claim && o.claim.steps) || {}, type = o.status.replace(/요청$/, ""), srcs = [...new Set(o.lines.map((l) => SRC(l.id)))];
+        const left = o.amount - (o.refunded || 0), sug = o.claim && o.claim.refund != null ? o.claim.refund : left;
+        const cost = o.lines.reduce((a, l) => a + (Number(l.cost) || 0) * (Number(l.qty) || 1), 0);
+        const flow = type === "취소" ? [["ws", "① 도매처 주문 취소 완료"]] : type === "반품" ? [["ws", "① 도매처 반품 신청 완료"], ["retrieved", "② 회수(상품 도착) 확인"]] : [["ws", "① 도매처 교환 신청 완료"], ["retrieved", "② 회수 확인"], ["resent", "③ 새 상품 발송 → 교환완료"]];
+        const canRefund = type !== "교환" && (type === "취소" ? (!o.lines.some((l) => l.po) || st.ws) : st.retrieved);
+        return `<div class="po-group" style="border:1px solid var(--line);padding:14px;margin-bottom:12px">
+          <h3 style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="state">${esc(o.status)}</span> ${esc(o.orderId)} <small class="muted">${esc(o.customer?.name || "")} · ${esc(o.customer?.phone || "")}</small></h3>
+          <p>${o.lines.map((l) => `${esc(l.name)} × ${l.qty} <span class="muted">[${esc(SUP[SRC(l.id)].n)} ${esc(l.source_no || String(l.id).replace(/^DM/, ""))}]${l.po ? " · 발주함" : " · 발주 전"}</span>`).join("<br>")}</p>
+          ${o.claim ? `<p class="muted">${o.claim.kind ? "[" + esc(o.claim.kind) + "] " : ""}${esc(o.claim.reason || "")} ${Array.from({ length: o.claim.photos || 0 }, (_, i) => `<button class="ghost" style="padding:1px 6px" data-act="claim-photo" data-id="${esc(o.orderId)}" data-i="${i}">사진 ${i + 1}</button>`).join(" ")}</p>` : ""}
+          <p>결제 ${won(o.amount)}${o.refunded ? ` · 환불됨 ${won(o.refunded)}` : ""} · <b>${type === "교환" ? (/변심/.test(o.claim?.kind || "") ? `왕복 배송비 ${won(o.claim?.deduct || 0)} 손님 부담 (입금 확인 후 진행)` : "불량·오배송: 도매처 부담으로 교환") : `환불할 금액 ${won(sug)}`}</b>
+            ${cost && o.lines.some((l) => l.po) ? `<br><span class="muted">도매처에 낸 원가 약 ${won(cost)} → 도매처 ${type}로 돌려받기${/변심/.test(o.claim?.kind || "") ? ` (도매처 반품·교환 배송비는 손님 부담분 ${won(o.claim?.deduct || 0)}로 충당)` : " (불량·오배송이면 배송비도 도매처 부담으로 요청)"}</span>` : ""}</p>
+          <p class="muted" style="margin:6px 0">${srcs.filter((x) => x !== "direct").map((x) => `<a href="${SUP[x].url}" target="_blank" rel="noopener">${SUP[x].n} 열기 ↗</a>`).join(" · ")}${srcs.includes("direct") ? " · 직영 상품: 직접 회수·처리" : ""}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${flow.map(([k, lb]) => step(o, k, lb, st[k])).join(" → ")}
+            ${type !== "교환" ? ` → <button ${canRefund ? "" : 'class="ghost" '}data-act="order-refund" data-id="${esc(o.orderId)}"${o.claim?.refund != null ? ` data-refund="${o.claim.refund}" data-deduct="${o.claim.deduct}"` : ""}>${type === "취소" ? "②" : "③"} 환불 ${won(sug)}</button>` : ""}</div>
+          ${!canRefund && type !== "교환" ? `<p class="muted" style="font-size:12px;margin-top:4px">앞 단계를 끝낸 뒤 환불하세요. 순서를 건너뛰면 한 번 더 확인해요.</p>` : ""}</div>`;
+      };
+      return `<div class="card"><h2>처리할 취소·반품·교환 <small>${open.length}건</small></h2>
+        <p class="muted" style="margin-bottom:12px">순서대로 버튼만 누르면 돼요. 도매처 처리를 확인하기 전에 환불하려고 하면 한 번 더 물어봐서 손해를 막아요.
+        단순 변심은 받은 날부터 7일 안에만 신청할 수 있고(사이트에서 자동 차단), 배송비는 손님 부담으로 자동 계산돼요. 받은 뒤 8일이 지나면 자동 구매확정돼요.</p>
+        ${open.length ? open.map(card).join("") : `<p class="empty">처리할 요청이 없어요.</p>`}</div>
       <div class="card"><h2>처리 완료</h2>${orderTable(D.orders.filter((o) => ["취소완료", "반품완료", "교환완료"].includes(o.status)).slice(0, 30))}</div>`;
+    }
     if (tab === "qna") {
       const item = (q) => `<tr><td>${dt(q.at)}<br><span class="state${q.answer ? " done" : ""}" style="margin:0">${q.answer ? "답변완료" : "대기"}</span></td>
         <td>${q.product_name ? `<b>${esc(q.product_name)}</b><br>` : `<b>[${esc(q.type)}]</b> ${q.orderId ? "주문 " + esc(q.orderId) : ""}<br>`}${esc(q.text)}<br><span class="muted">${esc(q.name)} · ${esc(q.contact || "-")}${q.secret ? " · 비밀글" : ""}</span></td>
@@ -600,6 +639,7 @@
     if (ev.target.id === "m-q" && CUST) { const v = ev.target.value.trim().toLowerCase(), dv = v.replace(/\D/g, ""); $("#m-list").innerHTML = memTable((CUST.members || []).filter((m) => (m.name || "").toLowerCase().includes(v) || (m.email || "").toLowerCase().includes(v) || (dv && (m.phone || "").replace(/\D/g, "").includes(dv)))); }
     if (ev.target.id === "c-q" && CUST) { const v = ev.target.value.trim(), dv = v.replace(/\D/g, ""); $("#c-list").innerHTML = custTable(CUST.customers.filter((c) => c.name.includes(v) || (dv && c.phone.includes(dv)))); }
   });
+  document.addEventListener("change", (ev) => { if (ev.target.id === "trk-file" && ev.target.files[0]) $('[data-act="trk-import"]')?.click(); });  // 엑셀 고르면 바로 넣기
   document.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.id === "o-q") $('[data-act="o-search"]')?.click(); });
   document.addEventListener("click", async (ev) => {
     const t = ev.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; return paint(); }
@@ -610,7 +650,7 @@
       if (act === "export") return exportCsv();
       if (act === "soldout-cancel") {
         if (!confirm("도매처 품절로 이 주문을 취소하고 전액 환불할까요? 손님께 사과 안내가 자동으로 가요.")) return;
-        alert((await call("/admin/soldout-cancel", { orderId: id })).message); return load();
+        const r = await safeCall("/admin/soldout-cancel", { orderId: id }); if (r) alert(r.message); return load();
       }
       if (act === "backup") {
         const r = await fetch(API + "/admin/export", { method: "POST", headers: { Authorization: "Bearer " + encodeURIComponent(PW.trim()) } });
@@ -691,6 +731,14 @@
         if (!g || !confirm(`${g.name} ${g.lines.length}건을 발주 완료로 표시할까요? (도매처 결제까지 끝낸 뒤 눌러 주세요)`)) return;
         alert((await call("/admin/po-done", { items: g.lines.map((l) => ({ orderId: l.orderId, idx: l.idx })) })).message); return load();
       }
+      if (act === "cl-step") { await call("/admin/claim-step", { orderId: b.dataset.id, step: b.dataset.step, undo: !!b.dataset.undo }); return load(); }
+      if (act === "trk-file-up") { $("#trk-file").click(); return; }
+      if (act === "trk-wait") {  // 송장 기다리는 주문 목록 (도매처 사이트에서 찾기 쉽게)
+        const src = b.dataset.src, rows = [["우리 주문번호", "도매처 상품번호", "상품명", "수량", "받는 분", "연락처", "발주일"]];
+        for (const o of D.orders.filter((o) => o.status === "상품준비중" && !o.tracking)) for (const l of o.lines) if (SRC(l.id) === src) rows.push([o.orderId, l.source_no || String(l.id).replace(/^DM/, ""), l.name, l.qty, o.customer?.name || "", o.customer?.phone || "", (l.po || "").slice(0, 10)]);
+        const csv = "\ufeff" + rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `송장대기_${SUP[src].n}_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); return;
+      }
       if (act === "po-check") { b.disabled = true; b.textContent = "확인 중…"; try { const r = await call("/admin/po-check"); alert(r.bad ? `⚠️ 문제 ${r.bad}건을 찾았어요. 표의 빨간 줄을 확인해 주세요.` : "확인했어요. 표의 '도매처 확인' 칸을 보세요."); } catch (e) { alert(e.message); } return load(); }
       if (act === "oc-trk") { b.disabled = true; b.textContent = "가져오는 중…"; try { alert((await call("/admin/oc-tracking-sync")).message); } catch (e) { alert(e.message); } return load(); }
       if (act === "trk-import") {
@@ -734,7 +782,7 @@
         const amt = prompt(sug != null ? `단순 변심 반품이에요. 배송비 ${Number(b.dataset.deduct).toLocaleString()}원을 뺀 금액이 채워져 있어요. 확인 후 진행하세요. (비우면 전액 환불)` : "환불할 금액을 입력하세요. 비워 두면 전액 환불돼요.", sug ?? "");
         if (amt === null) return;
         if (!confirm("결제가 실제로 취소돼요. 진행할까요?")) return;
-        await call("/admin/order-cancel", { orderId: id, amount: amt.replace(/\D/g, ""), reason: "판매자 환불" });
+        if (!(await safeCall("/admin/order-cancel", { orderId: id, amount: amt.replace(/\D/g, ""), reason: "판매자 환불" }))) return;
       }
       if (act === "answer") await call("/admin/answer", { key, answer: $('[data-f="answer"]', row).value });
       if (act === "delete") { if (!confirm("삭제할까요?")) return; await call("/admin/delete", { key }); }

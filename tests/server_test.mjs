@@ -50,7 +50,8 @@ r = await call("/inquiry/add", { name: "김", contact: "010", type: "배송", te
 r = await call("/order/claim", { orderId: "ORD1", phone: "01012345678", type: "반품", reason: "단순 변심" }); ok("반품 신청", r.d.order?.status === "반품요청", r);
 r = await call("/admin/list", {}, true); ok("관리자 목록", r.d.orders.length === 1 && r.d.stats.claims === 1 && r.d.qnas.length === 1 && r.d.inquiries.length === 1 && r.d.reviews.length === 1 && r.d.coupons[0].used === 1, r.d.stats);
 r = await call("/admin/answer", { key: r.d.qnas[0].key, answer: "다음 주예요" }, true); ok("문의 답변", r.s === 200, r);
-r = await call("/admin/order-cancel", { orderId: "ORD1", reason: "반품 환불" }, true); ok("환불", r.s === 200, r);
+r = await call("/admin/order-cancel", { orderId: "ORD1", reason: "반품 환불" }, true); ok("회수 확인 전 환불은 한 번 더 묻기", r.s === 409 && r.d.need === "retrieved", r);
+r = await call("/admin/order-cancel", { orderId: "ORD1", reason: "반품 환불", ok: ["retrieved"] }, true); ok("환불", r.s === 200, r);
 r = await call("/order/lookup", { orderId: "ORD1", phone: "01012345678" }); ok("환불 후 상태", r.d.order.status === "반품완료", r.d.order?.status);
 r = await call("/confirm", { paymentKey: "pk2", orderId: "ORD2", amount: 5000, items: [{ id: "B1", qty: 1 }], customer: cust }); 
 r = await call("/order/cancel", { orderId: "ORD2", phone: "01012345678", reason: "실수" }); ok("결제완료 즉시 취소", r.d.order?.status === "취소완료", r);

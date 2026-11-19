@@ -1079,6 +1079,11 @@ export async function trackSweep(env) {
   let n = 0, done = 0;
   for (const { name } of (await env.SHOP.list({ prefix: "order:" })).keys) {
     const o = await env.SHOP.get(name, "json");
+    if (o?.status === "배송완료" && !o.claim) {  // 받은 뒤 8일 지나면 자동 구매확정 (단순 변심 반품 기간 7일 끝)
+      const h = (o.history || []).filter((x) => x.status === "배송완료").pop();
+      if (h && Date.now() - Date.parse(h.at) > 8 * 864e5) { setStatus(o, "구매확정", { by: "자동(수령 8일)" }); await env.SHOP.put(name, JSON.stringify(o)); }
+      continue;
+    }
     if (o?.status !== "배송중" || !o.tracking) continue;
     if (await refreshTracking(env, o)) { n++; if (o.status === "배송완료") done++; }
   }
@@ -1118,6 +1123,12 @@ async function orderClaim(req, env) {
   if (!["반품", "교환"].includes(type)) return fail("신청 종류를 선택해 주세요.");
   if (!["배송중", "배송완료"].includes(o.status)) return fail("배송이 시작된 주문만 반품/교환을 신청할 수 있어요.");
   if (!clip(reason, 500)) return fail("사유를 입력해 주세요.");
+  {  // 신청 기한: 단순 변심은 받은 날(배송완료)부터 7일, 불량·오배송 등은 90일 (전자상거래법)
+    const h = (o.history || []).filter((x) => x.status === "배송완료").pop() || (o.history || []).filter((x) => x.status === "배송중").pop();
+    const days = h ? (Date.now() - Date.parse(h.at)) / 864e5 : 0;
+    if (/변심/.test(String(kind || "")) && days > 7) return fail("단순 변심 반품·교환은 상품을 받은 날부터 7일 안에만 신청할 수 있어요. 상품에 문제가 있다면 사유를 '불량·파손' 등으로 골라 사진과 함께 신청해 주세요.");
+    if (days > 90) return fail("상품을 받은 지 3개월이 지나 반품·교환을 신청할 수 없어요. 고객센터로 문의해 주세요.");
+  }
   // 사진: 불량·파손·오배송·누락은 필수 (최대 3장, 장당 1.5MB 이하 이미지)
   photos = (Array.isArray(photos) ? photos : []).filter((p) => typeof p === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(p)).slice(0, 3);
   if (photos.some((p) => p.length > 2_000_000)) return fail("사진 용량이 너무 커요. 다시 골라 주세요.");
@@ -1339,8 +1350,24 @@ async function ocTrackingSync(env) {
   }
   return { ok: true, updated, message: `오너클랜 주문 ${seen}건 확인 → 송장 ${updated}건 자동 입력했어요.${Object.keys(want).length ? ` (아직 송장 없음 ${Object.keys(want).length}건)` : ""}` };
 }
-async function poCron(env) {  // 10분마다: 새 결제 주문 도매처 확인, 1시간마다: 오너클랜 송장 수집
+async function opsAlert(env) {  // 놓치면 손해·클레임이 되는 일 모아서 알림 (6시간마다)
+  const now = Date.now(), h = (t) => (now - Date.parse(t || 0)) / 36e5, L = { po: [], trk: [], claim: [], cancel: [] };
+  for (const o of await kvList(env, "order:")) {
+    if (o.status === "결제완료" && o.lines.some((l) => !l.po) && h(o.paidAt) > 24) L.po.push(o.orderId);
+    if (o.status === "상품준비중" && !o.tracking && h((o.history || []).filter((x) => x.status === "상품준비중").pop()?.at || o.paidAt) > 72) L.trk.push(o.orderId);
+    if (/^(반품|교환)요청$/.test(o.status) && h(o.claim?.at) > 48) L.claim.push(o.orderId);
+    if (o.status === "취소요청") L.cancel.push(o.orderId);
+  }
+  const t = [L.cancel.length && `🛑 취소 요청 ${L.cancel.length}건 — 도매처 취소 후 환불: ${L.cancel.slice(0, 5).join(", ")}`,
+    L.po.length && `⏰ 결제 후 24시간 넘게 발주 안 한 주문 ${L.po.length}건: ${L.po.slice(0, 5).join(", ")}`,
+    L.trk.length && `🚚 발주 후 3일 넘게 송장 없는 주문 ${L.trk.length}건 (도매처 출고 확인): ${L.trk.slice(0, 5).join(", ")}`,
+    L.claim.length && `📦 2일 넘게 처리 안 된 반품·교환 ${L.claim.length}건: ${L.claim.slice(0, 5).join(", ")}`].filter(Boolean);
+  if (t.length) await notify(env, "📋 담Go사Go 할 일\n" + t.join("\n") + "\n관리자 화면에서 처리해 주세요.").catch(() => {});
+}
+async function poCron(env) {  // 10분마다: 새 결제 주문 도매처 확인, 1시간마다: 오너클랜 송장 수집, 6시간마다: 할 일 알림
   await poCheckOrders(env, { notifyBad: true }).catch(() => {});
+  const lastOps = Number(await env.SHOP.get("ops_at")) || 0;
+  if (Date.now() - lastOps > 6 * 36e5) { await env.SHOP.put("ops_at", String(Date.now())); await opsAlert(env).catch(() => {}); }
   const last = Number(await env.SHOP.get("oc_trk_at")) || 0;
   if (Date.now() - last > 55 * 60e3) { await env.SHOP.put("oc_trk_at", String(Date.now())); await ocTrackingSync(env).catch(() => {}); }
 }
@@ -1348,15 +1375,16 @@ async function adminPoDone(req, env) {
   const { items } = await req.json();  // [{orderId, idx}]
   const by = {};
   for (const it of items || []) (by[it.orderId] = by[it.orderId] || []).push(+it.idx);
-  let n = 0;
+  let n = 0, skipped = null;
   for (const [id, idxs] of Object.entries(by)) {
     const o = await env.SHOP.get("order:" + id, "json");
     if (!o) continue;
+    if (!["결제완료", "상품준비중"].includes(o.status)) { (skipped ||= []).push(`${id}(${o.status})`); continue; }  // 그사이 손님이 취소 요청한 주문
     idxs.forEach((i) => { if (o.lines[i] && !o.lines[i].po) { o.lines[i].po = new Date().toISOString(); n++; } });
     if (o.status === "결제완료" && o.lines.every((l) => l.po)) setStatus(o, "상품준비중", { by: "발주" });
     await env.SHOP.put("order:" + id, JSON.stringify(o));
   }
-  return json({ ok: true, message: `${n}건 발주 완료로 표시했어요.` });
+  return json({ ok: true, message: `${n}건 발주 완료로 표시했어요.` + (skipped ? `\n⚠️ 손님이 취소를 요청해서 건너뛴 주문: ${skipped.join(", ")}\n도매처에 이미 주문했다면 바로 취소해 주세요.` : "") });
 }
 // 도매처에서 받은 송장 목록(행마다 우리 주문번호·택배사·송장번호) → 주문에 입력, 배송중 + 출고 알림
 async function adminTrackingImport(req, env) {
@@ -1374,11 +1402,30 @@ async function adminTrackingImport(req, env) {
 }
 
 // 도매처 품절 → 전액 환불 + 손님에게 사과 안내 (웹푸시·메일, 알림톡은 템플릿 있을 때)
+// 환불 전 안전 확인: 손해 날 수 있는 경우 관리자에게 한 번 더 묻기 (409 + need). 확인한 항목은 ok 목록으로 다시 보냄
+const SRC_KO = { domeme: "도매매", ownerclan: "오너클랜", onchannel: "온채널" };
+function refundRisk(o, d, amt) {
+  const ok = Array.isArray(d.ok) ? d.ok : [];
+  const ordered = o.lines.some((l) => l.po) || o.status === "상품준비중";
+  const srcs = [...new Set(o.lines.filter((l) => l.po).map((l) => SRC_KO[srcOf(l)] || "공급사"))].join("·") || "도매처";
+  if (ordered && ["결제완료", "상품준비중", "취소요청"].includes(o.status) && !ok.includes("ws_cancel"))
+    return { need: "ws_cancel", message: `이 주문은 이미 ${srcs}에 발주했어요.\n${srcs}에서 주문 취소가 완료됐나요?\n(취소 안 하고 환불하면 상품이 그대로 나가서 상품값만큼 손해예요)` };
+  if (["배송중", "배송완료", "구매확정"].includes(o.status) && !ok.includes("shipped"))
+    return { need: "shipped", message: "이미 출고된 주문이에요. 반품 회수 없이 환불하면 상품값만큼 손해예요.\n그래도 환불할까요?" };
+  if (o.status === "반품요청" && !ok.includes("retrieved"))
+    return { need: "retrieved", message: `${srcs}에서 반품 상품 회수(도착)가 확인됐나요?\n(회수 전에 환불하면 상품을 못 돌려받을 수 있어요)` };
+  const left = o.amount - (o.refunded || 0), want = amt || left;
+  if (o.claim && o.claim.refund != null && want > o.claim.refund && !ok.includes("over"))
+    return { need: "over", message: `단순 변심 반품이라 배송비 ${won0(o.claim.deduct)}원을 뺀 ${won0(o.claim.refund)}원만 환불하는 게 맞아요.\n그래도 ${won0(want)}원을 환불할까요?` };
+  return null;
+}
 async function adminSoldoutCancel(req, env) {
-  const { orderId } = await req.json();
+  const d = await req.json();
+  const { orderId } = d;
   const o = await env.SHOP.get("order:" + orderId, "json");
   if (!o) return fail("주문을 찾을 수 없어요.");
-  if (!["결제완료", "상품준비중"].includes(o.status)) return fail("출고 전 주문만 품절 취소할 수 있어요.");
+  if (!["결제완료", "상품준비중", "취소요청"].includes(o.status)) return fail("출고 전 주문만 품절 취소할 수 있어요.");
+  const risk = refundRisk(o, d, 0); if (risk) return json(risk, 409);
   const left = o.amount - (o.refunded || 0);
   const c = await payCancel(env, o, "상품 품절로 인한 주문 취소");
   if (!c.ok) return fail(c.message);
@@ -1399,12 +1446,16 @@ async function adminExport(env) {
 }
 
 async function adminOrderCancel(req, env) {
-  const { orderId, reason, amount } = await req.json();
+  const d = await req.json();
+  const { orderId, reason, amount } = d;
   const o = await env.SHOP.get("order:" + orderId, "json");
   if (!o) return fail("주문을 찾을 수 없어요.");
   if (o.status === "취소완료" || o.status === "반품완료") return fail("이미 환불된 주문이에요.");
   const amt = parseInt(amount) || 0;
   if (amt && amt > o.amount - (o.refunded || 0)) return fail("환불 금액이 결제 금액보다 커요.");
+  if (!(o.amount - (o.refunded || 0) > 0)) return fail("더 환불할 금액이 없어요.");
+  const risk = refundRisk(o, d, amt); if (risk) return json(risk, 409);
+  if (o.claim) { o.claim.steps = o.claim.steps || {}; for (const k of (d.ok || [])) if (k === "retrieved" || k === "ws_cancel") o.claim.steps[k === "retrieved" ? "retrieved" : "ws"] ||= new Date().toISOString(); }
   const c = await payCancel(env, o, clip(reason, 100) || "판매자 취소", amt || undefined);
   if (!c.ok) return fail(c.message);
   o.refunded = (o.refunded || 0) + (amt || o.amount - (o.refunded || 0));
@@ -1414,6 +1465,18 @@ async function adminOrderCancel(req, env) {
   return json({ ok: true });
 }
 
+async function adminClaimStep(req, env) {  // 취소·반품·교환 진행 단계 표시 (도매처 신청 → 회수 확인 → 환불/교환 발송)
+  const d = await req.json().catch(() => ({}));
+  const o = await env.SHOP.get("order:" + d.orderId, "json");
+  if (!o) return fail("주문을 찾을 수 없어요.");
+  if (!["ws", "retrieved", "resent"].includes(d.step)) return fail("단계가 올바르지 않아요.");
+  o.claim = o.claim || { type: o.status.replace(/요청$/, ""), at: new Date().toISOString(), status: "접수" };
+  o.claim.steps = o.claim.steps || {};
+  if (d.undo) delete o.claim.steps[d.step]; else o.claim.steps[d.step] = new Date().toISOString();
+  if (d.step === "resent" && !d.undo && o.status === "교환요청") { o.claim.status = "완료"; setStatus(o, "교환완료"); }
+  await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
+  return json({ ok: true });
+}
 async function adminAnswer(req, env) {
   const { key, answer } = await req.json();
   if (!/^(qna|inquiry):/.test(key || "")) return fail("잘못된 요청이에요.");
@@ -1876,6 +1939,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/close-report") return await closeReport(req, env);
       if (path === "/admin/order-update") return await adminOrderUpdate(req, env);
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
+      if (path === "/admin/claim-step") return await adminClaimStep(req, env);
       if (path === "/admin/soldout-cancel") return await adminSoldoutCancel(req, env);
       if (path === "/admin/export") return await adminExport(env);
       if (path === "/admin/track-sweep") return json(await trackSweep(env));
