@@ -2,7 +2,7 @@
 import json, os, sys, urllib.request
 
 def post(url, body, token=None):
-    h = {"Content-Type": "application/json"}
+    h = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (damgosago-shop)"}
     if token:
         h["Authorization"] = "Bearer " + token
     req = urllib.request.Request(url, json.dumps(body).encode(), h)
