@@ -48,8 +48,8 @@ jobs:
       - if: steps.job.outputs.go
         name: 최적화 (${{ steps.job.outputs.mode }} · ${{ steps.job.outputs.scope }})
         env:
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_SEARCH_ID || secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_SEARCH_SECRET || secrets.NAVER_CLIENT_SECRET }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: python3 tools/seo_auto.py --mode "${{ steps.job.outputs.mode }}" --scope "${{ steps.job.outputs.scope }}" --limit "${{ steps.job.outputs.limit }}" --run "${{ steps.job.outputs.run }}$(date -u +%m%d%H%M)"
       - if: always() && steps.job.outputs.go && hashFiles('dist/seo_cache.json.gz') != ''
