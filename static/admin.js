@@ -168,12 +168,13 @@
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>도매처 대량주문 양식 <small>각 도매처 공식 양식에 맞춰 주문서가 만들어져요</small></h2>
         <p class="muted" style="margin-bottom:8px">도매처 사이트의 대량(엑셀) 주문 화면에서 <b>양식(샘플) 파일</b>을 내려받아 여기에 한 번만 올려 두면, 그 열 순서·이름 그대로 주문서를 만들어 드려요. 도매처가 양식을 바꾸면 다시 올리면 돼요.</p>
-        <table class="adm-table"><tr><th>도매처</th><th>지금 쓰는 양식</th><th></th></tr>${["domeme", "ownerclan", "onchannel", "ggsan", "cmtstory"].map((k) => {
+        <table class="adm-table"><tr><th>도매처</th><th>지금 쓰는 양식</th><th></th></tr>${["domeme", "ownerclan", "onchannel"].map((k) => {
           const my = (D.mysheets || {})[k], cols = (my && my.cols) || (D.sheets || {})[k] || SHEET_DEFAULT, miss = cols.filter((c) => !fieldFor(c, cols));
           return `<tr><td>${srcTag(k === "domeme" ? "DM1" : k === "ownerclan" ? "WAAAAAA" : k === "onchannel" ? "CH1" : k === "ggsan" ? "GS1" : "CM1")}</td>
             <td style="white-space:normal">${my ? `<b>올린 양식</b> (${esc(my.name || "")}, ${dt(my.at)})` : (D.sheets || {})[k] ? "기본 양식" : `<span style="color:var(--sale)">공통 양식 — 도매처 양식을 올려 주세요</span>`}<br>
               <span class="muted" style="font-size:12px">${cols.map((c) => fieldFor(c, cols) ? esc(c) : `<b style="color:var(--sale)">${esc(c)}(빈칸)</b>`).join(" · ")}</span></td>
             <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="ghost" data-act="open-url" data-url="${SUP[k].url}">사이트 열기 ↗</button><button class="ghost" data-act="sheet-up" data-src="${k}">양식 올리기</button>${my ? `<button class="ghost" data-act="sheet-reset" data-src="${k}">기본으로</button>` : ""}</div></td></tr>`; }).join("")}</table>
+        <p class="muted" style="margin-top:8px">건강산·화장품스토리는 엑셀 대량주문 기능이 없어 발주 표의 [상품 열기]·[배송정보 복사]로 한 건씩 주문해요.</p>
         <input type="file" id="sheet-file" accept=".xlsx,.xls,.csv" hidden></div>
         <div class="card"><h2>도매처별 송장 가져오기 <small>송장 기다리는 주문 ${D.orders.filter((o) => o.status === "상품준비중" && !o.tracking).length}건</small></h2>
         <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "ggsan", "cmtstory", "own", "direct"].map((k) => {
