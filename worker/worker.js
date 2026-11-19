@@ -1389,7 +1389,7 @@ async function adminList(env) {
     monthSales: paid.filter((o) => kst(o.paidAt).slice(0, 7) === today.slice(0, 7)).reduce((a, o) => a + o.amount, 0),
     toShip: all.filter((o) => ["결제완료", "상품준비중"].includes(o.status)).length,
     claims: all.filter((o) => /요청$/.test(o.status)).length,
-    donation: donationOf(all, PRICING(env), Number(env.DONATION_RATE ?? 0.01)),
+    donation: donationOf(all, PRICING(env), Number(env.DONATION_RATE ?? 0.001)),
   };
   const byAt = (a, b) => b.at.localeCompare(a.at);
   const qnas = (await kvList(env, "qna:")).sort(byAt).slice(0, 200);
