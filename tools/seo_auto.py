@@ -233,7 +233,11 @@ def optimize(p, nv):
         # 상품명 재구성: [브랜드] + 검색량 높은 대표 키워드(최대 2개, 우리 상품에 맞는 말만) + 나머지 원래 말 + 규격·색상 (50자 안)
         vol = {x["k"].lower(): x["v"] for x in arel}
         lead, nm = [], name.lower().replace(" ", "")
-        for w, v in sorted([x for x in atags + syn if x[1] >= 500], key=lambda x: -x[1]):
+        name_toks = {t.lower() for t in tokens(name0 + " " + " ".join(str(o.get("v", "")) for o in (p.get("options") or [])))}
+        def solid(w):  # 상품명에 붙일 말: '핵심 말 + 우리 상품 이름에 실제로 있는 2글자 이상 말' 조합만 (상세 설명 속 말은 태그까지만)
+            rest = w.replace(core_w, "") if core_w else ""
+            return bool(core_w) and core_w in w and len(rest) >= 2 and (rest in name_toks or any(rest in t for t in name_toks))
+        for w, v in sorted([x for x in atags if x[1] >= 1000 and solid(x[0])], key=lambda x: -x[1]):
             if len(lead) >= 2:
                 break
             if w in nm or SPEC.match(w) or any(w in l or l in w for l, _ in lead):
