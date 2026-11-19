@@ -1136,8 +1136,18 @@
         <div><div class="muted" style="font-size:13px">${date(o.paidAt)} · ${esc(o.orderId)} · <b style="color:var(--ink)">${esc(o.status)}</b></div>
         ${o.lines.map((l) => `<div class="nm" style="margin-top:4px"><a href="${ROOT}product/${encodeURIComponent(l.id)}.html">${esc(l.name)}</a> <span class="muted">× ${l.qty}</span></div>`).join("")}
         <div style="margin-top:4px"><b>${won(o.amount)}</b></div></div>
-        <button class="mini-btn" data-fi="${i}">자세히 · 취소/반품</button></div>`).join("");
-      box.onclick = (e) => { const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); } };
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><button class="mini-btn" data-fi="${i}">자세히 · 취소/반품</button>${["배송중", "배송완료"].includes(o.status) ? `<button class="mini-btn" data-ok="${i}" style="background:var(--ink);color:#fff;border-color:var(--ink)">구매 확정</button>` : ""}</div></div>`).join("");
+      box.onclick = async (e) => {
+        const c = e.target.closest("[data-ok]");
+        if (c) {  // 구매 확정 (목록에서 바로)
+          const o = d.orders[+c.dataset.ok];
+          if (!confirm("상품을 잘 받으셨나요? 구매 확정하면 반품·교환 신청이 어려워져요.")) return;
+          const r = await api("/order/confirm-receipt", { orderId: o.orderId, phone: o.phone || $("#f-phone").value.trim() });
+          alert(r.ok ? r.d.message : r.d.message || "구매 확정을 하지 못했어요.");
+          if (r.ok) { o.status = "구매확정"; $("#f-btn").click(); }
+          return;
+        }
+        const b = e.target.closest("[data-fi]"); if (b) { const o = d.orders[+b.dataset.fi]; render(o, o.phone || $("#f-phone").value.trim()); res.scrollIntoView({ behavior: "smooth" }); } };
     };
     ["f-name", "f-phone"].forEach((k) => $("#" + k)?.addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-btn").click(); }));
     {  // 이 기기에서 주문한 적 있으면 이름·연락처 채우고 구매 내역 바로 보여 줌 (로그인 불필요)
