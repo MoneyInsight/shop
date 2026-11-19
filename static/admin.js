@@ -30,17 +30,22 @@
     }
     return null;
   };
-  const SRC = (id) => /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{6}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : "direct";
+  const SRC = (id) => { id = String(id); return /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{3,}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : /^GS\d/.test(id) ? "ggsan" : /^CM\d/.test(id) ? "cmtstory" : /^OWN/.test(id) ? "own" : "direct"; };
   const SUP = { domeme: { n: "도매매", url: "https://domeme.domeggook.com/", how: "로그인 → 주문/배송 관리 → 주문내역 → 엑셀 다운로드" },
     ownerclan: { n: "오너클랜", url: "https://ownerclan.com/", how: "자동으로 가져와요 (1시간마다). 급하면 [지금 가져오기]" },
     onchannel: { n: "온채널", url: "https://www.onch3.co.kr/", how: "로그인 → 판매사 → 주문관리 → 배송조회 → 엑셀 다운로드" },
-    direct: { n: "직영(직접 발송)", url: "", how: "[주문] 탭에서 송장 직접 입력" } };
+    ggsan: { n: "건강산", url: "https://www.ggsan.com/", how: "로그인 → 마이페이지 → 주문배송조회에서 송장 확인 → 엑셀 올리기 또는 [주문] 탭에 입력" },
+    cmtstory: { n: "화장품스토리", url: "https://www.cmtstory.com/", how: "로그인 → 마이페이지 → 주문배송조회에서 송장 확인 → 엑셀 올리기 또는 [주문] 탭에 입력" },
+    own: { n: "자체상품", url: "", how: "직접 포장·발송 → [주문] 탭에서 송장 입력" },
+    direct: { n: "직영·기타", url: "", how: "[주문] 탭에서 송장 직접 입력" } };
+  const SRC_COLOR = { domeme: "#e8590c", ownerclan: "#1971c2", onchannel: "#2f9e44", ggsan: "#7048e8", cmtstory: "#d6336c", own: "#212529", direct: "#868e96" };
+  const srcTag = (id) => { const k = SRC(id); return `<span style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:${SRC_COLOR[k]};border-radius:3px;padding:1px 6px;margin-right:4px;white-space:nowrap">${SUP[k].n}</span>`; };
 
   const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "회원·고객"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
-      <td>${o.lines.map((l) => `${esc(l.name)} × ${l.qty}<br><span class="muted">[${esc(l.supplier || "직영")}] ${esc(l.id)}</span>`).join("<br>")}</td>
+      <td>${o.lines.map((l) => `${esc(l.name)} × ${l.qty}<br>${srcTag(l.id)}<span class="muted">${esc(l.id)}</span>`).join("<br>")}</td>
       <td>${esc(o.customer?.name)}<br>${esc(o.customer?.phone)}<br><span class="muted">[${esc(o.customer?.zip)}] ${esc(o.customer?.addr)}${o.customer?.memo ? "<br>메모: " + esc(o.customer.memo) : ""}</span></td>
       <td><b>${won(o.amount)}</b>${o.discount ? `<br><span class="muted">쿠폰 ${esc(o.coupon)} −${won(o.discount)}</span>` : ""}${o.refunded ? `<br><span style="color:var(--sale)">환불 ${won(o.refunded)}</span>` : ""}</td>
       <td><select data-f="status">${D.statuses.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("")}</select>
@@ -129,15 +134,15 @@
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
           <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button>${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
           <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>원가 / 판매</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
-          <td><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td><td>${l.qty}${l.pk > 1 ? `<br><span class="muted">(${l.pk}개 묶음)</span>` : ""}</td>
+          <td>${srcTag(l.id)}<br><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td><td>${l.qty}${l.pk > 1 ? `<br><span class="muted">(${l.pk}개 묶음)</span>` : ""}</td>
           <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td>
           <td style="white-space:normal;max-width:220px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}${l.lv && l.lv.at ? `<br><span class="muted" style="font-size:11px">${dt(l.lv.at)}</span>` : ""}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>도매처별 송장 가져오기 <small>송장 기다리는 주문 ${D.orders.filter((o) => o.status === "상품준비중" && !o.tracking).length}건</small></h2>
-        <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "direct"].map((k) => {
+        <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "ggsan", "cmtstory", "own", "direct"].map((k) => {
           const n = D.orders.filter((o) => o.status === "상품준비중" && !o.tracking && o.lines.some((l) => SRC(l.id) === k)).length;
           return `<tr><td><b>${SUP[k].n}</b></td><td>${n ? `<b>${n}건</b>` : `<span class="muted">0건</span>`}</td><td class="muted" style="white-space:normal">${SUP[k].how}</td>
-            <td>${k === "ownerclan" ? `<button data-act="oc-trk">지금 가져오기</button>` : k === "direct" ? "" : `${SUP[k].url ? `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a>` : ""} <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>`}
+            <td>${k === "ownerclan" ? `<button data-act="oc-trk">지금 가져오기</button>` : k === "direct" || k === "own" ? "" : `${SUP[k].url ? `<a class="btn btn-ghost" href="${SUP[k].url}" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12.5px">사이트 열기 ↗</a>` : ""} <button class="ghost" data-act="trk-file-up">엑셀 올리기</button>`}
             ${n ? ` <button class="ghost" data-act="trk-wait" data-src="${k}">기다리는 주문 목록</button>` : ""}</td></tr>`; }).join("")}</table>
         <p class="muted" style="margin-top:8px">엑셀 올리기: 도매처에서 받은 주문·배송 엑셀을 그대로 올리면 우리 주문번호로 찾아 송장이 들어가고, 손님께 출고 알림이 자동으로 가요. 어느 도매처 파일이든 같은 버튼이에요.</p></div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
@@ -405,7 +410,7 @@
     for (const r of PIDX.items) { const t = (r[0] + " " + r[1]).toLowerCase(); if (words.every((w) => t.includes(w))) { hits.push(r); if (hits.length >= 40) break; } }
     const row = (r) => `<tr>
       <td><img src="${esc(r[4])}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px"></td>
-      <td>${esc(r[1])}<br><span class="muted">${esc(r[0])}${r[7] ? " · 품절" : ""}${PEDITS.items[r[0]] ? " · ✏️ 고침" : ""}</span></td>
+      <td>${esc(r[1])}<br>${srcTag(r[0])}<span class="muted">${esc(r[0])}${r[7] ? " · 품절" : ""}${PEDITS.items[r[0]] ? " · ✏️ 고침" : ""}</span></td>
       <td>${esc(r[6] === null ? "" : catName(r[6]) || r[6])}</td><td>${won(r[2])}</td>
       <td><button data-act="p-pick" data-id="${esc(r[0])}">수정</button> <a class="muted" href="product/item.html?id=${encodeURIComponent(r[0])}" target="_blank">보기</a></td></tr>`;
     // 사이트 목록 밖(상품 DB 150만 개)도 서버에서 찾기
@@ -436,7 +441,7 @@
     const html = big.detail_html !== undefined ? big.detail_html : (row.detail_html || det.detail_html || "");
     PSEL = { id, cur, imgs: [...imgs], opts, optName: big.option_name ?? row.option_name ?? det.option_name ?? "", html0: null, imgs0: JSON.stringify(imgs), opts0: JSON.stringify(opts), floor: row.floor || 0 };
     const box = $("#p-edit"); box.style.display = "";
-    box.innerHTML = `<h2>상품 수정 <small>${esc(id)}</small></h2>
+    box.innerHTML = `<h2>상품 수정 <small>${srcTag(id)}${esc(id)}</small></h2>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
         <img src="${esc(imgs[0] || "")}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px">
         <div style="flex:1;min-width:260px">

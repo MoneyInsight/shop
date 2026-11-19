@@ -1268,10 +1268,11 @@ const PRICING = (env) => ({ net_margin: +(env.NET_MARGIN || 0.12), min_margin_wo
 
 // ---------- 발주 (도매매·오너클랜 등에 주문 넣기) ----------
 // 결제완료 주문을 도매처별로 모아 주문서로 만들고, '발주 완료'를 누르면 상품준비중으로. 도매처 송장 파일을 올리면 송장 자동 입력
-const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜", onchannel: "온채널" };
+const SOURCE_NAME = { domeme: "도매매", ownerclan: "오너클랜", onchannel: "온채널", ggsan: "건강산", cmtstory: "화장품스토리", own: "자체상품(직접 발송)" };
 // 도매처 대량주문 양식 열 (관리자에게만 보냄)
 const ORDER_SHEETS = {"domeme": ["상품번호", "옵션", "수량", "수령자명", "휴대전화", "추가연락처", "우편번호", "배송지주소", "배송상세주소", "쇼핑몰명", "전달사항", "배송요청사항"], "ownerclan": ["오너클랜 상품코드", "수량", "배송방식", "받는사람 이름", "받는사람 전화번호", "받는사람 휴대폰", "우편번호", "받는사람 주소", "옵션1", "옵션2", "배송시 요청사항", "판매사 주문관리 메모", "원장주문코드", "개인통관부호", "구매자 생년월일", "마켓 정산가(배송비 포함)"], "onchannel": ["온채널 상품코드", "주문코드", "주문 옵션", "옵션 주문 수량", "배송비 결제 유형", "받는사람", "전화번호", "비상연락처", "우편번호", "주소", "배송 메시지", "통관고유부호", "(국제)배송방식"]};
-const srcOf = (l) => l.source || (String(l.id).startsWith("DM") ? "domeme" : /^W/.test(l.id) ? "ownerclan" : /^CH\d/.test(l.id) ? "onchannel" : "");
+// 상품코드 앞글자 → 도매처: DM 도매매 · W(7자리) 오너클랜 · CH 온채널 · GS 건강산 · CM 화장품스토리 · OWN 자체상품
+const srcOf = (l) => { const id = String(l.id); return /^DM/.test(id) ? "domeme" : /^W[0-9A-Z]{3,}$/.test(id) ? "ownerclan" : /^CH\d/.test(id) ? "onchannel" : /^GS\d/.test(id) ? "ggsan" : /^CM\d/.test(id) ? "cmtstory" : /^OWN/.test(id) ? "own" : (l.source && SOURCE_NAME[l.source] ? l.source : ""); };
 async function adminPo(env) {
   const groups = {};
   for (const o of await kvList(env, "order:")) {
@@ -1409,7 +1410,7 @@ async function adminTrackingImport(req, env) {
 
 // 도매처 품절 → 전액 환불 + 손님에게 사과 안내 (웹푸시·메일, 알림톡은 템플릿 있을 때)
 // 환불 전 안전 확인: 손해 날 수 있는 경우 관리자에게 한 번 더 묻기 (409 + need). 확인한 항목은 ok 목록으로 다시 보냄
-const SRC_KO = { domeme: "도매매", ownerclan: "오너클랜", onchannel: "온채널" };
+const SRC_KO = SOURCE_NAME;
 function refundRisk(o, d, amt) {
   const ok = Array.isArray(d.ok) ? d.ok : [];
   const ordered = o.lines.some((l) => l.po) || o.status === "상품준비중";
