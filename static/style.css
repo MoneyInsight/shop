@@ -165,12 +165,19 @@ ul{list-style:none}
 .tabs{display:flex;border-bottom:1px solid var(--line);margin-top:72px;position:sticky;top:76px;background:var(--bg);z-index:20}
 .tabs a{flex:1;text-align:center;padding:17px 0;font-size:15px;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs a.on,.tabs a:hover{color:var(--ink);border-color:var(--ink);font-weight:600}
-.tab-sec{padding:48px 0;max-width:860px;margin:0 auto;scroll-margin-top:140px}
+.tab-sec{padding:48px 0;max-width:1000px;margin:0 auto;scroll-margin-top:140px}
 .tab-sec h3{font-family:var(--serif);font-size:21px;font-weight:600;margin-bottom:20px;letter-spacing:-.03em;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .detail-body{text-align:center}
 .detail-body img{margin:0 auto 10px;height:auto}
 .detail-body p{font-size:16px;line-height:1.9;padding:4px 0;color:var(--ink2)}
 .detail-html img{max-width:100%;height:auto;margin:0 auto}
+/* 상세페이지: 도매처 HTML의 고정 폭(표·div·img width)을 무시하고 화면 폭에 맞춤 — 780·860·1000px 등 어떤 크기로 만든 상세도 가득 보이게 */
+.detail-body{max-width:1000px;margin:0 auto}
+.detail-body *{max-width:100% !important;box-sizing:border-box}
+.detail-body table{width:100% !important;table-layout:auto}
+.detail-body img{display:block;height:auto !important}
+.detail-body img.d-fit{width:100% !important}
+.detail-body iframe,.detail-body video{width:100% !important;aspect-ratio:16/9;height:auto !important}
 .notice-table{width:100%;border-collapse:collapse;font-size:14px;border-top:1px solid var(--ink)}
 .notice-table th,.notice-table td{border-bottom:1px solid var(--line);padding:13px 14px;text-align:left;vertical-align:top}
 .notice-table th{background:var(--paper);width:28%;color:var(--ink2);font-weight:500}

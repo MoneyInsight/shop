@@ -590,8 +590,17 @@
   }
 
   // ── 상품 상세 ──
+  // 상세페이지 사진 크기 맞추기: 큰 사진(가로 500px 이상, 780·860·1000 등)은 칸 폭에 꽉 차게, 작은 아이콘은 원래 크기로
+  function fitDetail() {
+    $$(".detail-body img").forEach((im) => {
+      const fit = () => { if (im.naturalWidth >= 500) im.classList.add("d-fit"); };
+      if (im.complete) fit(); else im.addEventListener("load", fit, { once: true });
+      im.removeAttribute("width"); im.removeAttribute("height");
+    });
+  }
   function initDetail() {
     const el = $("#buy");
+    fitDetail(); setTimeout(fitDetail, 1500);  // 서버에서 받아 채우는 상품(item.html)도 한 번 더
     if (!el) return;
     // 상품번호는 관리자에게만 (관리자 화면에 로그인한 브라우저)
     try { if (localStorage.getItem("is_admin") === "1") document.querySelectorAll(".adm-only").forEach((x) => (x.hidden = false)); } catch (e) {}
