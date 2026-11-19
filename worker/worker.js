@@ -1375,16 +1375,19 @@ async function adminPoDone(req, env) {
   const { items } = await req.json();  // [{orderId, idx}]
   const by = {};
   for (const it of items || []) (by[it.orderId] = by[it.orderId] || []).push(+it.idx);
-  let n = 0, skipped = null;
+  let n = 0, skipped = null, cancelReq = null;
   for (const [id, idxs] of Object.entries(by)) {
     const o = await env.SHOP.get("order:" + id, "json");
     if (!o) continue;
-    if (!["결제완료", "상품준비중"].includes(o.status)) { (skipped ||= []).push(`${id}(${o.status})`); continue; }  // 그사이 손님이 취소 요청한 주문
+    if (!["결제완료", "상품준비중", "취소요청"].includes(o.status)) { (skipped ||= []).push(`${id}(${o.status})`); continue; }
+    // 이미 도매처에 발주했으면 취소 요청 중이어도 '발주함'으로 꼭 기록 → 환불 때 "도매처 취소 먼저" 확인이 걸려 손해를 막음
     idxs.forEach((i) => { if (o.lines[i] && !o.lines[i].po) { o.lines[i].po = new Date().toISOString(); n++; } });
+    if (o.status === "취소요청") (cancelReq ||= []).push(id);
     if (o.status === "결제완료" && o.lines.every((l) => l.po)) setStatus(o, "상품준비중", { by: "발주" });
     await env.SHOP.put("order:" + id, JSON.stringify(o));
   }
-  return json({ ok: true, message: `${n}건 발주 완료로 표시했어요.` + (skipped ? `\n⚠️ 손님이 취소를 요청해서 건너뛴 주문: ${skipped.join(", ")}\n도매처에 이미 주문했다면 바로 취소해 주세요.` : "") });
+  return json({ ok: true, message: `${n}건 발주 완료로 표시했어요.` + (cancelReq ? `\n⚠️ 발주한 뒤 손님이 취소를 요청한 주문: ${cancelReq.join(", ")}\n발주 기록은 남겨 뒀어요. 도매처에 주문 취소를 요청하고, 이미 출고됐으면 반품으로 처리하세요. (도매처 취소 확인 전에는 환불되지 않게 막아 뒀어요)` : "")
+    + (skipped ? `\n건너뛴 주문(이미 취소·환불됨): ${skipped.join(", ")}` : "") });
 }
 // 도매처에서 받은 송장 목록(행마다 우리 주문번호·택배사·송장번호) → 주문에 입력, 배송중 + 출고 알림
 async function adminTrackingImport(req, env) {
