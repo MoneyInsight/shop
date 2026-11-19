@@ -1391,6 +1391,25 @@ async function poCron(env) {  // 10분마다: 새 결제 주문 도매처 확인
   const last = Number(await env.SHOP.get("oc_trk_at")) || 0;
   if (Date.now() - last > 55 * 60e3) { await env.SHOP.put("oc_trk_at", String(Date.now())); await ocTrackingSync(env).catch(() => {}); }
 }
+async function adminOrderBulk(req, env) {  // 주문 여러 건 상태 한 번에 (돈이 오가는 상태는 안 됨)
+  const d = await req.json().catch(() => ({}));
+  const OK = { 상품준비중: ["결제완료"], 배송완료: ["배송중"], 구매확정: ["배송중", "배송완료"], 교환완료: ["교환요청"] };
+  if (!OK[d.status]) return fail("일괄로 바꿀 수 없는 상태예요. (취소·환불·반품은 각 주문에서 처리)");
+  const ids = [...new Set((Array.isArray(d.ids) ? d.ids : []).map((x) => String(x).replace(/[^0-9A-Za-z_-]/g, "")))].slice(0, 500);
+  let n = 0; const skip = [];
+  for (const id of ids) {
+    const o = await env.SHOP.get("order:" + id, "json");
+    if (!o) { skip.push(id + "(없음)"); continue; }
+    if (!OK[d.status].includes(o.status)) { skip.push(`${id}(${o.status})`); continue; }
+    const fake = new Request("https://x", { method: "POST", body: JSON.stringify({ orderId: id, status: d.status }) });
+    const out = await (await adminOrderUpdate(fake, env)).json().catch(() => ({}));
+    if (out.ok) {
+      if (d.status === "상품준비중") { const o2 = await env.SHOP.get("order:" + id, "json"); if (o2) { o2.lines.forEach((l) => { l.po ||= new Date().toISOString(); }); await env.SHOP.put("order:" + id, JSON.stringify(o2)); } }  // 상품준비중 = 발주함
+      n++;
+    } else skip.push(id);
+  }
+  return json({ ok: true, message: `${n}건을 ‘${d.status}’(으)로 바꿨어요.` + (skip.length ? `\n바꾸지 않은 주문 ${skip.length}건 (지금 상태에서 바꿀 수 없음): ${skip.slice(0, 10).join(", ")}` : "") });
+}
 async function adminSheetSave(req, env) {  // 관리자가 올린 도매처 공식 대량주문 양식 (열 이름·순서)
   const d = await req.json().catch(() => ({}));
   if (!SOURCE_NAME[d.src]) return fail("도매처가 올바르지 않아요.");
@@ -1977,6 +1996,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
       if (path === "/admin/claim-step") return await adminClaimStep(req, env);
       if (path === "/admin/sheet-save") return await adminSheetSave(req, env);
+      if (path === "/admin/order-bulk") return await adminOrderBulk(req, env);
       if (path === "/admin/soldout-cancel") return await adminSoldoutCancel(req, env);
       if (path === "/admin/export") return await adminExport(env);
       if (path === "/admin/track-sweep") return json(await trackSweep(env));

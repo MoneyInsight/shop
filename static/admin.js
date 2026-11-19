@@ -45,7 +45,16 @@
        ["<b>CM</b>1000000046", "CM1", "화장품스토리 (cmtstory.com)"], ["<b>OWN</b>13803…", "OWN1", "숨엔·듀리온 등 직접 발송"]].map(([c, id, n]) => `<tr><td>${c}</td><td>${srcTag(id)}</td><td>${n}</td></tr>`).join("")}</table></details>`;
   const srcTag = (id) => { const k = SRC(id); return `<span style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:${SRC_COLOR[k]};border-radius:3px;padding:1px 6px;margin-right:4px;white-space:nowrap">${SUP[k].n}</span>`; };
 
-  const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "회원·고객"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
+  // 업무 처리 순서: 매일 할 일(발주→배송→취소·반품→문의) → 상품·고객 관리 → 분석·설정
+  const TABS = [["dash", "대시보드"], ["po", "① 발주"], ["orders", "② 주문·배송"], ["claims", "③ 취소·반품·교환"], ["qna", "④ 문의"], ["reviews", "리뷰"], ["products", "상품 관리"], ["customers", "회원·고객"], ["coupons", "쿠폰"], ["stats", "분석"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
+  const tabCount = (k) => {  // 처리할 일 개수 (탭에 빨간 숫자)
+    if (!D) return 0;
+    if (k === "po") return (D.po || []).reduce((a, g) => a + g.lines.length, 0);
+    if (k === "orders") return (D.orders || []).filter((o) => ["결제완료", "상품준비중"].includes(o.status) && !o.tracking).length;
+    if (k === "claims") return (D.orders || []).filter((o) => /요청$/.test(o.status)).length;
+    if (k === "qna") return (D.qnas || []).filter((q) => !q.answer).length + (D.inquiries || []).filter((q) => !q.answer).length;
+    return 0;
+  };
 
   function orderRow(o) {
     return `<tr><td><b>${esc(o.orderId)}</b><br><span class="muted">${dt(o.paidAt)}</span></td>
@@ -58,7 +67,7 @@
         <input data-f="tracking" placeholder="송장번호" value="${esc(o.tracking || "")}" style="margin-top:4px">${o.track?.stage ? `<br><b style="color:var(--accent)">📦 ${esc(o.track.stage)}</b>` : ""}</td>
       <td><button data-act="order-save" data-id="${esc(o.orderId)}">저장</button><br><button class="ghost" data-act="order-refund" data-id="${esc(o.orderId)}"${o.claim?.refund != null ? ` data-refund="${o.claim.refund}" data-deduct="${o.claim.deduct}"` : ""}>환불</button>${["결제완료", "상품준비중"].includes(o.status) ? `<br><button class="ghost" data-act="soldout-cancel" data-id="${esc(o.orderId)}">품절 취소</button>` : ""}</td></tr>`;
   }
-  const orderTable = (list) => list.length ? `<table class="adm-table"><tr><th>주문</th><th>상품</th><th>받는 분</th><th>결제</th><th>상태</th><th>송장</th><th></th></tr>${list.map(orderRow).join("")}</table>` : `<p class="empty">해당하는 주문이 없어요.</p>`;
+  const orderTable = (list, bulk) => list.length ? `<table class="adm-table"><tr>${bulk ? `<th><input type="checkbox" id="ob-all" title="이 쪽 전체 선택" style="width:auto"></th>` : ""}<th>주문</th><th>상품</th><th>받는 분</th><th>결제</th><th>상태</th><th>송장</th><th></th></tr>${list.map((o) => bulk ? orderRow(o).replace("<tr>", `<tr><td><input type="checkbox" class="ob-chk" value="${esc(o.orderId)}" style="width:auto"></td>`) : orderRow(o)).join("")}</table>` : `<p class="empty">해당하는 주문이 없어요.</p>`;
 
   function view() {
     const s = D.stats;
@@ -93,7 +102,13 @@
         <div style="display:flex;gap:8px;margin-bottom:12px"><input id="o-q" placeholder="주문번호·이름·연락처·상품코드(DM…)·도매처 상품번호·상품명·송장번호" value="${esc(OQ)}" style="flex:1"><button data-act="o-search">검색</button>${OSEARCH ? `<button class="ghost" data-act="o-clear">검색 지우기</button>` : ""}</div>
         <div class="chips" style="margin-bottom:14px">${filters.map((f) => `<button class="chip${f === orderFilter ? " on" : ""}" data-filter="${f}">${f}</button>`).join("")}
         <button class="chip" data-act="export">발주용 엑셀(CSV) 받기</button><button class="chip" data-act="track-sweep">배송 단계 새로고침</button></div>
-        <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
+        <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>
+        <div id="ob-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:var(--accent-soft);margin-bottom:10px">
+          <b>선택한 주문 <span id="ob-n">0</span>건</b> →
+          <select id="ob-status" style="width:auto;height:34px"><option value="">상태 고르기</option>${["상품준비중", "배송완료", "구매확정", "교환완료"].map((x) => `<option>${x}</option>`).join("")}</select>
+          <button data-act="ob-apply">일괄 변경</button>
+          <span class="muted" style="font-size:12px">취소·환불·반품완료는 돈이 오가서 일괄 변경이 안 돼요 (각 주문의 [환불]로). ‘배송중’은 송장을 넣으면 자동으로 바뀌어요.</span></div>
+        ${orderTable(list, true)}</div>`;
     }
     if (tab === "stats") return statsView();
     if (tab === "products") { setTimeout(prodInit, 0); return SRC_LEGEND() + prodShell(); }
@@ -252,7 +267,7 @@
   }
 
   function paint() {
-    $("#adm-tabs").innerHTML = TABS.map(([k, n]) => `<button class="chip${k === tab ? " on" : ""}" data-tab="${k}">${n}</button>`).join("");
+    $("#adm-tabs").innerHTML = TABS.map(([k, n]) => { const c = tabCount(k); return `<button class="chip${k === tab ? " on" : ""}" data-tab="${k}">${n}${c ? ` <b style="display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:var(--sale);color:#fff;font-size:11px;line-height:18px;text-align:center">${c}</b>` : ""}</button>`; }).join("");
     $("#adm-view").innerHTML = view();
   }
   async function load() {
@@ -724,6 +739,10 @@
     PG.size = +ev.target.value; PG.page = {}; try { localStorage.setItem("adm_pg", PG.size); } catch (e) {} autoPage();
   });
   new MutationObserver(() => { clearTimeout(autoPage._t); autoPage._t = setTimeout(autoPage, 30); }).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("change", (ev) => {  // 주문 일괄 선택 (전체 선택은 지금 보이는 쪽만)
+    if (ev.target.id === "ob-all") document.querySelectorAll(".ob-chk").forEach((c) => { if (c.closest("tr").style.display !== "none") c.checked = ev.target.checked; });
+    if (ev.target.id === "ob-all" || ev.target.classList.contains("ob-chk")) { const n = $("#ob-n"); if (n) n.textContent = document.querySelectorAll(".ob-chk:checked").length; }
+  });
   document.addEventListener("change", (ev) => { if (ev.target.id === "trk-file" && ev.target.files[0]) $('[data-act="trk-import"]')?.click(); });
   document.addEventListener("change", async (ev) => {  // 도매처 양식 올리기: 첫 줄(열 이름)만 읽어 저장
     if (ev.target.id !== "sheet-file" || !ev.target.files[0]) return;
@@ -832,6 +851,14 @@
       }
       if (act === "cl-step") { await call("/admin/claim-step", { orderId: b.dataset.id, step: b.dataset.step, undo: !!b.dataset.undo }); return load(); }
       if (act === "trk-file-up") { $("#trk-file").click(); return; }
+      if (act === "ob-apply") {
+        const ids = [...document.querySelectorAll(".ob-chk:checked")].map((x) => x.value), st = $("#ob-status").value;
+        if (!ids.length) { alert("바꿀 주문을 먼저 체크해 주세요."); return; }
+        if (!st) { alert("바꿀 상태를 골라 주세요."); return; }
+        if (!confirm(`선택한 ${ids.length}건을 ‘${st}’(으)로 바꿀까요?`)) return;
+        const r = await call("/admin/order-bulk", { ids, status: st });
+        alert(r.message); return load();
+      }
       if (act === "sheet-up") { const f = $("#sheet-file"); f.dataset.src = b.dataset.src; f.value = ""; f.click(); return; }
       if (act === "sheet-reset") { if (!confirm("올린 양식을 지우고 기본 양식으로 돌릴까요?")) return; await call("/admin/sheet-save", { src: b.dataset.src, reset: true }); return load(); }
       if (act === "open-url") { window.open(b.dataset.url, "_blank", "noopener"); return; }
