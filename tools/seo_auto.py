@@ -28,7 +28,7 @@ SPECIAL = re.compile(r"[★☆♥♡◆◇■□●○▶◀▲▼※♣♠✔�
 COLORS = set("블랙 화이트 그레이 네이비 베이지 브라운 레드 블루 그린 옐로우 핑크 퍼플 오렌지 아이보리 카키 민트 실버 골드 검정 흰색 회색 남색 빨강 파랑 초록 노랑 분홍 보라 랜덤 혼합".split())
 STOP = set("추천 강추 및 등 외 용 형 개 세트 1개 2개 상품 제품 신형 기본 고급 프리미엄 국산 국내산 수입 정품 새상품 단품 택1 선택 옵션 색상 사이즈 컬러 랜덤발송 랜덤".split())
 GENERIC = set("대용량 소용량 미니 대형 중형 소형 휴대용 가정용 업소용 사무용 차량용 캠핑용 다용도 다용도용 초대형 슬림 접이식 고급형 일반형 신형 구형 남성 여성 남녀공용 아동 유아 성인 겨울 여름 사계절 간편 튼튼한 예쁜".split())
-SPEC = re.compile(r"^(\d+([.,]\d+)?(mm|cm|m|ml|l|g|kg|매|개|입|장|p|pcs|ea|구|단|롤|인치|인용|켤레|족|팩|박스|세트|겹|호|종|미터|리터|w|v|mah|평)?|[xX×*]\d+.*|\d+[xX×*]\d+.*|\d+\+\d+|[a-z]{1,2}\d{2,}[a-z0-9-]*)$", re.I)
+SPEC = re.compile(r"^(\d[\d.,+x×*/\-]*[a-z%]*|[a-z]{1,4}-?\d{2,}[a-z0-9\-/]*.*|x\d+.*|[0-9a-z]{1,3}(촉|형|호|급)|\d+\S*(사용|색상|컬러|가지|종류)|.*\d+(ml|l|g|kg|mm|cm|m|매|개|개입|입|장|p|ea|팩|박스|세트|컬러|색상|색|침|종|가지|단|구|롤|켤레|족|인용|인치|w|v|mah)\)?)$", re.I)
 TOK = re.compile(r"[0-9A-Za-z가-힣][0-9A-Za-z가-힣.+\-]*")
 
 
@@ -130,7 +130,7 @@ class SearchAd:
         if not self.ok or self.left <= 0:
             return None
         path = "/keywordstool"
-        url = "https://api.searchad.naver.com" + path + "?" + urllib.parse.urlencode({"hintKeywords": q.replace(" ", ""), "showDetail": 1})
+        url = "https://api.searchad.naver.com" + path + "?" + urllib.parse.urlencode({"hintKeywords": ",".join(x.replace(" ", "") for x in q.split(",") if x.strip())[:200], "showDetail": 1})
         for t in range(3):
             ts = str(int(time.time() * 1000))
             sig = base64.b64encode(hmac.new(self.secret.encode(), f"{ts}.GET.{path}".encode(), hashlib.sha256).digest()).decode()
@@ -206,12 +206,25 @@ def optimize(p, nv):
     items = nv.shop(q) if q else None
     ad = getattr(nv, "ad", None)
     core_w = q.split()[-1].lower() if q else ""
-    arel = ad.related(core_w) if (ad and core_w) else None
+    arel = None
+    if ad:  # 이름 속 말들의 실제 월 검색량을 보고 가장 많이 찾는 말을 핵심으로 (끝 단어가 '1컬러'·'거실' 같은 말이어도 틀리지 않게)
+        hints = []
+        for t in content_tokens(re.sub(r"[\[\(【〔][^\]\)】〕]*[\]\)】〕]", " ", name)):
+            t = t.lower()
+            if re.search(r"[가-힣]", t) and not SPEC.match(t) and t not in GENERIC and t not in hints:
+                hints.append(t)
+        hints = hints[-5:]
+        if hints:
+            arel = ad.related(",".join(hints))
+            if arel:
+                hv = {x["k"].lower(): x["v"] for x in arel}
+                best = max(hints, key=lambda h: hv.get(h, 0))
+                if hv.get(best, 0) > 0:
+                    core_w = best; q = best
     if arel:
         atags, syn = ad_words(arel, core_w, own_text, my)
         syn = [x for x in syn if not any(x[0] in t.lower() for t in tokens(name))]  # 이미 이름 속 말에 들어 있으면(신발 ⊂ 남성신발) 안 붙임
-        if syn and syn[0][1] >= 1000 and len(name) + len(syn[0][0]) + 1 <= 50:
-            add = syn[0][0]; name = f"{name} {add}"; why.append(f"검색 많은 이름 '{add}' 추가 (월 {syn[0][1]:,}회)")
+
         for w, v in atags[:8] + syn[1:3]:
             if w not in tags and w != core_w:
                 tags.append(w)
@@ -219,27 +232,25 @@ def optimize(p, nv):
             why.append(f"연관 검색어 {len(tags)}개 (월 검색량 순)")
         # 상품명 재구성: [브랜드] + 검색량 높은 대표 키워드(최대 2개, 우리 상품에 맞는 말만) + 나머지 원래 말 + 규격·색상 (50자 안)
         vol = {x["k"].lower(): x["v"] for x in arel}
-        lead = []
-        for w, v in sorted([x for x in atags + syn if x[1] >= 300], key=lambda x: -x[1]):
+        lead, nm = [], name.lower().replace(" ", "")
+        for w, v in sorted([x for x in atags + syn if x[1] >= 500], key=lambda x: -x[1]):
             if len(lead) >= 2:
                 break
-            if any(w in l or l in w for l, _ in lead):
-                continue
+            if w in nm or SPEC.match(w) or any(w in l or l in w for l, _ in lead):
+                continue  # 이미 이름에 있는 말·규격은 붙이지 않음
             lead.append((w, v))
-        if core_w and vol.get(core_w, 0) >= max([v for _, v in lead] or [0]) and not any(core_w in l for l, _ in lead):
-            lead = [(core_w, vol[core_w])] + lead[:1]  # 핵심 말 자체가 제일 많이 찾는 말이면 맨 앞
         if lead:
             m = re.match(r"^\s*([\[\(][^\]\)]{1,20}[\]\)])\s*", name)
             brand = m.group(1) if m else ""
             rest = name[m.end():] if m else name
             toks = rest.split()
             spec = [t for t in toks if SPEC.match(t) or t in COLORS]
-            body = [t for t in toks if t not in spec and not any(t.lower() in l for l, _ in lead)]
+            body = [t for t in toks if t not in spec]
             cand = " ".join(x for x in [brand, " ".join(l for l, _ in lead), " ".join(body), " ".join(spec)] if x).strip()
             cand = re.sub(r"\s+", " ", cand)
             if 4 <= len(cand) <= 50 and cand.replace(" ", "") != name.replace(" ", ""):
                 name = cand
-                why.append("대표 키워드 앞으로: " + ", ".join(f"'{l}'(월 {v:,}회)" for l, v in lead))
+                why.append("많이 찾는 검색어 추가: " + ", ".join(f"'{l}'(월 {v:,}회)" for l, v in lead) + f" · 핵심 '{core_w}'(월 {vol.get(core_w, 0):,}회)")
     rel = []
     if items and not arel:
         rel, brands, df, cats = market(items, my, (q.split()[-1].lower() if q else ""))
