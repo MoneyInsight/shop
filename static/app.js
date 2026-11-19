@@ -536,6 +536,7 @@
     const buy = $("#buy");
     Object.assign(buy.dataset, { id: p.id, name: p.name, price: p.price, opts: JSON.stringify(opts.map((o) => o.add)), qt: JSON.stringify(p.qt || []),
       ship: p.shipping_fee || 0, sn: p.sn || 0, pk: p.pk || 1, mq: p.mq || 1 });  // 배송비 규칙 (서버 결제 검증과 같게)
+    if ($(".d-meta .pid")) $(".d-meta .pid").textContent = p.id;
     const sdd = $(".d-meta dd");
     if (sdd) sdd.innerHTML = shipInfo(p.shipping_fee || 0, p.sn || 0, p.price, p.mq || 1);
     const bb = $("#bulk-box"); if (bb) { bb.href = ROOT + "bulk.html?id=" + encodeURIComponent(p.id); bb.hidden = !!p.soldout; }
@@ -591,6 +592,7 @@
   function initDetail() {
     const el = $("#buy");
     if (!el) return;
+    document.addEventListener("click", (ev) => { if (ev.target.closest(".pid-copy")) { navigator.clipboard?.writeText($(".d-meta .pid").textContent.trim()).then(() => { const b = ev.target.closest(".pid-copy"); b.textContent = "복사됨"; setTimeout(() => (b.textContent = "복사"), 1500); }).catch(() => {}); } });
     // 미리 만들어 둔 상품 페이지인데 관리자가 그 뒤에 고쳤으면 → 최신 정보 화면으로 (다음 사이트 빌드 전까지)
     if (el.dataset.built && API && !/item\.html$/.test(location.pathname)) {
       fetch(`${API}/edits/one?id=${encodeURIComponent(el.dataset.id)}`).then((r) => r.json()).then((d) => {
