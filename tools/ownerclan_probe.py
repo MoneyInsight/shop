@@ -35,3 +35,24 @@ for env, auth, apis in [("sandbox", "https://auth-sandbox.ownerclan.com/auth", [
         open(f"probe/{env}_schema.json", "w").write(body)
         st, body = post(api, {"query": "query{allItems(first:2){edges{node{key name price}}}}"}, tok)
         print(env, "sample", st, body[:600])
+
+# 주문·송장 관련 타입만 로그로 (송장 자동 수집용)
+try:
+    sch = json.load(open("probe/production_schema.json"))["data"]["__schema"]
+    def tn(t):
+        s = ""
+        while t:
+            s += (t.get("name") or t.get("kind", "")[:1]) + ("" if t.get("name") else "")
+            t = t.get("ofType")
+        return s
+    for t in sch["types"]:
+        if t["name"] and ("Order" in t["name"] or "Shipping" in t["name"] or "Tracking" in t["name"]) and not t["name"].startswith("__"):
+            print("TYPE", t["name"], t["kind"])
+            for f in (t.get("fields") or []) + (t.get("inputFields") or []):
+                print("   ", f["name"], tn(f["type"]), [a["name"] for a in f.get("args") or []])
+    q = [t for t in sch["types"] if t["name"] == sch["queryType"]["name"]][0]
+    for f in q["fields"]:
+        if "rder" in f["name"]:
+            print("QUERY", f["name"], [a["name"] for a in f["args"]], tn(f["type"]))
+except Exception as e:
+    print("schema parse fail", e)
