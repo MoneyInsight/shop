@@ -106,16 +106,19 @@
         <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
         <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
         <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
-        나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣으면 우리 주문번호로 찾아 송장이 자동으로 들어가요.</p>
+        <b>직영(숨엔 등 직접 보내는 상품)</b>: 직접 포장·발송 → [주문] 탭에서 송장 입력 → 고객에게 출고 알림이 자동으로 가요.<br>
+        나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣거나 엑셀 파일을 그대로 올리면 우리 주문번호로 찾아 송장이 자동으로 들어가요.<br>
+        <span style="color:var(--sale)">발주 전 확인: 도매처 결제 금액이 아래 '원가'보다 크면(도매가 인상) 손해일 수 있어요 — 발주하지 말고 품절 취소하세요.</span></p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
           <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button>${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
-          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
-          <td><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}</td><td>${l.qty}</td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
+          <table class="adm-table"><tr><th>주문</th><th>상품번호</th><th>상품</th><th>수량</th><th>원가 / 판매</th><th>받는 분</th></tr>${g.lines.map((l) => `<tr><td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
+          <td><b>${esc(l.product_no)}</b></td><td style="white-space:normal">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td><td>${l.qty}${l.pk > 1 ? `<br><span class="muted">(${l.pk}개 묶음)</span>` : ""}</td>
+          <td>${l.cost ? won(l.cost * (l.qty / (l.pk || 1))) : "-"}<br><span class="muted">${won(l.amount)}</span></td><td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`).join("")}</table></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
         <div class="card"><h2>송장 한 번에 넣기</h2>
         <p class="muted" style="margin-bottom:10px">도매처에서 받은 송장 엑셀을 열어 <b>전체 복사(Ctrl+A → Ctrl+C)</b> 후 아래에 붙여넣거나, CSV로 저장해 올려 주세요. 각 줄에서 우리 주문번호(T로 시작)·택배사·송장번호를 자동으로 찾아요.</p>
         <textarea id="trk-paste" style="width:100%;height:120px" placeholder="여기에 붙여넣기"></textarea>
-        <div style="margin-top:8px"><input type="file" id="trk-file" accept=".csv,.txt"> <button data-act="trk-import">송장 넣기</button></div><div id="trk-result" class="muted" style="margin-top:8px"></div></div>`;
+        <div style="margin-top:8px"><input type="file" id="trk-file" accept=".xlsx,.xls,.csv,.txt"> <button data-act="trk-import">송장 넣기</button></div><div id="trk-result" class="muted" style="margin-top:8px"></div></div>`;
     }
     if (tab === "claims") return `<div class="card"><h2>처리 순서</h2><ol class="why" style="padding-left:18px;list-style:decimal">
         <li><b>취소 (발주 전)</b>: 고객이 직접 취소하면 자동 환불돼요. 할 일 없음.</li>
@@ -686,7 +689,12 @@
       }
       if (act === "trk-import") {
         let text = $("#trk-paste").value;
-        const f = $("#trk-file").files[0]; if (f) text += "\n" + (await f.text());
+        const f = $("#trk-file").files[0];
+        if (f && /\.xlsx?$/i.test(f.name)) {  // 도매처 엑셀 그대로
+          const X = await loadXLSX().catch((e) => { alert(e.message); return null; }); if (!X) return;
+          const wb = X.read(await f.arrayBuffer(), { type: "array" });
+          for (const n of wb.SheetNames) text += "\n" + X.utils.sheet_to_csv(wb.Sheets[n], { FS: "\t" });
+        } else if (f) text += "\n" + (await f.text());
         const rows = parseTracking(text);
         if (!rows.length) { $("#trk-result").textContent = "주문번호(T로 시작)와 송장번호가 있는 줄을 찾지 못했어요."; return; }
         const r = await call("/admin/tracking-import", { rows });

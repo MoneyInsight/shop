@@ -661,3 +661,8 @@ footer .logo-tag{display:none}
 .give-foot{margin-top:8px;font-size:13px;color:var(--accent);font-weight:600}
 .give-band{margin:14px 0 0;padding:11px 14px;background:#fff6f0;border-radius:6px;text-align:center;font-size:14.5px;color:var(--ink2)}.give-band b{color:var(--accent)}
 .qty-cells .qc-sum{display:block;font-size:11.5px;color:var(--sub);margin-top:2px}
+/* 관리자: 카드 안 일반 버튼도 버튼처럼 보이게 */
+#adm-view button:not(.chip):not(.btn):not(.pid-copy){display:inline-flex;align-items:center;gap:4px;font-size:13px;border:1px solid var(--ink);background:var(--ink);color:#fff;padding:6px 12px;cursor:pointer;white-space:nowrap}
+#adm-view button.ghost{background:var(--paper);color:var(--ink2);border-color:var(--line)}
+#adm-view button:disabled{opacity:.4;cursor:default}
+#adm-view button:not(:disabled):hover{filter:brightness(1.15)}
