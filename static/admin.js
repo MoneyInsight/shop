@@ -147,7 +147,7 @@
         온채널·건강산·화장품스토리는 연결 기능(API)이 없어 자동 확인이 안 돼요 — 발주할 때 도매처 결제 금액이 표의 '도매 원가'와 같은지 꼭 확인하세요.</p>
         <p class="muted" style="margin-bottom:12px"><b>온채널</b>: [주문서 받기](.xlsx) → 온채널 판매사 메뉴 ‘대량주문등록’에 업로드(주문코드에 우리 주문번호) → 결제 → [발주 완료]<br>
         <b>오너클랜</b>: [주문서 받기] → 오너클랜 ‘엑셀 주문하기’에 그대로 업로드(오너클랜 공식 양식, 원장주문코드에 우리 주문번호) → 오클머니 결제 → [발주 완료]<br>
-        <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
+        <b>도매매</b>: [대량주문 엑셀 받기] → <a href="https://domeggook.com/main/myBuy/order/my_orderExcelForm.php" target="_blank" rel="noopener">도매꾹 엑셀일괄주문</a>에 파일 업로드(도매꾹 공식 양식, 전달사항에 우리 주문번호) → 이머니 바로결제 → [발주 완료]<br>
         <b>직영(숨엔 등 직접 보내는 상품)</b>: 직접 포장·발송 → [주문] 탭에서 송장 입력 → 고객에게 출고 알림이 자동으로 가요.<br>
         나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣거나 엑셀 파일을 그대로 올리면 우리 주문번호로 찾아 송장이 자동으로 들어가요.<br>
         <span style="color:var(--sale)">발주 전 확인: 도매처 결제 화면의 <b>상품값·택배비</b>가 아래 '도매 원가'·'택배비'(주문당 1번 / N개마다)와 다르면 손해일 수 있어요 — 특히 도매처가 <b>1개마다 택배비</b>를 받는데 표에 '주문당 1번'이면 발주하지 말고 알려 주세요.</span></p>
@@ -591,9 +591,14 @@
       ["xl/worksheets/sheet1.xml", sheet]]);
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   };
-  const XLSX_ONLY = { onchannel: true };
+  const XLSX_ONLY = { onchannel: true, domeme: true };  // 도매꾹·도매매 공식 '엑셀주문양식'(orderBatchForm) 열 그대로
   // 도매처 양식의 열 이름 → 넣을 값 (정확한 이름이 없으면 비슷한 말로 찾음). 못 찾으면 null = 빈칸 (화면에 빨간색으로 알려 줌)
+  const hyphenPhone = (p) => { const d = String(p || "").replace(/\D/g, ""); return d.length === 11 ? d.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3") : d.length === 10 ? d.replace(/(\d{2,3})(\d{3,4})(\d{4})/, "$1-$2-$3") : p; };
   function fieldFor(c, cols) {
+    const c0 = String(c).replace(/\s|\(.*?\)/g, "");
+    if (c0 === "마켓") return () => "도매매";  // 도매꾹 엑셀주문양식: 도매매 상품
+    if (c0 === "옵션코드") return () => "";  // 옵션명으로 주문 (코드는 비워 둠)
+    if (c0 === "휴대전화" && (cols || []).some((x) => /^마켓$/.test(String(x).trim()))) return (l) => hyphenPhone(l.phone);  // 도매꾹: 010-0000-0000
     const hasDetail = (cols || []).some((x) => /상세주소|나머지주소|주소2/.test(String(x).replace(/\s/g, "")));
     if (FIELD[c] && !(c === "주소" && hasDetail)) return FIELD[c];
     const k = String(c).replace(/\s|\(.*?\)|\*|필수|선택/g, "");
