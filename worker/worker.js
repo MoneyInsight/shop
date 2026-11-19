@@ -1439,7 +1439,7 @@ export async function handle(req, env, path) {
       }
       const files = Object.values(groups).flatMap((g) => g.files);
       const bulk = !!d.bulk;  // 대량 수집(상품 창고용)은 매일 점검과 따로 보관
-      if (!files.length || files.length > (bulk ? 1000 : 400)) return fail("파일 목록이 이상해요.");
+      if (!files.length || files.length > (bulk ? 3000 : 400)) return fail("파일 목록이 이상해요.");
       await env.SHOP.put(bulk ? "onch_bulk" : "onch_files", JSON.stringify({ at: Date.now(), groups }));
       return json({ ok: true, n: files.length });
     }

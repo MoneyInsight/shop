@@ -8,7 +8,7 @@ permissions: { contents: write }
 jobs:
   apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,7 +34,21 @@ jobs:
         run: |
           mkdir -p warehouse
           OUT="../warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv" CAT=auto EXCL=온채널상품.csv,온채널겨울상품.csv,온채널추가상품.csv NO_GIT=1 bash tools/onch_apply.sh $(cat files.txt)
-          gzip -9f "warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv"
+          # 깃허브 파일 한도(100MB) 안 넘게 6만 줄씩 나눠 저장
+          python3 - "warehouse/onch_bulk_${{ steps.chk.outputs.at }}.csv" <<'PY'
+          import csv, gzip, sys, os
+          csv.field_size_limit(10**9)
+          src = sys.argv[1]; base = src[:-4]
+          with open(src, encoding="utf-8-sig", newline="") as f:
+              r = csv.reader(f); head = next(r); part, n, out, w = 0, 0, None, None
+              for row in r:
+                  if n % 60000 == 0:
+                      if out: out.close()
+                      part += 1; out = gzip.open(f"{base}_p{part:02d}.csv.gz", "wt", encoding="utf-8-sig", newline=""); w = csv.writer(out); w.writerow(head)
+                  w.writerow(row); n += 1
+              if out: out.close()
+          os.remove(src); print("저장:", n, "줄,", part, "개 파일")
+          PY
           echo "${{ steps.chk.outputs.at }}" > data/onch_bulk_last.txt
       - if: steps.chk.outputs.go
         name: 저장
