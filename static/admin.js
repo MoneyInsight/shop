@@ -39,6 +39,10 @@
     own: { n: "자체상품", url: "", how: "직접 포장·발송 → [주문] 탭에서 송장 입력" },
     direct: { n: "직영·기타", url: "", how: "[주문] 탭에서 송장 직접 입력" } };
   const SRC_COLOR = { domeme: "#e8590c", ownerclan: "#1971c2", onchannel: "#2f9e44", ggsan: "#7048e8", cmtstory: "#d6336c", own: "#212529", direct: "#868e96" };
+  const SRC_LEGEND = () => `<details class="card" style="padding:16px 28px"><summary style="cursor:pointer;font-weight:700">상품코드로 도매처 구분 (표 보기)</summary>
+    <table class="adm-table" style="margin-top:10px;max-width:720px"><tr><th>상품코드</th><th>표시</th><th>도매처</th></tr>
+    ${[["<b>DM</b>12345678", "DM1", "도매매"], ["<b>W</b>FSLBA3", "WFSLBA3", "오너클랜"], ["<b>CH</b>5641997", "CH1", "온채널"], ["<b>GS</b>1000000017", "GS1", "건강산 (ggsan.com)"],
+       ["<b>CM</b>1000000046", "CM1", "화장품스토리 (cmtstory.com)"], ["<b>OWN</b>13803…", "OWN1", "숨엔·듀리온 등 직접 발송"]].map(([c, id, n]) => `<tr><td>${c}</td><td>${srcTag(id)}</td><td>${n}</td></tr>`).join("")}</table></details>`;
   const srcTag = (id) => { const k = SRC(id); return `<span style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:${SRC_COLOR[k]};border-radius:3px;padding:1px 6px;margin-right:4px;white-space:nowrap">${SUP[k].n}</span>`; };
 
   const TABS = [["dash", "대시보드"], ["stats", "분석"], ["po", "발주"], ["orders", "주문"], ["products", "상품 관리"], ["customers", "회원·고객"], ["claims", "취소·반품·교환"], ["qna", "문의"], ["reviews", "리뷰"], ["coupons", "쿠폰"], ["sellers", "공급사"], ["settings", "사이트 설정·기록"]];
@@ -92,7 +96,7 @@
         <p class="muted" style="margin-bottom:12px">택배사·송장번호만 넣고 저장하면 자동으로 ‘배송중’이 되고 고객에게 출고 알림이 가요. 이후 택배 단계(집하→이동중→배송출발→배송완료)를 2시간마다 확인해 배송완료되면 상태가 자동으로 바뀌고 리뷰 요청이 나가요.</p>${orderTable(list)}</div>`;
     }
     if (tab === "stats") return statsView();
-    if (tab === "products") { setTimeout(prodInit, 0); return prodShell(); }
+    if (tab === "products") { setTimeout(prodInit, 0); return SRC_LEGEND() + prodShell(); }
     if (tab === "customers") {
       if (!CUST) { call("/admin/customers").then((r) => { CUST = r; paint(); }).catch((e) => alert(e.message)); return `<p class="muted">불러오는 중…</p>`; }
       const bl = Object.entries(CUST.blocked || {});
@@ -122,7 +126,7 @@
       const G = D.po || [];
       const total = G.reduce((a, g) => a + g.lines.length, 0);
       const badN = G.reduce((a, g) => a + g.lines.filter((l) => l.lv && l.lv.ok === false).length, 0);
-      return `<div class="card"><h2>발주 대기 <small>${total}건</small>${badN ? ` <small style="color:var(--sale)">⚠️ 도매처 문제 ${badN}건</small>` : ""}
+      return SRC_LEGEND() + `<div class="card"><h2>발주 대기 <small>${total}건</small>${badN ? ` <small style="color:var(--sale)">⚠️ 도매처 문제 ${badN}건</small>` : ""}
         <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost" data-act="po-check">가격·재고 지금 확인 (도매매·오너클랜)</button></span></h2>
         <p class="muted" style="margin:-8px 0 10px">도매매·오너클랜은 도매처 시스템에 연결돼 10분마다 가격·재고를 자동 확인하고, 품절·가격 인상이면 카톡으로 알려 드려요.
         온채널·건강산·화장품스토리는 연결 기능(API)이 없어 자동 확인이 안 돼요 — 발주할 때 도매처 결제 금액이 표의 '도매 원가'와 같은지 꼭 확인하세요.</p>
