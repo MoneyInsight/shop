@@ -1046,7 +1046,7 @@
     const render = (o, phone) => {
       const step = o.status === "구매확정" ? 3 : FLOW.indexOf(o.status);
       const special = step < 0;
-      const canCancel = ["결제완료", "상품준비중"].includes(o.status), shipped = ["배송중", "배송완료"].includes(o.status);
+      const canCancel = o.status === "결제완료" && !o.ordered, shipped = ["배송중", "배송완료"].includes(o.status);
       res.innerHTML = `<div class="card"><h2>주문 ${esc(o.orderId)} <span class="state${special ? "" : " done"}">${esc(o.status)}</span></h2>
         ${special ? "" : `<div class="track">${FLOW.map((s, i) => `<div class="${i <= step ? "on" : ""}">${s}</div>`).join("")}</div>`}
         ${trackHTML(o)}
@@ -1058,6 +1058,7 @@
           <dt>주문일</dt><dd>${date(o.paidAt)}</dd><dt>결제 금액</dt><dd><b>${won(o.amount)}</b>${o.discount ? ` (쿠폰 −${won(o.discount)})` : ""} · ${esc(o.method || "")}</dd>
           <dt>받는 분</dt><dd>${esc(o.receiver.name || "")}</dd><dt>배송지</dt><dd>[${esc(o.receiver.zip || "")}] ${esc(o.receiver.addr || "")}</dd>
           ${o.receiver.memo ? `<dt>배송 메모</dt><dd>${esc(o.receiver.memo)}</dd>` : ""}</dl>
+        ${!canCancel && ["결제완료", "상품준비중"].includes(o.status) ? `<p class="muted" style="margin:8px 0">상품 준비(발주)가 시작돼서 주문 취소는 할 수 없어요. 받으신 뒤 7일 안에 반품을 신청해 주세요.</p>` : ""}
         <div class="act-row">${canCancel ? `<button class="btn btn-line sm" data-act="cancel">주문 취소</button>` : ""}
           ${shipped ? `<button class="btn btn-dark sm" data-act="confirm-receipt">구매 확정</button><button class="btn btn-line sm" data-act="반품">반품 신청</button><button class="btn btn-line sm" data-act="교환">교환 신청</button>` : ""}</div>
         <div class="mini-form" id="act-form"><label class="opt-label" id="act-label"></label>

@@ -1022,7 +1022,7 @@ function setStatus(order, status, extra) {
 
 // 고객에게 보여줄 주문 정보 (결제키·공급가 등 내부 정보 제외)
 const publicOrder = (o) => ({
-  orderId: o.orderId, status: o.status, paidAt: o.paidAt, amount: o.amount, subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping || 0, method: o.method,
+  orderId: o.orderId, status: o.status, ordered: o.status === "상품준비중" || o.lines.some((l) => l.po), paidAt: o.paidAt, amount: o.amount, subtotal: o.subtotal, discount: o.discount || 0, shipping: o.shipping || 0, method: o.method,
   lines: o.lines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price })),
   receiver: { name: o.customer?.name, zip: o.customer?.zip, addr: o.customer?.addr, memo: o.customer?.memo },
   receipt: o.receipt || "", courier: o.courier || "", tracking: o.tracking || "", track: o.track || null, history: o.history || [], claim: o.claim || null,
@@ -1102,7 +1102,10 @@ async function orderCancel(req, env) {
     await notify(env, `↩️ 주문 취소(자동 환불) ${o.orderId}`);
     return json({ message: "주문이 취소되었어요. 결제수단에 따라 환불까지 3~7영업일이 걸릴 수 있어요.", order: publicOrder(o) });
   }
-  if (o.status === "상품준비중" || (o.status === "결제완료" && o.poSheetAt)) {  // 도매처에 주문했을 수 있음 → 관리자 확인 후 처리
+  if (o.status === "상품준비중" || o.lines.some((l) => l.po)) {  // 이미 도매처에 발주함 → 취소 불가 (받은 뒤 반품으로)
+    return fail("이미 상품 준비(발주)가 시작돼서 주문을 취소할 수 없어요. 상품을 받으신 뒤 7일 안에 [반품 신청]을 해 주세요.");
+  }
+  if (o.status === "결제완료" && o.poSheetAt) {  // 주문서만 받은 상태 (발주했을 수 있음) → 관리자 확인 후 처리
     setStatus(o, "취소요청", { reason: clip(reason, 200) });
     await env.SHOP.put("order:" + o.orderId, JSON.stringify(o));
     await notify(env, `⚠️ 취소 요청 ${o.orderId} (상품 준비 중)`);
