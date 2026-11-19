@@ -55,7 +55,7 @@ export function incomeTax(base) {
 }
 
 // 후원 기금: 달마다 순이익(매출−원가−카드수수료−부가세−운영비, 취소·반품·환불 반영)의 일정 비율 (적자 달은 0원)
-export function donation(orders, P, rate = 0.001) {
+export function donation(orders, P, rate = 0.005) {
   const card = P?.card_fee ?? 0.034, ops = P?.ops_cost_won ?? 300;
   const kst = (iso) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(0, 7);
   const m = {};
