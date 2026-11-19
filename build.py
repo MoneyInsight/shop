@@ -566,14 +566,25 @@ def build_home(ps):
     max_deal = int(max([(1 - p['qt'][-1] / p['qt'][0]) * 100 for p in ps if p.get('qt')] or [0]) + 1e-9)
     ld = {"@context": "https://schema.org", "@type": "WebSite", "name": CFG["shop_name"], "alternateName": CFG.get("shop_name_alt") or [], "url": BASE + "/",
           "potentialAction": {"@type": "SearchAction", "target": BASE + "/search.html?q={q}", "query-input": "required name=q"}}
-    by_cat = {c["slug"]: [p for p in ps if in_cat(p, c["slug"])] for c in SHOW_CATS}
+    # 첫 화면 전시는 '다른 곳보다 싸거나 같은' 상품 먼저: 공급사가 정한 온라인 최저 판매가(mp)와 같거나 낮게 파는 상품
+    # (다른 판매처는 이 가격 아래로 팔 수 없음) → 그다음 나머지. 같은 순서 안에서는 원래 순서 유지
+    def cheap(p):
+        mp = int(p.get("mp") or 0)
+        return bool(mp) and int(p["price"]) <= mp
+    n_cheap = sum(1 for p in ps if cheap(p))
+    print(f"첫 화면 우선 전시(최저 판매가 이하): {n_cheap}개")
+    home_ps = sorted(ps, key=lambda p: (0 if cheap(p) else 1))  # 안정 정렬
+    by_cat = {c["slug"]: [p for p in home_ps if in_cat(p, c["slug"])] for c in SHOW_CATS}
     art = [p for p in ps if p["image"].startswith("http")][:4] or ps[:4]
     tiles = "".join(f'<a href="category/{c["slug"]}.html">{e(c["name"])}<small>{((DC or {}).get(c["slug"]) or len(by_cat[c["slug"]])):,}개</small></a>' for c in SHOW_CATS if by_cat[c["slug"]])
     top = sorted([c for c in SHOW_CATS if len(by_cat[c["slug"]]) >= 4], key=lambda c: -len(by_cat[c["slug"]]))[:4]
     sections = "".join(f'''<section class="section"><div class="wrap"><div class="sec-head"><div><h2>{e(c["name"])}</h2></div><a href="category/{c["slug"]}.html">더 보기</a></div>
 <div class="grid">{"".join(card(p, "./") for p in [x for x in by_cat[c["slug"]][:12] if in_db(x["id"])][:4])}</div></div></section>''' for c in top)
     def pics(cat, n=4):
-        pool = [p for p in (by_cat.get(cat) or ps) if p["image"].startswith("http") and not p.get("soldout")]
+        pool = [p for p in (by_cat.get(cat) or home_ps) if p["image"].startswith("http") and not p.get("soldout")]
+        cp = [p for p in pool if cheap(p)]
+        if len(cp) >= n:  # 최저 판매가 이하 상품이 충분하면 그것만
+            pool = cp
         step = max(1, len(pool) // (n * 7))
         picked = []
         for p in pool[::step][:n * 3]:
@@ -582,6 +593,7 @@ def build_home(ps):
         return "".join(f'<a href="product/{p["id"]}.html" title="{e(p["name"])}"><img src="{e(p["image"])}" alt="{e(p["name"])}" loading="lazy"></a>' for p in picked)
     # 새로 들어온 상품: 한 종류만 몰리지 않게 카테고리마다 돌아가며 1개씩 (사진 있는·품절 아닌 상품, 같은 카테고리 안에서도 비슷한 상품 피하기)
     pools = [[p for p in by_cat[c["slug"]] if p["image"].startswith("http") and not p.get("soldout")] for c in SHOW_CATS]
+    pools = [([p for p in pl if cheap(p)] if sum(1 for p in pl if cheap(p)) >= 2 else pl) for pl in pools]  # 카테고리마다 최저 판매가 이하 상품 먼저
     pools = sorted([pl for pl in pools if pl], key=len, reverse=True)
     mixed, seen_w = [], set()
     for rnd in range(30):
