@@ -120,7 +120,7 @@
         <label>눌렀을 때 이동할 주소 (선택)</label><input id="st-link" value="${esc(st.notice_link || "")}" placeholder="예: search.html?q=겨울 또는 https://…">
         <div style="margin-top:12px"><button data-act="st-save">저장</button></div></div>
         <div class="card"><h2>관리자 작업 기록 <small>최근 ${ALOG.length}건</small></h2><p class="muted">관리자 화면에서 바꾼 작업이 시간·접속 위치(IP)와 함께 남아요. 모르는 기록이 보이면 관리자 비밀번호를 바꾸세요.</p>
-        ${ALOG.length ? `<table class="adm-table"><tr><th>때</th><th>작업</th><th>IP</th></tr>${ALOG.slice(0, 100).map((x) => `<tr><td class="muted">${dt(x.at)}</td><td>${esc(LOGNAME[x.path] || x.path)}</td><td class="muted">${esc(x.ip || "")}</td></tr>`).join("")}</table>` : `<p class="muted">아직 기록이 없어요.</p>`}</div>`;
+        ${ALOG.length ? `<table class="adm-table"><tr><th>때</th><th>작업</th><th>IP</th></tr>${ALOG.map((x) => `<tr><td class="muted">${dt(x.at)}</td><td>${esc(LOGNAME[x.path] || x.path)}</td><td class="muted">${esc(x.ip || "")}</td></tr>`).join("")}</table>` : `<p class="muted">아직 기록이 없어요.</p>`}</div>`;
     }
     if (tab === "po") {
       const G = D.po || [];
@@ -196,7 +196,7 @@
         <p class="muted" style="margin-bottom:12px">순서대로 버튼만 누르면 돼요. 도매처 처리를 확인하기 전에 환불하려고 하면 한 번 더 물어봐서 손해를 막아요.
         단순 변심은 받은 날부터 7일 안에만 신청할 수 있고(사이트에서 자동 차단), 배송비는 손님 부담으로 자동 계산돼요. 받은 뒤 8일이 지나면 자동 구매확정돼요.</p>
         ${open.length ? open.map(card).join("") : `<p class="empty">처리할 요청이 없어요.</p>`}</div>
-      <div class="card"><h2>처리 완료</h2>${orderTable(D.orders.filter((o) => ["취소완료", "반품완료", "교환완료"].includes(o.status)).slice(0, 30))}</div>`;
+      <div class="card"><h2>처리 완료</h2>${orderTable(D.orders.filter((o) => ["취소완료", "반품완료", "교환완료"].includes(o.status)))}</div>`;
     }
     if (tab === "qna") {
       const item = (q) => `<tr><td>${dt(q.at)}<br><span class="state${q.answer ? " done" : ""}" style="margin:0">${q.answer ? "답변완료" : "대기"}</span></td>
@@ -268,8 +268,8 @@
   let PIDX = null, PEDITS = null, PSEL = null, OSEARCH = null, OQ = "", CUST = null, ALOG = null;
   const BADGES = ["", "NEW", "BEST", "SALE", "추천", "특가"];
   const LOGNAME = { "/admin/order-update": "주문 상태·송장 저장", "/admin/order-cancel": "주문 취소·환불", "/admin/soldout-cancel": "품절 취소", "/admin/product-save": "상품 수정", "/admin/product-bulk": "상품 여러 개 수정", "/admin/block": "주문 차단 변경", "/admin/site-save": "공지 띠 변경", "/admin/coupon-save": "쿠폰 저장", "/admin/answer": "문의 답변", "/admin/delete": "삭제", "/admin/po-done": "발주 완료", "/admin/po-mark": "도매처 주문서 받기", "/admin/tracking-import": "송장 한 번에 넣기", "/admin/offer-reply": "가격 제안 답변", "/admin/approve-seller": "공급사 승인", "/admin/approve-product": "상품 승인", "/admin/reject-product": "상품 반려" };
-  const memTable = (list) => list.length ? `<table class="adm-table"><tr><th>가입일</th><th>이름</th><th>가입 방법</th><th>이메일</th><th>연락처</th><th>주문</th><th>최근 로그인</th></tr>${list.slice(0, 500).map((m) => `<tr><td class="muted">${m.joinedAt ? dt(m.joinedAt) : ""}</td><td>${esc(m.name || "-")}</td><td>${esc({ naver: "네이버", kakao: "카카오", google: "구글" }[m.provider] || m.provider)}</td><td>${esc(m.email || "-")}</td><td>${esc(m.phone || "-")}</td><td>${m.orders}</td><td class="muted">${m.lastLogin ? dt(m.lastLogin) : ""}</td></tr>`).join("")}</table>${list.length > 500 ? `<p class="muted" style="margin-top:8px">최근 500명만 보여요. 검색으로 찾아 주세요.</p>` : ""}` : `<p class="empty">아직 가입한 회원이 없어요.</p>`;
-  const custTable = (list) => list.length ? `<table class="adm-table"><tr><th>이름</th><th>연락처</th><th>주문</th><th>구매액</th><th>취소/반품</th><th>최근 주문</th><th></th></tr>${list.slice(0, 300).map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${c.orders}</td><td>${won(c.total)}</td><td>${c.cancels}/${c.claims}</td><td class="muted">${c.last ? dt(c.last) : ""}</td>
+  const memTable = (list) => list.length ? `<table class="adm-table"><tr><th>가입일</th><th>이름</th><th>가입 방법</th><th>이메일</th><th>연락처</th><th>주문</th><th>최근 로그인</th></tr>${list.map((m) => `<tr><td class="muted">${m.joinedAt ? dt(m.joinedAt) : ""}</td><td>${esc(m.name || "-")}</td><td>${esc({ naver: "네이버", kakao: "카카오", google: "구글" }[m.provider] || m.provider)}</td><td>${esc(m.email || "-")}</td><td>${esc(m.phone || "-")}</td><td>${m.orders}</td><td class="muted">${m.lastLogin ? dt(m.lastLogin) : ""}</td></tr>`).join("")}</table>${list.length > 500 ? `<p class="muted" style="margin-top:8px">최근 500명만 보여요. 검색으로 찾아 주세요.</p>` : ""}` : `<p class="empty">아직 가입한 회원이 없어요.</p>`;
+  const custTable = (list) => list.length ? `<table class="adm-table"><tr><th>이름</th><th>연락처</th><th>주문</th><th>구매액</th><th>취소/반품</th><th>최근 주문</th><th></th></tr>${list.map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${c.orders}</td><td>${won(c.total)}</td><td>${c.cancels}/${c.claims}</td><td class="muted">${c.last ? dt(c.last) : ""}</td>
     <td><button class="ghost" data-act="c-orders" data-phone="${esc(c.phone)}">주문 보기</button> ${(CUST.blocked || {})[c.phone] ? `<button class="ghost" data-act="bl-del" data-phone="${esc(c.phone)}">차단 풀기</button>` : `<button class="ghost" data-act="bl-quick" data-phone="${esc(c.phone)}">차단</button>`}</td></tr>`).join("")}</table>` : `<p class="muted">아직 고객이 없어요.</p>`;
   function prodShell() {
     return `<div class="card form"><h2>상품 찾기</h2>
@@ -388,7 +388,7 @@
       <span style="margin-left:auto;display:flex;gap:4px;align-items:center"><button class="ghost" data-act="sa-pg" data-p="1"${SA.page === 1 ? " disabled" : ""}>«</button><button class="ghost" data-act="sa-pg" data-p="${SA.page - 1}"${SA.page === 1 ? " disabled" : ""}>‹ 이전</button>
       <span class="muted">${SA.page} / ${pages} 쪽 (${L.length}개)</span>
       <button class="ghost" data-act="sa-pg" data-p="${SA.page + 1}"${SA.page === pages ? " disabled" : ""}>다음 ›</button><button class="ghost" data-act="sa-pg" data-p="${pages}"${SA.page === pages ? " disabled" : ""}>»</button></span></div>`;
-    box.innerHTML = nav + `<table class="adm-table"><tr><th>상품코드</th><th>지금 상품명</th><th>바뀔 상품명</th><th>검색 태그</th><th>이유</th></tr>${rows.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.before)}</td><td>${x.after !== x.before ? `<b>${esc(x.after)}</b>` : `<span class="muted">그대로</span>`}</td><td class="muted">${esc(x.kw)}</td><td class="muted">${esc((x.why || []).join(", "))}</td></tr>`).join("")}</table>`;
+    box.innerHTML = nav + `<table class="adm-table" data-nopage="1"><tr><th>상품코드</th><th>지금 상품명</th><th>바뀔 상품명</th><th>검색 태그</th><th>이유</th></tr>${rows.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.before)}</td><td>${x.after !== x.before ? `<b>${esc(x.after)}</b>` : `<span class="muted">그대로</span>`}</td><td class="muted">${esc(x.kw)}</td><td class="muted">${esc((x.why || []).join(", "))}</td></tr>`).join("")}</table>`;
     $("#sa-size").onchange = (ev) => { SA.size = +ev.target.value; SA.page = 1; try { localStorage.setItem("sa_size", SA.size); } catch (e) {} saTable(); };
     $("#sa-only").onchange = (ev) => { SA.only = ev.target.checked; SA.page = 1; try { localStorage.setItem("sa_only", SA.only ? "1" : "0"); } catch (e) {} saTable(); };
   }
@@ -692,6 +692,38 @@
     if (ev.target.id === "m-q" && CUST) { const v = ev.target.value.trim().toLowerCase(), dv = v.replace(/\D/g, ""); $("#m-list").innerHTML = memTable((CUST.members || []).filter((m) => (m.name || "").toLowerCase().includes(v) || (m.email || "").toLowerCase().includes(v) || (dv && (m.phone || "").replace(/\D/g, "").includes(dv)))); }
     if (ev.target.id === "c-q" && CUST) { const v = ev.target.value.trim(), dv = v.replace(/\D/g, ""); $("#c-list").innerHTML = custTable(CUST.customers.filter((c) => c.name.includes(v) || (dv && c.phone.includes(dv)))); }
   });
+  // ── 모든 목록 표 쪽 나누기: 줄이 많으면 자동으로 [한 쪽에 N개] + 쪽 이동 (설정은 이 브라우저에 기억) ──
+  const PG = { size: +(localStorage.getItem("adm_pg") || 20), page: {} };
+  function autoPage() {
+    const view = $("#adm-view"); if (!view) return;
+    view.querySelectorAll("table.adm-table:not([data-nopage])").forEach((t, ti) => {
+      const rows = [...t.querySelectorAll("tr")].filter((r) => !r.querySelector("th"));
+      const key = tab + ":" + ti, old = t.nextElementSibling && t.nextElementSibling.classList.contains("adm-pager") ? t.nextElementSibling : null;
+      if (rows.length <= Math.min(PG.size, 10) && !old) return;
+      const size = PG.size, pages = Math.max(1, Math.ceil(rows.length / size));
+      let pg = Math.min(PG.page[key] || 1, pages); PG.page[key] = pg;
+      rows.forEach((r, i) => { r.style.display = i >= (pg - 1) * size && i < pg * size ? "" : "none"; });
+      const sig = `${rows.length}|${size}|${pg}`;
+      if (old && old.dataset.sig === sig) return;  // 바뀐 게 없으면 다시 그리지 않음 (무한 반복 방지)
+      const nav = old || Object.assign(document.createElement("div"), { className: "adm-pager" });
+      nav.dataset.sig = sig;
+      nav.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:10px 0 0;font-size:13px";
+      nav.innerHTML = `<span class="muted">총 ${rows.length.toLocaleString()}개 · 한 쪽에</span><select data-pgsize style="width:auto;height:30px">${[10, 20, 50, 100, 200].map((n) => `<option${n === size ? " selected" : ""}>${n}</option>`).join("")}</select><span class="muted">개</span>
+        <span style="margin-left:auto;display:flex;gap:4px;align-items:center"><button class="ghost" data-pg="1" ${pg === 1 ? "disabled" : ""}>«</button><button class="ghost" data-pg="${pg - 1}" ${pg === 1 ? "disabled" : ""}>‹ 이전</button>
+        <span class="muted">${pg} / ${pages} 쪽</span><button class="ghost" data-pg="${pg + 1}" ${pg === pages ? "disabled" : ""}>다음 ›</button><button class="ghost" data-pg="${pages}" ${pg === pages ? "disabled" : ""}>»</button></span>`;
+      nav.dataset.key = key;
+      if (!old) t.after(nav);
+    });
+  }
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest(".adm-pager [data-pg]"); if (!b || b.disabled) return;
+    PG.page[b.closest(".adm-pager").dataset.key] = +b.dataset.pg; autoPage();
+  });
+  document.addEventListener("change", (ev) => {
+    if (!ev.target.matches(".adm-pager [data-pgsize]")) return;
+    PG.size = +ev.target.value; PG.page = {}; try { localStorage.setItem("adm_pg", PG.size); } catch (e) {} autoPage();
+  });
+  new MutationObserver(() => { clearTimeout(autoPage._t); autoPage._t = setTimeout(autoPage, 30); }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener("change", (ev) => { if (ev.target.id === "trk-file" && ev.target.files[0]) $('[data-act="trk-import"]')?.click(); });
   document.addEventListener("change", async (ev) => {  // 도매처 양식 올리기: 첫 줄(열 이름)만 읽어 저장
     if (ev.target.id !== "sheet-file" || !ev.target.files[0]) return;
