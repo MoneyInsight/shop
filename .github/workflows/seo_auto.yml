@@ -1,0 +1,57 @@
+name: SEO 자동 최적화 (관리자 요청 · 매일 새벽)
+on:
+  schedule:
+    - cron: "41 18 * * *"   # 매일 03:41 (한국) — 관리자 화면에서 '매일 자동'을 켰을 때만 적용
+  workflow_dispatch:
+    inputs:
+      mode: { description: "preview / apply", default: "preview" }
+      scope: { description: "site / db / cat:<분류> / ids:A,B", default: "site" }
+      limit: { description: "최대 상품 수", default: "20000" }
+concurrency: { group: seo-auto, cancel-in-progress: false }
+permissions: { contents: read }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install openpyxl
+      - name: 할 일 정하기
+        id: job
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, urllib.request
+          W = "https://shop-api.scream0506.workers.dev"
+          ev = os.environ.get("GITHUB_EVENT_NAME")
+          if ev == "workflow_dispatch" and os.environ.get("IN_MODE"):
+              r = {"mode": os.environ["IN_MODE"], "scope": os.environ.get("IN_SCOPE") or "site", "limit": os.environ.get("IN_LIMIT") or "20000", "id": ""}
+              d = json.loads(urllib.request.urlopen(urllib.request.Request(W + "/seo-auto/req?take=1", headers={"User-Agent": "damgosago-seo"}), timeout=20).read())
+              if d.get("req"): r = d["req"]  # 관리자 화면 요청이 있으면 그걸 실행
+          else:
+              d = json.loads(urllib.request.urlopen(urllib.request.Request(W + "/seo-auto/req?take=1", headers={"User-Agent": "damgosago-seo"}), timeout=20).read())
+              r = d.get("req") or ({"mode": "apply", "scope": "site", "limit": 20000, "id": "daily"} if d.get("daily") else None)
+          if not r:
+              print("go=")
+          else:
+              print("go=1"); print("mode=" + r["mode"]); print("scope=" + r["scope"]); print("limit=" + str(r["limit"])); print("run=" + (r.get("id") or ""))
+          PY
+        env:
+          IN_MODE: ${{ inputs.mode }}
+          IN_SCOPE: ${{ inputs.scope }}
+          IN_LIMIT: ${{ inputs.limit }}
+      - if: steps.job.outputs.go
+        name: 지난 네이버 조회 결과 불러오기 (7일)
+        uses: actions/cache/restore@v4
+        with: { path: dist/seo_cache.json.gz, key: "seo-cache-${{ github.run_id }}", restore-keys: seo-cache- }
+      - if: steps.job.outputs.go
+        name: 최적화 (${{ steps.job.outputs.mode }} · ${{ steps.job.outputs.scope }})
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: python3 tools/seo_auto.py --mode "${{ steps.job.outputs.mode }}" --scope "${{ steps.job.outputs.scope }}" --limit "${{ steps.job.outputs.limit }}" --run "${{ steps.job.outputs.run }}$(date -u +%m%d%H%M)"
+      - if: always() && steps.job.outputs.go && hashFiles('dist/seo_cache.json.gz') != ''
+        uses: actions/cache/save@v4
+        with: { path: dist/seo_cache.json.gz, key: "seo-cache-${{ github.run_id }}" }

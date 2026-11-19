@@ -203,6 +203,18 @@
       <p class="muted" style="margin-top:6px">고친 내용은 서버에 저장되고, 30분 안에 사이트에 자동으로 반영돼요. 가격은 손해를 막기 위해 공급사 최저가·순마진 8% 아래로는 내려가지 않아요.</p>
       <div id="p-res" style="margin-top:10px"></div></div>
       <div class="card form" id="p-edit" style="display:none"></div>
+      <div class="card form"><h2>SEO 자동 최적화 <small class="muted">네이버 쇼핑 검색 흐름 기준</small></h2>
+        <p class="muted">지금 네이버에서 같은 상품을 찾을 때 많이 쓰는 말을 조사해서 <b>상품명·검색 태그·요약 설명</b>을 다듬어요.<br>
+        · 상품명은 원래 이름을 바탕으로 홍보 문구·특수문자·반복을 빼고, 대표 검색어가 빠졌으면 하나만 붙여요 (우리 상품 설명에 있는 말만, 다른 브랜드 이름은 절대 안 넣어요)<br>
+        · 손으로 고친 SEO는 건드리지 않아요 · 검사에 걸리면 그 상품은 원래대로 · 적용 전 값은 백업돼서 <b>한 번에 되돌리기</b> 가능</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <select id="sa-scope"><option value="site">사이트 상품</option><option value="db">상품 DB 전체</option>${Object.entries((window.SHOP_CFG || {}).cat_names || {}).map(([k, v]) => `<option value="cat:${esc(k)}">${esc(v)}</option>`).join("")}<option value="ids">상품코드 직접 입력</option></select>
+          <input id="sa-ids" placeholder="상품코드 (쉼표로 구분)" style="display:none;min-width:240px">
+          <label class="muted">최대 <input id="sa-limit" type="number" value="20000" min="1" max="200000" step="1000" style="width:100px"> 개</label>
+          <button class="ghost" data-act="sa-run" data-m="preview">① 미리보기</button>
+          <button data-act="sa-run" data-m="apply">② 적용</button>
+          <label style="display:flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="sa-daily" style="width:auto"> 매일 새벽 자동 (사이트 상품)</label></div>
+        <div id="sa-status" style="margin-top:10px"><p class="muted">불러오는 중…</p></div></div>
       <div class="card form"><h2>SEO 일괄 수정 (엑셀)</h2>
         <p class="muted">① 상품 목록을 내려받아 엑셀에서 <b>상품명·검색키워드·요약설명</b>을 고치고 ② 저장한 파일(엑셀·CSV 모두 가능)을 올리면 돼요. 상품코드·기존 상품명 칸은 고치지 마세요.<br>
         검색키워드는 쉼표(,)로 구분, 요약설명은 150자 안. 올린 내용은 30분 안에 사이트·상품 DB에 반영돼요. (엑셀은 한 파일에 100만 줄까지라 30만 개씩 나눠서 받아요)</p>
@@ -290,11 +302,30 @@
       msg.textContent = `완료: ${done.toLocaleString()}개 저장. 30분 안에 사이트에 반영돼요.`;
     } catch (e) { msg.textContent = `실패 (${done.toLocaleString()}개까지 저장됨): ` + e.message; }
   }
+  async function seoAutoPaint() {
+    const box = $("#sa-status"); if (!box) return;
+    let d; try { d = await call("/admin/seo-auto-status"); } catch (e) { box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+    $("#sa-daily").checked = !!d.daily;
+    const rq = d.req, rp = d.report, MODE = { preview: "미리보기", apply: "적용" };
+    const scopeName = (x) => x === "site" ? "사이트 상품" : x === "db" ? "상품 DB 전체" : String(x || "").startsWith("cat:") ? (((window.SHOP_CFG || {}).cat_names || {})[x.slice(4)] || x) : "상품코드 지정";
+    let h = "";
+    if (rq) h += `<p>⏳ <b>${MODE[rq.mode]}</b> (${esc(scopeName(rq.scope))}, 최대 ${(+rq.limit).toLocaleString()}개) ${rq.taken ? "실행 중이에요. 상품 수에 따라 몇 분~몇 시간 걸려요." : "요청됨 — 30분 안에 시작해요."}</p>`;
+    if (rp) {
+      const st = rp.stats || {};
+      h += `<p><b>최근 결과</b> · ${esc(MODE[rp.mode] || rp.mode)} · ${esc(scopeName(rp.scope))} · ${rp.at ? dt(rp.at) : ""} ${rp.ok ? "✅" : "❌ " + esc(rp.error || "")}<br>
+        <span class="muted">확인 ${(rp.checked || 0).toLocaleString()}개 → 바뀜 ${(rp.changed || 0).toLocaleString()}개${rp.applied ? ` (적용 ${rp.applied.toLocaleString()}개)` : ""} · ${Object.entries(st).map(([k, v]) => `${esc(k)} ${(+v).toLocaleString()}`).join(" · ")} · 네이버 조회 ${(rp.api_calls || 0).toLocaleString()}회 (${esc(rp.api || "")})</span></p>`;
+      if ((rp.samples || []).length) h += `<details${rp.mode === "preview" ? " open" : ""}><summary>바뀌는 예시 ${rp.samples.length}개 보기</summary><table class="adm-table"><tr><th>상품코드</th><th>지금 상품명</th><th>바뀔 상품명</th><th>검색 태그</th><th>이유</th></tr>${rp.samples.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.before)}</td><td>${x.after !== x.before ? `<b>${esc(x.after)}</b>` : `<span class="muted">그대로</span>`}</td><td class="muted">${esc(x.kw)}</td><td class="muted">${esc((x.why || []).join(", "))}</td></tr>`).join("")}</table></details>`;
+    }
+    if ((d.runs || []).length) h += `<p style="margin-top:8px">적용한 기록: ${d.runs.slice().reverse().map((r) => `<span style="display:inline-block;margin:2px 6px 2px 0">${esc(r)} <button class="ghost" style="padding:2px 8px" data-act="sa-undo" data-run="${esc(r)}">되돌리기</button></span>`).join("")}</p>`;
+    box.innerHTML = h || `<p class="muted">아직 실행한 적이 없어요. ① 미리보기로 먼저 확인해 보세요.</p>`;
+    if (rq) { clearTimeout(box._t); box._t = setTimeout(seoAutoPaint, 60000); }
+  }
   async function prodInit() {
     if (!PIDX) PIDX = await fetch("idx/list.json?t=" + Date.now()).then((r) => r.json())
       .then((L) => Promise.all(L.map((c) => fetch(`idx/${c}.json?t=${Date.now()}`).then((r) => r.json()))))
       .then((a) => ({ ...a[0], items: a.flatMap((d) => d.items) })).catch(() => null);
     PEDITS = await call("/admin/product-edits").catch(() => ({ items: {} }));
+    const sc = $("#sa-scope"); if (sc) { sc.onchange = () => ($("#sa-ids").style.display = sc.value === "ids" ? "" : "none"); $("#sa-daily").onchange = async (ev) => { try { alert((await call("/admin/seo-auto-req", { daily: ev.target.checked })).message); } catch (e) { alert(e.message); ev.target.checked = !ev.target.checked; } }; seoAutoPaint(); }
     const sf = $("#seo-file"); if (sf) sf.onchange = () => { if (sf.files[0]) seoUploadFile(sf.files[0]); sf.value = ""; };
     const q = $("#p-q"); if (!q) return;
     q.oninput = () => { clearTimeout(q._t); q._t = setTimeout(prodSearch, 200); };
@@ -575,6 +606,14 @@
         alert((await call("/admin/block", { phone, reason, block: act !== "bl-del" })).message); CUST = null; return paint();
       }
       if (act === "seo-down") { seoDownload(b.dataset.fmt); return; }
+      if (act === "sa-run") {
+        let scope = $("#sa-scope").value;
+        if (scope === "ids") { const ids = $("#sa-ids").value.split(/[\s,]+/).filter(Boolean).map((x) => (/^\d+$/.test(x) ? "DM" + x : x)); if (!ids.length) { alert("상품코드를 넣어 주세요."); return; } scope = "ids:" + ids.join(","); }
+        const m = b.dataset.m, lim = +$("#sa-limit").value || 20000;
+        if (m === "apply" && !confirm(`SEO 자동 최적화를 적용할까요?\n(손으로 고친 상품은 건드리지 않고, 적용 전 값은 백업돼서 언제든 되돌릴 수 있어요)`)) return;
+        alert((await call("/admin/seo-auto-req", { mode: m, scope, limit: lim })).message); return seoAutoPaint();
+      }
+      if (act === "sa-undo") { if (!confirm(`${b.dataset.run} 실행으로 바뀐 SEO를 모두 되돌릴까요?`)) return; alert((await call("/admin/seo-restore", { run: b.dataset.run })).message); return seoAutoPaint(); }
       if (act === "pb") {
         const ids = $("#pb-ids").value; if (!ids.trim()) { alert("상품코드를 넣어 주세요."); return; }
         if (!confirm("선택한 작업을 적용할까요?")) return;

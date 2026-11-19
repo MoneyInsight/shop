@@ -1,0 +1,21 @@
+// SEO 자동 최적화(서버 쪽) 테스트 — node tests/seo_auto_test.mjs
+import { handle } from "../worker/worker.js";
+const mem = new Map();
+const SHOP = { get: async (k, t) => (mem.has(k) ? (t === "json" ? JSON.parse(mem.get(k)) : mem.get(k)) : null), put: async (k, v) => void mem.set(k, v), delete: async (k) => void mem.delete(k) };
+const env = { SHOP, ADMIN_PASSWORD: "pw" };
+const call = async (path, body, method = "POST") => { const r = await handle(new Request("https://api.test" + path, method === "GET" ? {} : { method, headers: { "Content-Type": "application/json", Authorization: "Bearer pw" }, body: JSON.stringify(body) }), env, path.split("?")[0]); return { s: r.status, d: await r.json() }; };
+let pass = 0, failn = 0; const ok = (n, c, i) => (c ? pass++ : (failn++, console.log("❌", n, JSON.stringify(i))));
+const get = async (id) => { for (let b = 0; b < 64; b++) { const x = await call("/edits/seo?b=" + b, null, "GET"); if (x.d[id]) return x.d[id]; } return null; };
+await call("/admin/seo-upload", { rows: [{ id: "M1", name: "손으로 고친 이름" }] });
+await call("/admin/seo-upload", { rows: [{ id: "A1", name: "옛 자동", kw: "a" }], auto: true, run: "r0" });
+let r = await call("/admin/seo-upload", { rows: [{ id: "M1", name: "자동 이름" }, { id: "A1", name: "새 자동", kw: "b", auto: "2026-11-19" }, { id: "N1", kw: "c", auto: "2026-11-19" }], auto: true, run: "r1" });
+ok("수동 보호", r.d.skipped === 1 && (await get("M1")).name === "손으로 고친 이름", r.d);
+ok("자동 저장", (await get("A1")).name === "새 자동" && (await get("A1")).auto === "2026-11-19", await get("A1"));
+r = await call("/admin/seo-auto-status", {}); ok("기록", r.d.runs.includes("r1"), r.d);
+r = await call("/admin/seo-restore", { run: "r1" }); ok("되돌리기", r.s === 200 && (await get("A1")).name === "옛 자동" && !(await get("N1")) && (await get("M1")).name === "손으로 고친 이름", r.d);
+r = await call("/admin/seo-auto-req", { mode: "apply", scope: "cat:winter", limit: 500 }); ok("요청", r.s === 200, r.d);
+r = await call("/admin/seo-auto-req", { mode: "apply", scope: "x;rm" }); ok("잘못된 범위 거절", r.s === 400, r.d);
+r = await call("/seo-auto/req?take=1", null, "GET"); ok("가져가기", r.d.req.scope === "cat:winter", r.d);
+r = await call("/seo-auto/req", null, "GET"); ok("실행 중", !r.d.req && r.d.running, r.d);
+r = await call("/admin/seo-auto-report", { run: "x", mode: "apply", ok: true, applied: 3, samples: [] }); r = await call("/admin/seo-auto-status", {}); ok("결과 저장·요청 정리", r.d.report.applied === 3 && !r.d.req, r.d);
+console.log(`seo_auto: ${pass} pass, ${failn} fail`); if (failn) process.exit(1);

@@ -154,16 +154,66 @@ async function seoUpload(req, env) {
     if (r.name) e.name = String(r.name).replace(/\s+/g, " ").trim().slice(0, 100);
     if (r.kw) e.kw = String(r.kw).replace(/\s+/g, " ").trim().slice(0, 300);
     if (r.summary) e.summary = String(r.summary).replace(/\s+/g, " ").trim().slice(0, 160);
+    if (d.auto && Object.keys(e).length) e.auto = String(r.auto || new Date().toISOString().slice(0, 10)).slice(0, 10);  // 자동 최적화 표시 (손으로 고친 것과 구분)
     (by[seoBucket(id)] ||= {})[id] = Object.keys(e).length ? e : null;
     n++;
   }
+  const run = d.auto ? String(d.run || "").replace(/[^0-9a-z]/gi, "").slice(0, 20) : "";
+  let skipped = 0;
   for (const [b, items] of Object.entries(by)) {
     const cur = (await env.SHOP.get("seo:" + b, "json")) || {};
-    for (const [id, e] of Object.entries(items)) { if (e) cur[id] = e; else delete cur[id]; }
+    const bak = run ? ((await env.SHOP.get(`seo_bak:${run}:${b}`, "json")) || {}) : null;
+    for (const [id, e] of Object.entries(items)) {
+      if (d.auto && cur[id] && !cur[id].auto) { skipped++; n--; continue; }  // 관리자가 손으로 고친 건 자동으로 덮지 않음
+      if (bak && !(id in bak)) bak[id] = cur[id] || null;  // 되돌리기용 (이번 실행 전 값)
+      if (e) cur[id] = e; else delete cur[id];
+    }
     await env.SHOP.put("seo:" + b, JSON.stringify(cur));
+    if (bak) await env.SHOP.put(`seo_bak:${run}:${b}`, JSON.stringify(bak), { expirationTtl: 60 * 86400 });
+  }
+  if (run) { const runs = (await env.SHOP.get("seo_runs", "json")) || []; if (!runs.includes(run)) { runs.push(run); await env.SHOP.put("seo_runs", JSON.stringify(runs.slice(-30))); } }
+  await env.SHOP.put("seo_ver", String(Date.now()));
+  return json({ ok: true, saved: n, skipped, message: `${n.toLocaleString()}개 상품을 저장했어요.` });
+}
+// ---------- SEO 자동 최적화 (깃허브에서 실행: tools/seo_auto.py) ----------
+async function seoAutoReq(req, env) {  // 관리자 → 실행 요청 (30분 안에 깃허브가 가져가 실행)
+  const d = await req.json().catch(() => ({}));
+  if (d.daily !== undefined) { await env.SHOP.put("seo_auto_daily", d.daily ? "1" : "0"); return json({ ok: true, message: d.daily ? "매일 새벽 자동 최적화를 켰어요." : "매일 자동 최적화를 껐어요." }); }
+  const mode = d.mode === "apply" ? "apply" : "preview";
+  let scope = String(d.scope || "site");
+  if (!/^(site|db|cat:[a-z_]{2,20}|ids:[0-9A-Za-z_,-]{2,4000})$/.test(scope)) return fail("범위가 올바르지 않아요.");
+  const limit = Math.min(200000, Math.max(1, parseInt(d.limit) || 20000));
+  const r = { id: Date.now().toString(36), mode, scope, limit, at: new Date().toISOString() };
+  await env.SHOP.put("seo_auto_req", JSON.stringify(r));
+  return json({ ok: true, req: r, message: (mode === "apply" ? "적용" : "미리보기") + " 요청을 받았어요. 30분 안에 시작하고, 끝나면 결과가 여기에 보여요." });
+}
+async function seoAutoReport(req, env) {  // 깃허브 → 결과 저장
+  const d = await req.json().catch(() => ({}));
+  const r = { ...d, samples: (d.samples || []).slice(0, 300) };
+  await env.SHOP.put("seo_auto_report", JSON.stringify(r));
+  const cur = await env.SHOP.get("seo_auto_req", "json");
+  if (cur && cur.taken) await env.SHOP.delete("seo_auto_req");
+  if (d.mode === "apply" && d.applied) await env.SHOP.put("seo_ver", String(Date.now()));
+  return json({ ok: true });
+}
+async function seoRestore(req, env) {  // 자동 최적화 한 번을 통째로 되돌리기
+  const d = await req.json().catch(() => ({}));
+  const run = String(d.run || "").replace(/[^0-9a-z]/gi, "");
+  if (!run) return fail("되돌릴 실행이 없어요.");
+  let n = 0;
+  for (let b = 0; b < SEO_B; b++) {
+    const bak = await env.SHOP.get(`seo_bak:${run}:${b}`, "json"); if (!bak) continue;
+    const cur = (await env.SHOP.get("seo:" + b, "json")) || {};
+    for (const [id, old] of Object.entries(bak)) {
+      if (cur[id] && !cur[id].auto) continue;  // 그사이 손으로 고친 건 그대로
+      if (old) cur[id] = old; else delete cur[id]; n++;
+    }
+    await env.SHOP.put("seo:" + b, JSON.stringify(cur));
+    await env.SHOP.delete(`seo_bak:${run}:${b}`);
   }
   await env.SHOP.put("seo_ver", String(Date.now()));
-  return json({ ok: true, saved: n, message: `${n.toLocaleString()}개 상품을 저장했어요.` });
+  const runs = ((await env.SHOP.get("seo_runs", "json")) || []).filter((x) => x !== run); await env.SHOP.put("seo_runs", JSON.stringify(runs));
+  return json({ ok: true, message: `${n.toLocaleString()}개 상품의 SEO를 자동 최적화 전으로 되돌렸어요. 30분 안에 사이트에 반영돼요.` });
 }
 async function catalogExport(req, env) {  // 상품 목록 내려받기 (상품코드 순서로 나눠서)
   if (!env.DB) return fail("상품 DB가 없어요.", 500);
@@ -1538,6 +1588,13 @@ export async function handle(req, env, path) {
     if (!value) return new Response("not found", { status: 404 });
     return new Response(value, { headers: { "Content-Type": (metadata && metadata.type) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": "*" } });
   }
+  if (req.method === "GET" && path === "/seo-auto/req") {  // 깃허브가 30분마다 확인: 실행할 요청이 있는지 (가져가면 taken 표시)
+    let r = await env.SHOP.get("seo_auto_req", "json");
+    if (r && r.taken && Date.now() - Date.parse(r.taken) > 7 * 3600e3) { await env.SHOP.delete("seo_auto_req"); r = null; }  // 실행이 중간에 끊긴 요청 정리
+    const daily = (await env.SHOP.get("seo_auto_daily")) === "1";
+    if (r && !r.taken && new URL(req.url).searchParams.get("take") === "1") { r.taken = new Date().toISOString(); await env.SHOP.put("seo_auto_req", JSON.stringify(r)); return json({ req: { ...r, taken: undefined }, daily }); }
+    return json({ req: r && !r.taken ? r : null, running: !!(r && r.taken), daily });
+  }
   if (req.method === "GET" && path === "/edits/one") {  // 이 상품을 관리자가 마지막으로 고친 시각 (상품 페이지가 최신인지 확인)
     const id = String(new URL(req.url).searchParams.get("id") || "");
     const e = (((await env.SHOP.get("product_edits", "json")) || {}).items || {})[id];
@@ -1727,7 +1784,7 @@ export async function handle(req, env, path) {
       const ip = ipOf(req);
       if (await overLimit(env, "adminfail:" + ip, 5, 900, false)) return fail("비밀번호를 여러 번 틀려서 15분 동안 막았어요. 잠시 후 다시 시도해 주세요.", 429);
       if (got.trim() !== want) { await overLimit(env, "adminfail:" + ip, 5, 900); return fail("비밀번호가 틀렸어요.", 401); }
-      const READ_ONLY = ["/admin/product-get", "/admin/catalog-export", "/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
+      const READ_ONLY = ["/admin/seo-auto-status", "/admin/product-get", "/admin/catalog-export", "/admin/list", "/admin/po", "/admin/analytics", "/admin/product-edits", "/admin/order-search", "/admin/customers", "/admin/log", "/admin/export"];
       if (!READ_ONLY.includes(path)) await adminLog(env, path, ip, "").catch(() => {});
       if (path === "/admin/list") return await adminList(env);
       if (path === "/admin/kakao-connect") return await adminKakaoConnect(req, env);
@@ -1762,6 +1819,10 @@ export async function handle(req, env, path) {
       if (path === "/admin/offer-reply") return await adminOfferReply(req, env);
       if (path === "/admin/catalog-export") return await catalogExport(req, env);
       if (path === "/admin/seo-upload") return await seoUpload(req, env);
+      if (path === "/admin/seo-auto-req") return await seoAutoReq(req, env);
+      if (path === "/admin/seo-auto-report") return await seoAutoReport(req, env);
+      if (path === "/admin/seo-restore") return await seoRestore(req, env);
+      if (path === "/admin/seo-auto-status") return json({ req: await env.SHOP.get("seo_auto_req", "json"), report: await env.SHOP.get("seo_auto_report", "json"), runs: (await env.SHOP.get("seo_runs", "json")) || [], daily: (await env.SHOP.get("seo_auto_daily")) === "1" });
       if (path === "/admin/product-edits") return json((await env.SHOP.get("product_edits", "json")) || { ver: 0, items: {} });
       if (path === "/admin/product-save") return await adminProductSave(req, env);
       if (path === "/admin/product-get") return await adminProductGet(req, env);

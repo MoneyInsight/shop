@@ -18,3 +18,10 @@ jobs:
           S=$(curl -fsS "https://damgosago.com/edits_ver.txt?t=$(date +%s)" || echo 0)
           echo "서버 $W / 사이트 $S"
           if [ "$W" != "err" ] && [ "$W" != "$S" ]; then gh workflow run deploy.yml -R "$GITHUB_REPOSITORY" --ref main && echo "다시 배포 시작"; else echo "바뀐 것 없음"; fi
+      - name: SEO 자동 최적화 요청이 있으면 실행
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          R=$(curl -fsS https://shop-api.scream0506.workers.dev/seo-auto/req | python3 -c "import sys,json;d=json.load(sys.stdin);print('1' if d.get('req') else '')" || echo "")
+          if [ -n "$R" ]; then gh workflow run seo_auto.yml -R "$GITHUB_REPOSITORY" --ref main && echo "SEO 자동 최적화 시작"; else echo "SEO 요청 없음"; fi
