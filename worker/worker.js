@@ -509,7 +509,7 @@ async function confirmCore(body, env) {
   const now = new Date().toISOString();
   const order = { orderId, amount: Number(amount), subtotal, discount, coupon: couponCode, shipping, ship_by: shipBy, remote: remote.label || undefined, remote_fee: remote.fee || undefined, member_discount: memberDisc || undefined, lines, customer, method: pay.method, paymentKey, pg: pg === "portone" ? "portone" : "toss", receipt: pay.receipt?.url || "",
     paidAt: now, status: "결제완료", history: [{ status: "결제완료", at: now }] };
-  if (src) order.src = stats.sourceOf(src.ref, src.utm);  // 유입경로 (네이버·인스타 등)
+  if (src) order.src = stats.sourceOf(src.ref, src.utm, String(src.app || "").slice(0, 10));  // 유입경로 (네이버·인스타 등)
   if (token) order.uid = await auth.linkOrder(env, token, orderId);  // 로그인 회원이면 내 주문에 연결
   await env.SHOP.put("order:" + orderId, JSON.stringify(order));
   for (const uo of usedOffers) { uo.status = "주문완료"; uo.orderId = orderId; await env.SHOP.put("offer:" + uo.id, JSON.stringify(uo)); }

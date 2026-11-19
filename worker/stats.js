@@ -8,15 +8,20 @@ const KST = (d = new Date()) => new Date(new Date(d).getTime() + 9 * 3600 * 1000
 export const dayKey = (d) => KST(d).slice(0, 10);
 
 // 유입경로 이름 정리
-export function sourceOf(ref, utm) {
-  if (utm) return String(utm).toLowerCase().slice(0, 30);
-  if (!ref) return "직접 방문";
-  let h = "";
-  try { h = new URL(ref).hostname.replace(/^www\./, ""); } catch (e) { return "기타"; }
-  const map = [[/naver\.com|naver\.me/, "네이버"], [/google\./, "구글"], [/daum\.net|kakao\.com/, "다음·카카오"], [/instagram\.com/, "인스타그램"], [/facebook\.com|fb\.me/, "페이스북"],
-    [/youtube\.com|youtu\.be/, "유튜브"], [/threads\.net/, "스레드"], [/tistory\.com/, "티스토리"], [/blogger|blogspot/, "블로거"], [/bing\.com/, "빙"], [/coupang\.com/, "쿠팡"]];
+const OLD_SRC = { "직접 방문": "직접 입력·즐겨찾기", 네이버: "네이버 (기타)", 구글: "구글 검색", "다음·카카오": "다음 (기타)", 빙: "빙 검색", 티스토리: "티스토리 블로그", 블로거: "구글 블로거" };  // 예전 이름 → 새 이름
+export function sourceOf(ref, utm, app) {
+  if (utm) return String(utm).toLowerCase().slice(0, 30);  // 광고·링크에 붙인 utm_source 가 있으면 그대로
+  let h = "", u = null;
+  if (ref) { try { u = new URL(ref); h = u.hostname.replace(/^(www|m)\./, ""); } catch (e) { return "기타"; } }
+  if (!h || /damgosago\.com$/.test(h)) return app ? app + " (공유·링크)" : "직접 입력·즐겨찾기";  // 주소를 직접 치거나 즐겨찾기·앱 링크
+  const map = [
+    [/^search\.naver\.com|^m\.search\.naver\.com/, "네이버 검색"], [/shopping\.naver\.com|search\.shopping\.naver/, "네이버 쇼핑"], [/blog\.naver\.com/, "네이버 블로그"],
+    [/cafe\.naver\.com/, "네이버 카페"], [/naver\.com|naver\.me/, "네이버 (기타)"],
+    [/^google\.|\.google\./, "구글 검색"], [/search\.daum\.net/, "다음 검색"], [/daum\.net/, "다음 (기타)"], [/kakao\.com|kakaocdn/, "카카오"], [/bing\.com/, "빙 검색"], [/search\.zum\.com|zum\.com/, "줌 검색"],
+    [/instagram\.com/, "인스타그램"], [/facebook\.com|fb\.me/, "페이스북"], [/youtube\.com|youtu\.be/, "유튜브"], [/threads\.net/, "스레드"],
+    [/tistory\.com/, "티스토리 블로그"], [/blogger|blogspot/, "구글 블로거"], [/coupang\.com/, "쿠팡"], [/band\.us/, "밴드"]];
   for (const [re, n] of map) if (re.test(h)) return n;
-  return h.slice(0, 40);
+  return "다른 사이트: " + h.slice(0, 40);
 }
 
 export async function visit(env, d) {
@@ -28,7 +33,7 @@ export async function visit(env, d) {
   if (vid && !s.vids.includes(vid)) {
     s.vids.push(vid); s.uv++;
     if (s.vids.length > 20000) s.vids = s.vids.slice(-20000);
-    const src = sourceOf(d.ref, d.utm);
+    const src = sourceOf(d.ref, d.utm, String(d.app || "").slice(0, 10));
     s.src[src] = (s.src[src] || 0) + 1;  // 유입경로는 그날 처음 온 방문자 기준
   }
   const path = String(d.path || "/").replace(/\?.*$/, "").slice(0, 80);
@@ -91,7 +96,7 @@ export async function analytics(env, kvList, { from, to }, P) {
     const s = await env.SHOP.get("stat:" + k, "json");
     if (!s) continue;
     days[k].uv = s.uv; days[k].pv = s.pv;
-    for (const [n, v] of Object.entries(s.src || {})) (src[n] = src[n] || { visits: 0, orders: 0, sales: 0 }).visits += v;
+    for (const [n0, v] of Object.entries(s.src || {})) { const n = OLD_SRC[n0] || n0; (src[n] = src[n] || { visits: 0, orders: 0, sales: 0 }).visits += v; }
     for (const [n, v] of Object.entries(s.pages || {})) pages[n] = (pages[n] || 0) + v;
   }
   const prod = {}, T = { orders: 0, sales: 0, supply: 0, cost: 0, cardFee: 0, ops: 0, profit: 0, refunds: 0, canceled: 0, returned: 0, exchanged: 0, poLines: 0, poWait: 0, discount: 0, units: 0, costEstimated: false };
@@ -118,7 +123,8 @@ export async function analytics(env, kvList, { from, to }, P) {
     const profit = amt - fee - vat - cost - ops;
     T.orders++; T.sales += amt; T.cost += cost; T.cardFee += fee; T.ops += ops; T.profit += profit; T.discount += o.discount || 0;
     if (day) { day.orders++; day.sales += amt; day.cost += cost; day.profit += profit; }
-    const s = (src[o.src || "알 수 없음"] = src[o.src || "알 수 없음"] || { visits: 0, orders: 0, sales: 0 });
+    const k = OLD_SRC[o.src] || o.src || "알 수 없음";
+    const s = (src[k] = src[k] || { visits: 0, orders: 0, sales: 0 });
     s.orders++; s.sales += amt;
   }
   for (const u of users) if (u.joinedAt && days[dayKey(u.joinedAt)]) days[dayKey(u.joinedAt)].signups++;

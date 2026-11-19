@@ -1302,7 +1302,8 @@
     try { v = JSON.parse(sessionStorage.getItem("src0") || "null"); } catch (e) {}
     if (!v) {
       const ref = document.referrer && !document.referrer.startsWith(location.origin) ? document.referrer.slice(0, 200) : "";
-      v = { ref, utm: new URLSearchParams(location.search).get("utm_source") || "" };
+      const ua = navigator.userAgent, app = /KAKAOTALK/i.test(ua) ? "카카오톡" : /Instagram/i.test(ua) ? "인스타그램" : /FBAN|FBAV/i.test(ua) ? "페이스북" : /NAVER\(inapp|NAVER/.test(ua) ? "네이버 앱" : /Line\//i.test(ua) ? "라인" : /BAND\//i.test(ua) ? "밴드" : /DaumApps/i.test(ua) ? "다음 앱" : "";
+      v = { ref, utm: new URLSearchParams(location.search).get("utm_source") || "", app };  // app: 앱 안 브라우저(카톡·인스타 등은 주소를 안 알려 줘서 따로 구분)
       try { sessionStorage.setItem("src0", JSON.stringify(v)); } catch (e) {}
     }
     return v;
