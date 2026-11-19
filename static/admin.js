@@ -150,7 +150,7 @@
         <b>도매매</b>: [상품번호 복사] → 도매매 ‘엑셀일괄주문 › 일괄주문서작성’에 붙여넣고 [주문서 받기] 파일을 보며 수령자 입력(전달사항에 우리 주문번호) → e-money 결제 → [발주 완료] (1회 30개까지)<br>
         <b>직영(숨엔 등 직접 보내는 상품)</b>: 직접 포장·발송 → [주문] 탭에서 송장 입력 → 고객에게 출고 알림이 자동으로 가요.<br>
         나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣거나 엑셀 파일을 그대로 올리면 우리 주문번호로 찾아 송장이 자동으로 들어가요.<br>
-        <span style="color:var(--sale)">발주 전 확인: 도매처 결제 금액이 아래 '원가'보다 크면(도매가 인상) 손해일 수 있어요 — 발주하지 말고 품절 취소하세요.</span></p>
+        <span style="color:var(--sale)">발주 전 확인: 도매처 결제 화면의 <b>상품값·택배비</b>가 아래 '도매 원가'·'택배비'(주문당 1번 / N개마다)와 다르면 손해일 수 있어요 — 특히 도매처가 <b>1개마다 택배비</b>를 받는데 표에 '주문당 1번'이면 발주하지 말고 알려 주세요.</span></p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
           <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">대량주문 엑셀 받기 (${esc(((D.mysheets || {})[g.source] || {}).ext || (g.source === "onchannel" ? "xlsx" : "csv"))})</button>${(SUP[g.source] || {}).url ? `<button class="chip" data-act="open-url" data-url="${SUP[g.source].url}">${esc(SUP[g.source].n)} 사이트 열기 ↗</button>` : ""}${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
           <div style="overflow-x:auto"><table class="adm-table" style="font-size:12.5px"><tr><th>주문</th><th>상품코드</th><th>제품명</th><th>수량</th><th>개당가격</th><th>제품가격</th><th>택배비</th><th>종합가격<br><small>손님 결제</small></th><th>도매 원가</th><th>카드값</th><th>각종세금<br><small>부가세</small></th><th>순수마진</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => { const m = l.m || {}; return `<tr>
@@ -158,7 +158,7 @@
           <td>${srcTag(l.id)}<br><b>${esc(l.product_no)}</b></td>
           <td style="white-space:normal;min-width:160px">${esc(l.name)}${l.option ? `<br><span class="muted">옵션: ${esc(l.option)}</span>` : ""}</td>
           <td>${l.qty / (l.pk || 1)}${l.pk > 1 ? `<br><span class="muted">(도매처 ${l.qty}개)</span>` : ""}</td>
-          <td>${won(m.unit)}</td><td>${won(m.goods)}${m.disc ? `<br><span class="muted">할인 −${won(m.disc)}</span>` : ""}</td><td>${won(m.ship)}</td>
+          <td>${won(m.unit)}</td><td>${won(m.goods)}${m.disc ? `<br><span class="muted">할인 −${won(m.disc)}</span>` : ""}</td><td>${won(m.ship)}${l.ship_fee ? `<br><span class="muted" style="font-size:11px">${l.sn === 1 ? "1개마다" : l.sn > 1 ? l.sn + "개마다" : "주문당 1번"} ${won(l.ship_fee)}</span>` : l.ship_fee === 0 ? `<br><span class="muted" style="font-size:11px">무료배송</span>` : ""}</td>
           <td><b>${won(m.rev)}</b></td><td>${won(m.cost)}${m.ship ? `<br><span class="muted">+택배 ${won(m.ship)}</span>` : ""}</td>
           <td>${won(m.card)}</td><td>${won(m.vat)}${m.ops ? `<br><span class="muted">운영비 ${won(m.ops)}</span>` : ""}</td>
           <td><b style="color:${m.net < 0 ? "var(--sale)" : "var(--ok)"}">${won(m.net)}</b><br><span class="muted">${m.rate}%</span></td>

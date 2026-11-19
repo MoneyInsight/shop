@@ -435,7 +435,7 @@ async function confirmCore(body, env) {
     subtotal += unit * qty;
     shipUnits[p.id] = (shipUnits[p.id] || 0) + qty * (Number(p.pk) || 1); shipProd[p.id] = p;
     const sup = (await env.SHOP.get("supply:" + p.id, "json")) || { supplier: p.supplier || "직영", supply_price: 0 };
-    lines.push({ opt_add: optName ? Number(p.options[Number(it.opt)].add) || 0 : 0, id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
+    lines.push({ sn: Number(p.sn) || 0, ship_fee: Number(p.shipping_fee) || 0, opt_add: optName ? Number(p.options[Number(it.opt)].add) || 0 : 0, id: p.id, name: p.name + (optName ? ` [${optName}]` : ""), option: optName, qty, pk: Number(p.pk) || 1, price: unit, list_unit: listUnit, mp: Number(p.mp) || 0, supplier: sup.supplier, supply_price: sup.supply_price, cost: Number(p.cost) || stats.costFromPrice(p.price + (optName ? p.options[Number(it.opt)].add : 0), PRICING(env)), ship_mode: p.sm || "",
       source: p.source || (String(p.id).startsWith("DM") ? "domeme" : /^W/.test(p.id) ? "ownerclan" : /^CH\d/.test(p.id) ? "onchannel" : ""), source_no: p.source_no || String(p.id).replace(/^DM/, ""), ...(offerId ? { offer: offerId, list_price: p.price + (optName ? (p.options[Number(it.opt)].add) : 0) } : {}) });
   }
   const shipBy = {};
@@ -1299,7 +1299,7 @@ async function adminPo(env) {
       (groups[src] = groups[src] || { source: src, name: SOURCE_NAME[src] || (src === "direct" ? "직영·공급사" : src), lines: [] }).lines.push({
         orderId: o.orderId, idx: i, paidAt: o.paidAt, product_no: l.source_no || String(l.id).replace(/^DM/, ""), id: l.id, name: l.name, option: l.option || "", qty: l.qty * (Number(l.pk) || 1), pk: Number(l.pk) || 1,
         cost: l.cost || 0, amount: l.price * l.qty, ship_mode: l.ship_mode || "", receiver: o.customer?.name || "", phone: o.customer?.phone || "", zip: o.customer?.zip || "",
-        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null, m: lineMoney(o, l, i, P) });
+        addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null, m: lineMoney(o, l, i, P), sn: l.sn ?? null, ship_fee: l.ship_fee ?? null });
     });
   }
   return { groups: Object.values(groups), sheets: ORDER_SHEETS, mysheets: (await env.SHOP.get("order_sheets", "json")) || {} };
