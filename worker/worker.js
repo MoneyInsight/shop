@@ -1302,7 +1302,7 @@ async function adminPo(env) {
         addr: o.customer?.addr || "", addr1: o.customer?.addr1 || o.customer?.addr || "", addr2: o.customer?.addr2 || "", memo: o.customer?.memo || "", lv: l.lv || null, m: lineMoney(o, l, i, P) });
     });
   }
-  return { groups: Object.values(groups), sheets: ORDER_SHEETS };
+  return { groups: Object.values(groups), sheets: ORDER_SHEETS, mysheets: (await env.SHOP.get("order_sheets", "json")) || {} };
 }
 // ---------- 발주 전 도매처 가격·재고 확인 (도매매·오너클랜 실시간) ----------
 // 결과는 주문 줄(l.lv)에 저장 → 발주 화면에 빨강/초록 표시. 10분마다 새 결제 주문을 자동 확인하고 문제가 있으면 관리자에게 알림
@@ -1390,6 +1390,19 @@ async function poCron(env) {  // 10분마다: 새 결제 주문 도매처 확인
   if (Date.now() - lastOps > 6 * 36e5) { await env.SHOP.put("ops_at", String(Date.now())); await opsAlert(env).catch(() => {}); }
   const last = Number(await env.SHOP.get("oc_trk_at")) || 0;
   if (Date.now() - last > 55 * 60e3) { await env.SHOP.put("oc_trk_at", String(Date.now())); await ocTrackingSync(env).catch(() => {}); }
+}
+async function adminSheetSave(req, env) {  // 관리자가 올린 도매처 공식 대량주문 양식 (열 이름·순서)
+  const d = await req.json().catch(() => ({}));
+  if (!SOURCE_NAME[d.src]) return fail("도매처가 올바르지 않아요.");
+  const all = (await env.SHOP.get("order_sheets", "json")) || {};
+  if (d.reset) delete all[d.src];
+  else {
+    const cols = (Array.isArray(d.cols) ? d.cols : []).map((c) => String(c).trim().slice(0, 60)).filter(Boolean).slice(0, 80);
+    if (cols.length < 3) return fail("열 이름을 3개 이상 찾지 못했어요.");
+    all[d.src] = { cols, ext: d.ext === "csv" ? "csv" : "xlsx", name: String(d.name || "").slice(0, 80), at: new Date().toISOString() };
+  }
+  await env.SHOP.put("order_sheets", JSON.stringify(all));
+  return json({ ok: true, message: d.reset ? "기본 양식으로 돌렸어요." : `${SOURCE_NAME[d.src]} 양식을 저장했어요. 이제 [대량주문 엑셀 받기]가 이 양식으로 만들어져요.` });
 }
 async function adminPoDone(req, env) {
   const { items } = await req.json();  // [{orderId, idx}]
@@ -1963,6 +1976,7 @@ export async function handle(req, env, path) {
       if (path === "/admin/order-update") return await adminOrderUpdate(req, env);
       if (path === "/admin/order-cancel") return await adminOrderCancel(req, env);
       if (path === "/admin/claim-step") return await adminClaimStep(req, env);
+      if (path === "/admin/sheet-save") return await adminSheetSave(req, env);
       if (path === "/admin/soldout-cancel") return await adminSoldoutCancel(req, env);
       if (path === "/admin/export") return await adminExport(env);
       if (path === "/admin/track-sweep") return json(await trackSweep(env));

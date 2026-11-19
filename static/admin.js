@@ -137,7 +137,7 @@
         나중에 도매처 주문·배송 목록을 엑셀로 받아 아래에 붙여넣거나 엑셀 파일을 그대로 올리면 우리 주문번호로 찾아 송장이 자동으로 들어가요.<br>
         <span style="color:var(--sale)">발주 전 확인: 도매처 결제 금액이 아래 '원가'보다 크면(도매가 인상) 손해일 수 있어요 — 발주하지 말고 품절 취소하세요.</span></p>
         ${G.length ? G.map((g) => `<div class="po-group"><h3>${esc(g.name)} <small>${g.lines.length}건</small>
-          <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">주문서 받기 (CSV)</button>${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
+          <button class="chip" data-act="po-sheet" data-src="${esc(g.source)}">대량주문 엑셀 받기 (${esc(((D.mysheets || {})[g.source] || {}).ext || (g.source === "onchannel" ? "xlsx" : "csv"))})</button>${(SUP[g.source] || {}).url ? `<button class="chip" data-act="open-url" data-url="${SUP[g.source].url}">${esc(SUP[g.source].n)} 사이트 열기 ↗</button>` : ""}${g.source === "domeme" ? `<button class="chip" data-act="po-nos" data-src="domeme">상품번호 복사</button>` : ""}<button class="chip" data-act="po-done" data-src="${esc(g.source)}">발주 완료</button></h3>
           <div style="overflow-x:auto"><table class="adm-table" style="font-size:12.5px"><tr><th>주문</th><th>상품코드</th><th>제품명</th><th>수량</th><th>개당가격</th><th>제품가격</th><th>택배비</th><th>종합가격<br><small>손님 결제</small></th><th>도매 원가</th><th>카드값</th><th>각종세금<br><small>부가세</small></th><th>순수마진</th><th>도매처 확인</th><th>받는 분</th></tr>${g.lines.map((l) => { const m = l.m || {}; return `<tr>
           <td>${esc(l.orderId)}<br><span class="muted">${dt(l.paidAt)}</span></td>
           <td>${srcTag(l.id)}<br><b>${esc(l.product_no)}</b></td>
@@ -150,6 +150,15 @@
           <td style="white-space:normal;max-width:200px">${!l.lv ? `<span class="muted">확인 전</span>` : l.lv.ok === false ? `<b style="color:var(--sale)">⚠️ ${esc(l.lv.msg)}</b>` : l.lv.ok ? `<span style="color:var(--ok)">✅ 정상</span>` : `<span class="muted">${esc(l.lv.msg)}</span>`}</td>
           <td>${esc(l.receiver)}<br><span class="muted">${esc(l.addr)}</span></td></tr>`; }).join("")}</table></div></div>`).join("")
           : `<p class="empty">발주할 주문이 없어요.</p>`}</div>
+        <div class="card"><h2>도매처 대량주문 양식 <small>각 도매처 공식 양식에 맞춰 주문서가 만들어져요</small></h2>
+        <p class="muted" style="margin-bottom:8px">도매처 사이트의 대량(엑셀) 주문 화면에서 <b>양식(샘플) 파일</b>을 내려받아 여기에 한 번만 올려 두면, 그 열 순서·이름 그대로 주문서를 만들어 드려요. 도매처가 양식을 바꾸면 다시 올리면 돼요.</p>
+        <table class="adm-table"><tr><th>도매처</th><th>지금 쓰는 양식</th><th></th></tr>${["domeme", "ownerclan", "onchannel", "ggsan", "cmtstory"].map((k) => {
+          const my = (D.mysheets || {})[k], cols = (my && my.cols) || (D.sheets || {})[k] || SHEET_DEFAULT, miss = cols.filter((c) => !fieldFor(c, cols));
+          return `<tr><td>${srcTag(k === "domeme" ? "DM1" : k === "ownerclan" ? "WAAAAAA" : k === "onchannel" ? "CH1" : k === "ggsan" ? "GS1" : "CM1")}</td>
+            <td style="white-space:normal">${my ? `<b>올린 양식</b> (${esc(my.name || "")}, ${dt(my.at)})` : (D.sheets || {})[k] ? "기본 양식" : `<span style="color:var(--sale)">공통 양식 — 도매처 양식을 올려 주세요</span>`}<br>
+              <span class="muted" style="font-size:12px">${cols.map((c) => fieldFor(c, cols) ? esc(c) : `<b style="color:var(--sale)">${esc(c)}(빈칸)</b>`).join(" · ")}</span></td>
+            <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="ghost" data-act="open-url" data-url="${SUP[k].url}">사이트 열기 ↗</button><button class="ghost" data-act="sheet-up" data-src="${k}">양식 올리기</button>${my ? `<button class="ghost" data-act="sheet-reset" data-src="${k}">기본으로</button>` : ""}</div></td></tr>`; }).join("")}</table>
+        <input type="file" id="sheet-file" accept=".xlsx,.xls,.csv" hidden></div>
         <div class="card"><h2>도매처별 송장 가져오기 <small>송장 기다리는 주문 ${D.orders.filter((o) => o.status === "상품준비중" && !o.tracking).length}건</small></h2>
         <table class="adm-table"><tr><th>도매처</th><th>송장 기다림</th><th>가져오는 방법</th><th></th></tr>${["ownerclan", "domeme", "onchannel", "ggsan", "cmtstory", "own", "direct"].map((k) => {
           const n = D.orders.filter((o) => o.status === "상품준비중" && !o.tracking && o.lines.some((l) => SRC(l.id) === k)).length;
@@ -249,7 +258,7 @@
   async function load() {
     D = await call("/admin/list");
     const po = await call("/admin/po").catch(() => ({ groups: [] }));
-    D.po = po.groups || []; D.sheets = po.sheets || {};
+    D.po = po.groups || []; D.sheets = po.sheets || {}; D.mysheets = po.mysheets || {};
     D.kc = await fetch("kc_check.json").then((r) => r.json()).catch(() => []);
     $("#admin-login").style.display = "none"; $("#admin-body").style.display = "";
     paint();
@@ -568,12 +577,39 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   };
   const XLSX_ONLY = { onchannel: true };
+  // 도매처 양식의 열 이름 → 넣을 값 (정확한 이름이 없으면 비슷한 말로 찾음). 못 찾으면 null = 빈칸 (화면에 빨간색으로 알려 줌)
+  function fieldFor(c, cols) {
+    const hasDetail = (cols || []).some((x) => /상세주소|나머지주소|주소2/.test(String(x).replace(/\s/g, "")));
+    if (FIELD[c] && !(c === "주소" && hasDetail)) return FIELD[c];
+    const k = String(c).replace(/\s|\(.*?\)|\*|필수|선택/g, "");
+    if (/상품(코드|번호)|품번|상품id/i.test(k)) return (l) => l.product_no;
+    if (/옵션.*(수량)|주문수량|^수량|구매수량|개수/.test(k)) return (l) => l.qty;
+    if (/옵션/.test(k)) return (l) => l.option || "";
+    if (/(받는|수령|수취|수하|배송받)/.test(k) && /(이름|명|인|사람|자|분|성함)$/.test(k)) return (l) => l.receiver;
+    if (/(휴대|핸드폰|폰|연락처|전화)/.test(k) && !/(추가|비상|2)/.test(k)) return (l) => l.phone;
+    if (/(추가|비상|보조).*(연락|전화)|전화2|연락처2/.test(k)) return () => "";
+    if (/우편|zip/i.test(k)) return (l) => l.zip;
+    if (/상세주소|나머지주소|주소2/.test(k)) return (l) => l.addr2;
+    if (/주소/.test(k)) return (l) => (hasDetail ? l.addr1 : l.addr);
+    if (/(배송|요청|전달).*(메시지|메세지|메모|사항)|메시지|메세지|배송메모/.test(k)) return memoWithId;
+    if (/(주문|관리|원장).*(번호|코드)|주문id/i.test(k)) return (l) => l.orderId;
+    if (/(판매사|셀러).*메모|관리메모/.test(k)) return (l) => "담Go사Go " + l.orderId;
+    if (/쇼핑몰|판매처|마켓명/.test(k)) return () => "담Go사Go";
+    if (/상품명|제품명/.test(k)) return (l) => l.name.replace(/ \[.*\]$/, "");
+    if (/배송비.*(유형|방식|결제)|결제방식/.test(k)) return () => "선불";
+    if (/통관|생년월일|국제/.test(k)) return () => "";
+    return null;
+  }
   function poSheet(src) {
     const g = (D.po || []).find((x) => x.source === src); if (!g) return;
-    const cols = (D.sheets || {})[src] || SHEET_DEFAULT;
-    const val = (c, l) => { const v = FIELD[c] ? FIELD[c](l) : ""; return NO_COMMA[src] ? String(v ?? "").replace(/,/g, " ") : v; };
-    const rows = [cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], fn = `${g.name}_주문서_${new Date().toISOString().slice(0, 10)}`;
-    XLSX_ONLY[src] ? xlsxDown(rows, fn + ".xlsx") : csvDown(rows, fn + ".csv");
+    const my = (D.mysheets || {})[src];  // 관리자가 올린 도매처 공식 양식 (있으면 우선)
+    const cols = (my && my.cols) || (D.sheets || {})[src] || SHEET_DEFAULT;
+    const miss = cols.filter((c) => !fieldFor(c, cols));
+    if (miss.length && !confirm(`이 양식에서 자동으로 못 채우는 칸이 있어요: ${miss.join(", ")}\n빈칸으로 받을까요? (받은 뒤 엑셀에서 채워 주세요)`)) return;
+    const val = (c, l) => { const f = fieldFor(c, cols), v = f ? f(l) : ""; return NO_COMMA[src] ? String(v ?? "").replace(/,/g, " ") : v; };
+    const rows = [cols, ...g.lines.map((l) => cols.map((c) => val(c, l)))], fn = `${g.name}_대량주문서_${new Date().toISOString().slice(0, 10)}`;
+    const ext = (my && my.ext) || (XLSX_ONLY[src] ? "xlsx" : "csv");
+    ext === "xlsx" ? xlsxDown(rows, fn + ".xlsx") : csvDown(rows, fn + ".csv");
     // 주문서를 받은 주문은 손님이 '자동 즉시 환불'로 취소하지 못하게 표시 (도매처에 이미 주문했을 수 있음)
     call("/admin/po-mark", { ids: [...new Set(g.lines.map((l) => l.orderId))] }).catch(() => {});
   }
@@ -656,7 +692,21 @@
     if (ev.target.id === "m-q" && CUST) { const v = ev.target.value.trim().toLowerCase(), dv = v.replace(/\D/g, ""); $("#m-list").innerHTML = memTable((CUST.members || []).filter((m) => (m.name || "").toLowerCase().includes(v) || (m.email || "").toLowerCase().includes(v) || (dv && (m.phone || "").replace(/\D/g, "").includes(dv)))); }
     if (ev.target.id === "c-q" && CUST) { const v = ev.target.value.trim(), dv = v.replace(/\D/g, ""); $("#c-list").innerHTML = custTable(CUST.customers.filter((c) => c.name.includes(v) || (dv && c.phone.includes(dv)))); }
   });
-  document.addEventListener("change", (ev) => { if (ev.target.id === "trk-file" && ev.target.files[0]) $('[data-act="trk-import"]')?.click(); });  // 엑셀 고르면 바로 넣기
+  document.addEventListener("change", (ev) => { if (ev.target.id === "trk-file" && ev.target.files[0]) $('[data-act="trk-import"]')?.click(); });
+  document.addEventListener("change", async (ev) => {  // 도매처 양식 올리기: 첫 줄(열 이름)만 읽어 저장
+    if (ev.target.id !== "sheet-file" || !ev.target.files[0]) return;
+    const f = ev.target.files[0], src = ev.target.dataset.src;
+    try {
+      let rows;
+      if (/\.csv$/i.test(f.name)) rows = (await f.text()).replace(/^\ufeff/, "").split(/\r?\n/).map((r) => r.split(",").map((x) => x.replace(/^"|"$/g, "").trim()));
+      else { const X = await loadXLSX(); const wb = X.read(await f.arrayBuffer(), { type: "array" }); rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" }); }
+      const head = (rows.find((r) => r.filter((x) => String(x).trim()).length >= 3) || []).map((x) => String(x).trim()).filter(Boolean);
+      if (head.length < 3) { alert("양식의 열 이름(첫 줄)을 찾지 못했어요. 도매처에서 받은 양식 파일 그대로 올려 주세요."); return; }
+      const miss = head.filter((c) => !fieldFor(c, head));
+      if (!confirm(`${SUP[src].n} 양식: ${head.length}개 열을 찾았어요.\n${head.join(" · ")}${miss.length ? `\n\n자동으로 못 채우는 칸(빈칸으로 나감): ${miss.join(", ")}` : "\n\n모든 칸을 자동으로 채울 수 있어요."}\n\n이 양식으로 저장할까요?`)) return;
+      alert((await call("/admin/sheet-save", { src, cols: head, ext: /\.csv$/i.test(f.name) ? "csv" : "xlsx", name: f.name })).message); load();
+    } catch (e) { alert("양식을 읽지 못했어요: " + e.message); }
+  });  // 엑셀 고르면 바로 넣기
   document.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.id === "o-q") $('[data-act="o-search"]')?.click(); });
   document.addEventListener("click", async (ev) => {
     const t = ev.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; return paint(); }
@@ -750,6 +800,8 @@
       }
       if (act === "cl-step") { await call("/admin/claim-step", { orderId: b.dataset.id, step: b.dataset.step, undo: !!b.dataset.undo }); return load(); }
       if (act === "trk-file-up") { $("#trk-file").click(); return; }
+      if (act === "sheet-up") { const f = $("#sheet-file"); f.dataset.src = b.dataset.src; f.value = ""; f.click(); return; }
+      if (act === "sheet-reset") { if (!confirm("올린 양식을 지우고 기본 양식으로 돌릴까요?")) return; await call("/admin/sheet-save", { src: b.dataset.src, reset: true }); return load(); }
       if (act === "open-url") { window.open(b.dataset.url, "_blank", "noopener"); return; }
       if (act === "trk-wait") {  // 송장 기다리는 주문 목록 (도매처 사이트에서 찾기 쉽게)
         const src = b.dataset.src, rows = [["우리 주문번호", "도매처 상품번호", "상품명", "수량", "받는 분", "연락처", "발주일"]];
