@@ -102,6 +102,8 @@ def main():
         # 겨울용품 표시 열(w) — 예전 DB에 없으면 추가 (이미 있으면 오류 무시)
         wr("d1", "execute", NAME, "--remote", "--yes", "--command=ALTER TABLE products ADD COLUMN w INTEGER NOT NULL DEFAULT 0", check=False)
         wr("d1", "execute", NAME, "--remote", "--yes", "--command=CREATE INDEX IF NOT EXISTS idx_w ON products(w, soldout, rank)", check=False)
+        # 판매 안 하는 상품 정리: 100만원 이상 (대표님 2026-11-19) — 상태 기록과 어긋나 남은 것까지 확실히 지움
+        wr("d1", "execute", NAME, "--remote", "--yes", "--command=DELETE FROM products WHERE price >= 1000000", check=False)
         if not STATE.exists():
             st = load_state_from_db()
             STATE.parent.mkdir(parents=True, exist_ok=True)
